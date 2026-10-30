@@ -1,0 +1,2 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["_astro/graph-view.Cp6RLWzh.js","_astro/src.D1CKovUu.js"])))=>i.map(i=>d[i]);
+import{t as e}from"./preload-helper.DHhhL8Zf.js";var t=document.querySelector(`[data-graph]`),n=document.getElementById(`graph-data`);if(t&&n){let{graph:r,text:i}=JSON.parse(n.textContent);e(async()=>{let{mountGraph:e}=await import(`./graph-view.Cp6RLWzh.js`);return{mountGraph:e}},__vite__mapDeps([0,1])).then(({mountGraph:e})=>e(t,r,{...i,posts:e=>`${e}${i.postsLabel}`}))}
