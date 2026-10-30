@@ -1,0 +1,528 @@
+<!DOCTYPE html><html lang="ko" data-astro-cid-hkbrpulz><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>VLA-HWBench: Where the Time Goes When VLA Models Run on Edge Hardware | Tech Blog</title><meta name="description" content="VLA-HWBench는 18개 오픈 VLA 모델을 NVIDIA Jetson AGX Thor와 AMD Ryzen AI Max+ PRO 395에서 7단계 호출 분해로 측정하고, 컴파일·전문 백엔드·저정밀화 최적화의 지연 효과를 분석한다. 결과적으로 엣지 VLA 지연은 모델 크기보다 액션 생성 방식과 런타임·플랫폼에 따라 달라진다."><meta property="og:title" content="VLA-HWBench: Where the Time Goes When VLA Models Run on Edge Hardware"><meta property="og:description" content="VLA-HWBench는 18개 오픈 VLA 모델을 NVIDIA Jetson AGX Thor와 AMD Ryzen AI Max+ PRO 395에서 7단계 호출 분해로 측정하고, 컴파일·전문 백엔드·저정밀화 최적화의 지연 효과를 분석한다. 결과적으로 엣지 VLA 지연은 모델 크기보다 액션 생성 방식과 런타임·플랫폼에 따라 달라진다."><meta name="theme-color" content="#f4f6f9" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#0e131b" media="(prefers-color-scheme: dark)"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate" hreflang="en" href="/en/papers/vla-hwbench-where-the-time-goes/"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap"><script>
+      // 깜빡임 방지: 렌더 전에 테마 결정 (저장값 > 시스템 설정)
+      (() => {
+        let saved = null;
+        try {
+          saved = localStorage.getItem('theme');
+        } catch {}
+        const dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      })();
+    </script><link rel="stylesheet" href="/_astro/Base.DPAvT9-G.css"><style>.tagpath[data-astro-cid-jjfiepte]{font-size:var(--step--1);color:var(--ink-3);flex-wrap:wrap;align-items:baseline;gap:0 .3em;line-height:1.6;text-decoration:none;display:inline-flex}.leaf[data-astro-cid-jjfiepte]{color:var(--ink-2);font-weight:500}.sep[data-astro-cid-jjfiepte]{opacity:.55}.tagpath[data-astro-cid-jjfiepte]:hover .leaf[data-astro-cid-jjfiepte]{color:var(--ink);text-underline-offset:.2em;text-decoration:underline}.row[data-astro-cid-gc2g3jd6]{border-top:1px solid var(--rule);grid-template-columns:8.5rem 1fr;gap:.25rem 1.5rem;padding-block:1.6rem;display:grid}.meta[data-astro-cid-gc2g3jd6]{font-size:var(--step--1);color:var(--ink-3);font-variant-numeric:tabular-nums;flex-direction:column;gap:.15rem;padding-top:.3rem;display:flex}.type[data-astro-cid-gc2g3jd6]{color:var(--type);align-items:center;gap:.45rem;font-weight:600;display:inline-flex}.type[data-astro-cid-gc2g3jd6]:before{content:"";background:var(--type);border-radius:2px;width:.5rem;height:.5rem}.pending[data-astro-cid-gc2g3jd6]{color:var(--ink-3);align-self:flex-start;font-size:.75rem}.draft[data-astro-cid-gc2g3jd6]{border:1px dashed var(--rule-strong);border-radius:4px;align-self:flex-start;margin-top:.3rem;padding:0 .4rem;font-size:.75rem}.title[data-astro-cid-gc2g3jd6]{font-size:var(--step-2);margin:0;font-weight:600;line-height:1.35}.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]{background-image:linear-gradient(var(--type), var(--type));background-position:0 100%;background-repeat:no-repeat;background-size:0 2px;text-decoration:none;transition:background-size .2s}.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]:hover,.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]:focus-visible{background-size:100% 2px}.summary[data-astro-cid-gc2g3jd6]{max-width:62ch;color:var(--ink-2);margin:.45rem 0 0}.tags[data-astro-cid-gc2g3jd6]{flex-wrap:wrap;gap:.1rem 1.1rem;margin:.6rem 0 0;padding:0;list-style:none;display:flex}@media (width<=640px){.row[data-astro-cid-gc2g3jd6]{grid-template-columns:1fr;padding-block:1.25rem}.meta[data-astro-cid-gc2g3jd6]{flex-flow:wrap;gap:.75rem;padding-top:0}.draft[data-astro-cid-gc2g3jd6]{margin-top:0}.title[data-astro-cid-gc2g3jd6]{font-size:var(--step-1)}}
+</style><link rel="stylesheet" href="/_astro/_slug_.BU2vDBGq.css"></head><body data-astro-cid-hkbrpulz><a class="skip" href="#main" data-astro-cid-hkbrpulz>본문 바로가기</a><header class="site-header wrap" data-astro-cid-nen7h5rs><a class="wordmark" href="/ko/" translate="no" data-astro-cid-nen7h5rs>Tech Blog</a><nav class="nav" aria-label="주 메뉴" data-astro-cid-nen7h5rs><ul data-astro-cid-nen7h5rs><li data-type="paper" data-astro-cid-nen7h5rs><a href="/ko/papers/" aria-current="page" data-astro-cid-nen7h5rs>논문</a></li><li data-type="study" data-astro-cid-nen7h5rs><a href="/ko/study/" data-astro-cid-nen7h5rs>공부</a></li><li data-type="dev" data-astro-cid-nen7h5rs><a href="/ko/dev/" data-astro-cid-nen7h5rs>개발</a></li><li data-type="clip" data-astro-cid-nen7h5rs><a href="/ko/clips/" data-astro-cid-nen7h5rs>클립</a></li><li data-astro-cid-nen7h5rs><a href="/ko/tags/" data-astro-cid-nen7h5rs>태그</a></li></ul></nav><div class="tools" data-astro-cid-nen7h5rs><button class="icon-btn" type="button" data-search-open aria-label="검색" aria-keyshortcuts="/" data-astro-cid-nen7h5rs><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8" data-astro-cid-nen7h5rs></circle><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-astro-cid-nen7h5rs></path></svg></button><a class="lang" href="/en/papers/vla-hwbench-where-the-time-goes/" hreflang="en" aria-label="영어로 보기" data-astro-cid-nen7h5rs>English</a><button class="icon-btn" type="button" data-theme-toggle data-label-light="라이트 모드로 전환" data-label-dark="다크 모드로 전환" aria-label="다크 모드로 전환" data-astro-cid-nen7h5rs><svg class="sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8" data-astro-cid-nen7h5rs></circle><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-astro-cid-nen7h5rs></path></svg><svg class="moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><path d="M19.5 14.6A7.8 7.8 0 0 1 9.4 4.5a7.8 7.8 0 1 0 10.1 10.1Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" data-astro-cid-nen7h5rs></path></svg></button></div></header><script type="module">var e=document.querySelector(`[data-theme-toggle]`),t=document.documentElement,n=()=>{let n=t.dataset.theme===`dark`;document.querySelectorAll(`meta[name="theme-color"]`).forEach(e=>{e.setAttribute(`content`,n?`#0e131b`:`#f4f6f9`),e.removeAttribute(`media`)}),e.setAttribute(`aria-label`,(n?e.dataset.labelLight:e.dataset.labelDark)??``),e.setAttribute(`aria-pressed`,String(n))};n(),e.addEventListener(`click`,()=>{t.dataset.theme=t.dataset.theme===`dark`?`light`:`dark`;try{localStorage.setItem(`theme`,t.dataset.theme)}catch{}n()});</script><main id="main" data-astro-cid-hkbrpulz><article class="post wrap" data-type="paper" data-pagefind-body data-astro-cid-krmc5xkp><header class="head" data-astro-cid-krmc5xkp><div class="meta" data-astro-cid-krmc5xkp><a class="type" href="/ko/papers/" data-pagefind-ignore data-astro-cid-krmc5xkp>논문</a><time datetime="2026-10-30" data-astro-cid-krmc5xkp>2026년 10월 30일</time><span class="pending" data-astro-cid-krmc5xkp>AI 정리, 검수 전</span></div><h1 data-astro-cid-krmc5xkp>VLA-HWBench: Where the Time Goes When VLA Models Run on Edge Hardware</h1><p class="summary" data-astro-cid-krmc5xkp>VLA-HWBench는 18개 오픈 VLA 모델을 NVIDIA Jetson AGX Thor와 AMD Ryzen AI Max+ PRO 395에서 7단계 호출 분해로 측정하고, 컴파일·전문 백엔드·저정밀화 최적화의 지연 효과를 분석한다. 결과적으로 엣지 VLA 지연은 모델 크기보다 액션 생성 방식과 런타임·플랫폼에 따라 달라진다.</p><dl class="source" data-astro-cid-krmc5xkp><dd class="byline" data-astro-cid-krmc5xkp>Borui Xu, Hongshi Tan, Wenqi Jiang, Bingsheng He, Ming Wu, Jason Zeng, Michael Heinrich, arXiv, 2026</dd><dt data-astro-cid-krmc5xkp>원문</dt><dd data-astro-cid-krmc5xkp><a href="https://arxiv.org/abs/2610.34717" rel="noopener" data-astro-cid-krmc5xkp>arXiv 2610.34717</a></dd><dd data-astro-cid-krmc5xkp><a href="https://doi.org/10.48550/arXiv.2610.34717" rel="noopener" data-astro-cid-krmc5xkp>DOI 10.48550/arXiv.2610.34717</a></dd></dl><ul class="tags" data-pagefind-ignore data-astro-cid-krmc5xkp><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/task/benchmarking/" title="task/benchmarking" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>태스크</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>벤치마크·성능 측정</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/method/architecture/vision-language-action/" title="method/architecture/vision-language-action" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>방법론</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="parent" data-astro-cid-jjfiepte>아키텍처</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>비전-언어-행동 모델(VLA)</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/method/inference/" title="method/inference" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>방법론</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>추론 최적화</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/domain/robotics/" title="domain/robotics" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>분야</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>로보틱스</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/domain/performance/" title="domain/performance" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>분야</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>성능 분석</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/domain/hardware-architecture/" title="domain/hardware-architecture" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>분야</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>하드웨어 아키텍처</span></a></li></ul><div class="tags-editor" hidden data-dir="content/papers/vla-hwbench-where-the-time-goes" data-pagefind-ignore data-astro-cid-krmc5xkp></div></header><div class="columns" data-astro-cid-krmc5xkp><div class="prose" data-astro-cid-krmc5xkp><p class="note" data-astro-cid-krmc5xkp>이 글은 로컬 LLM이 원문을 읽고 정리했으며 아직 사람이 검수하지 않았습니다. 수치나 주장은 원문으로 확인하세요.</p><details class="toc-inline" data-pagefind-ignore data-astro-cid-krmc5xkp><summary data-astro-cid-krmc5xkp>목차</summary><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#tldr" data-astro-cid-krmc5xkp>TL;DR</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#문제-정의" data-astro-cid-krmc5xkp>문제 정의</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#핵심-아이디어" data-astro-cid-krmc5xkp>핵심 아이디어</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#방법론" data-astro-cid-krmc5xkp>방법론</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#벤치마크-범위" data-astro-cid-krmc5xkp>벤치마크 범위</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#참조-구성" data-astro-cid-krmc5xkp>참조 구성</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#단계-정의와-측정" data-astro-cid-krmc5xkp>단계 정의와 측정</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#최적화-실험" data-astro-cid-krmc5xkp>최적화 실험</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#figure-해설" data-astro-cid-krmc5xkp>Figure 해설</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#실험-결과" data-astro-cid-krmc5xkp>실험 결과</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#한계" data-astro-cid-krmc5xkp>한계</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#비판적-검토" data-astro-cid-krmc5xkp>비판적 검토</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#강점" data-astro-cid-krmc5xkp>강점</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#약점의문" data-astro-cid-krmc5xkp>약점·의문</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#재현-가능성" data-astro-cid-krmc5xkp>재현 가능성</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#내-생각" data-astro-cid-krmc5xkp>내 생각</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#관련-논문" data-astro-cid-krmc5xkp>관련 논문</a></li></ol></details><h2 id="tldr">TL;DR</h2>
+<ul>
+<li>VLA-HWBench는 공개 VLA 모델 18개와 19개 참조 구성을 NVIDIA Jetson AGX Thor, AMD Ryzen AI Max+ PRO 395에서 실행해 한 inference call의 시간을 7단계로 분해한다.</li>
+<li>액션 생성 방식이 모델 크기보다 지연을 더 크게 결정하며, Jetson에서는 19개 구성 중 14개에서 action generation이 가장 큰 단계다.</li>
+<li>kernel fusion과 4-bit weights가 가장 큰 도움을 주지만 두 모델·Jetson에서만 존재하고, 이후에도 denoising steps는 memory bandwidth, 나머지 단계는 software overhead로 제한된다.</li>
+</ul>
+<h2 id="문제-정의">문제 정의</h2>
+<p>VLA(vision-language-action) 모델은 점점 로봇에 탑재된 edge device에서 실행된다. 폐쇄 루프 로봇 제어(closed-loop robot control)에서는 추론 지연(latency)이 실시간 제약을 만들 수 있지만, 대부분의 VLA 논문은 task success만 보고한다.</p>
+<p>기존 연구는 최근 VLA가 액션을 생성하는 방식 중 일부만 다루고, 한 inference call을 최대 3단계로만 나누며, 같은 모델에서 추론 최적화를 비교하지 않는 경우가 많다. 이 논문은 VLA 모델, 추론 소프트웨어, edge hardware를 어떻게 설계해야 하는지 판단하기 위해 “한 호출의 시간이 어디에 쓰이는가”를 측정한다.</p>
+<h2 id="핵심-아이디어">핵심 아이디어</h2>
+<p>핵심 직관은 end-to-end latency를 단일 숫자로 두지 않고, CPU 전처리, host-to-device copy, GPU vision encoding, prefill, action generation, CPU 후처리, 잔여 시간으로 나누어 보는 것이다. 이렇게 하면 모델 파라미터 수가 아니라 액션 생성 방식이 stage별 시간 분포를 결정하는지 확인할 수 있다.</p>
+<p>한 inference call의 지연을 7단계 합으로 표현하면 다음과 같다.</p>
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>T</mi><mrow><mi>c</mi><mi>a</mi><mi>l</mi><mi>l</mi></mrow></msub><mo>=</mo><msub><mi>T</mi><mrow><mi>S</mi><mn>0</mn></mrow></msub><mo>+</mo><msub><mi>T</mi><mrow><mi>S</mi><mn>1</mn></mrow></msub><mo>+</mo><msub><mi>T</mi><mrow><mi>S</mi><mn>2</mn></mrow></msub><mo>+</mo><msub><mi>T</mi><mrow><mi>S</mi><mn>3</mn></mrow></msub><mo>+</mo><msub><mi>T</mi><mrow><mi>S</mi><mn>4</mn></mrow></msub><mo>+</mo><msub><mi>T</mi><mrow><mi>S</mi><mn>5</mn></mrow></msub><mo>+</mo><msub><mi>T</mi><mrow><mi>S</mi><mn>6</mn></mrow></msub></mrow><annotation encoding="application/x-tex">T_{call}=T_{S0}+T_{S1}+T_{S2}+T_{S3}+T_{S4}+T_{S5}+T_{S6}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">c</span><span class="mord mathnormal mtight">a</span><span class="mord mathnormal mtight" style="margin-right:0.0197em;">l</span><span class="mord mathnormal mtight" style="margin-right:0.0197em;">l</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3283em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0576em;">S</span><span class="mord mtight">0</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3283em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0576em;">S</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3283em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0576em;">S</span><span class="mord mtight">2</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3283em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0576em;">S</span><span class="mord mtight">3</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3283em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0576em;">S</span><span class="mord mtight">4</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3283em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0576em;">S</span><span class="mord mtight">5</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3283em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0576em;">S</span><span class="mord mtight">6</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></span>
+<p>여기서 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>T</mi><mrow><mi>S</mi><mn>6</mn></mrow></msub></mrow><annotation encoding="application/x-tex">T_{S6}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3283em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0576em;">S</span><span class="mord mtight">6</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>은 S0부터 S5까지의 합에서 뺀 residual latency로 정의된다. 이 분해를 18개 공개 VLA 모델, 각 release 소프트웨어와 대체 백엔드, 두 edge 플랫폼에 적용해 지연의 원인을 비교한다.</p>
+<h2 id="방법론">방법론</h2>
+<h3 id="벤치마크-범위">벤치마크 범위</h3>
+<p>VLA-HWBench는 다음 범위를 측정한다.</p>
+<ul>
+<li>공개 VLA 모델 18개</li>
+<li>각 모델이 공개한 software와 alternative backends</li>
+<li>NVIDIA Jetson AGX Thor</li>
+<li>AMD Ryzen AI Max+ PRO 395</li>
+<li>한 inference call에 대한 7단계 분해</li>
+</ul>
+<p>참조 구성은 각 release의 자체 LIBERO evaluation이 한 call마다 실행하는 software, camera views 수, chunk size <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi></mrow><annotation encoding="application/x-tex">H</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0813em;">H</span></span></span></span>, 그리고 call당 실행 동작 수 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>H</mi><mi>e</mi></msub></mrow><annotation encoding="application/x-tex">H_e</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0813em;">H</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0813em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">e</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>를 기준으로 한다. 전체 참조 구성은 19개이며, 이는 모델 18개 중 일부가 flow와 discrete 등 서로 다른 action generation 설정으로 포함되기 때문이다.</p>
+<h3 id="참조-구성">참조 구성</h3>
+<p>참조 구성은 action generation 방식별로 나뉜다. Table 4에 기반한 주요 구성은 다음과 같다.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Action generation</th><th>Model</th><th>Software</th><th align="right">Views</th><th align="right"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi></mrow><annotation encoding="application/x-tex">H</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0813em;">H</span></span></span></span></th><th align="right"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>H</mi><mi>e</mi></msub></mrow><annotation encoding="application/x-tex">H_e</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0813em;">H</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0813em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">e</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></th></tr></thead><tbody><tr><td>Flow matching</td><td>X-VLA</td><td>authors’ code</td><td align="right">2</td><td align="right">30</td><td align="right">30</td></tr><tr><td>Flow matching</td><td>GR00T N1.7</td><td>authors’ code</td><td align="right">2</td><td align="right">16</td><td align="right">8</td></tr><tr><td>Flow matching</td><td>SmolVLA</td><td>LeRobot 0.6.1</td><td align="right">3</td><td align="right">50</td><td align="right">50</td></tr><tr><td>Flow matching</td><td>InstructVLA</td><td>authors’ code</td><td align="right">2</td><td align="right">8</td><td align="right">8</td></tr><tr><td>Flow matching</td><td><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>π</mi><mn>0.5</mn></msub></mrow><annotation encoding="application/x-tex">\pi_{0.5}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">0.5</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></td><td>LeRobot 0.6.1</td><td align="right">2</td><td align="right">50</td><td align="right">50</td></tr><tr><td>Flow matching</td><td>NORA-1.5</td><td>authors’ code</td><td align="right">1</td><td align="right">5</td><td align="right">5</td></tr><tr><td>Flow matching</td><td>Evo-1</td><td>authors’ code</td><td align="right">2</td><td align="right">50</td><td align="right">50</td></tr><tr><td>Flow matching</td><td>FastWAM</td><td>LeRobot 0.6.1</td><td align="right">2</td><td align="right">32</td><td align="right">32</td></tr><tr><td>Flow matching</td><td>MolmoAct2 (flow)</td><td>LeRobot 0.6.1</td><td align="right">2</td><td align="right">10</td><td align="right">10</td></tr><tr><td>Flow matching</td><td>InternVLA-A1.5</td><td>authors’ code</td><td align="right">2</td><td align="right">8</td><td align="right">8</td></tr><tr><td>Parallel decoding</td><td>VLA-Adapter</td><td>authors’ code</td><td align="right">2</td><td align="right">8</td><td align="right">8</td></tr><tr><td>Parallel decoding</td><td>SimpleVLA-RL</td><td>authors’ code</td><td align="right">1</td><td align="right">8</td><td align="right">8</td></tr><tr><td>Parallel decoding</td><td>OpenVLA-OFT</td><td>authors’ code</td><td align="right">2</td><td align="right">8</td><td align="right">8</td></tr><tr><td>Parallel decoding</td><td>RIPT-VLA</td><td>authors’ code</td><td align="right">2</td><td align="right">8</td><td align="right">8</td></tr><tr><td>Autoregressive tokens</td><td>pi0-FAST</td><td>LeRobot 0.6.1</td><td align="right">2</td><td align="right">10</td><td align="right">10</td></tr><tr><td>Autoregressive tokens</td><td>MolmoAct2 (discrete)</td><td>LeRobot 0.6.1</td><td align="right">2</td><td align="right">10</td><td align="right">10</td></tr><tr><td>Autoregressive tokens</td><td>VLA-0</td><td>authors’ code</td><td align="right">2</td><td align="right">8</td><td align="right">1</td></tr><tr><td>Reasoning, then actions</td><td>DeepThinkVLA (CoT)</td><td>authors’ code</td><td align="right">2</td><td align="right">10</td><td align="right">10</td></tr><tr><td>Reasoning, then actions</td><td>MolmoAct2-Think (cold)</td><td>authors’ code</td><td align="right">2</td><td align="right">10</td><td align="right">10</td></tr></tbody></table>
+<p>일부 release는 기본값으로 최적화 옵션을 켜고 ship한다. <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>π</mi><mn>0.5</mn></msub></mrow><annotation encoding="application/x-tex">\pi_{0.5}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">0.5</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>와 pi0-FAST checkpoints는 LeRobot의 compile option이 on으로 ship되고, MolmoAct2는 CUDA graphs로 ship된다. 그러나 VLA-HWBench의 reference configuration에서는 이 항목들을 off 상태로 측정한다. Appendix F가 이 defaults를 보고한다.</p>
+<h3 id="단계-정의와-측정">단계 정의와 측정</h3>
+<p>한 inference call은 Table 6의 7단계로 나뉜다.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Stage</th><th>Work</th><th>Unit</th><th>Measured by</th></tr></thead><tbody><tr><td>S0 Preprocessing</td><td>resize, normalize, tokenize</td><td>CPU</td><td>timer</td></tr><tr><td>S1 Host-to-device</td><td>copy the inputs</td><td>copy engine</td><td>timer</td></tr><tr><td>S2 Vision encoding</td><td>images to tokens</td><td>GPU</td><td>timer or kernel trace</td></tr><tr><td>S3 Prefill</td><td>language model, key-value cache</td><td>GPU</td><td>timer or kernel trace</td></tr><tr><td>S4 Action generation</td><td>denoising steps or decoded tokens</td><td>GPU</td><td>timer, step sweep or kernel trace</td></tr><tr><td>S5 Postprocessing</td><td>unnormalize, copy back</td><td>CPU</td><td>timer</td></tr><tr><td>S6 Residual</td><td>latency minus S0-S5</td><td>CPU</td><td>derived</td></tr></tbody></table>
+<p>측정 규칙은 다음과 같다.</p>
+<ul>
+<li>release code가 다른 stage 안에서 실행하는 stage는 그 안에 count된다.</li>
+<li>captured CUDA graph 내부의 stage는 Section 4.4에서 설명하는 방식으로 분리한다.</li>
+<li>LeRobot은 vision encoding, prefill, action generation을 policy call 하나 안에서 실행하므로, policy의 own calls를 time한다.
+<ul>
+<li>vision encoding: image-embedding call</li>
+<li>prefill: key-value cache를 채우는 language-model call</li>
+<li>action generation: policy call의 나머지</li>
+</ul>
+</li>
+<li>FastWAM에서는 vision encoding이 image의 VAE encoding이고, prefill은 text encoder와 video transformer의 first frame pass다.</li>
+<li>FlashRT의 GR00T N1.7 backbone graph에서는 vision encoding이 language model의 first RMSNorm에서 끝난다. language model 이후의 VL self-attention은 action generation으로 count되며, 이는 Isaac-GR00T와 같다. 각 부분은 graph의 kernel time에서 그 share를 가진다.</li>
+</ul>
+<h3 id="최적화-실험">최적화 실험</h3>
+<p>논문은 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>π</mi><mn>0.5</mn></msub></mrow><annotation encoding="application/x-tex">\pi_{0.5}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">0.5</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>와 GR00T N1.7에 대해 최적화를 단계별로 적용한다. Figure 5는 각 stage까지 최적화를 적용한 fastest configuration의 latency, 해당 stage의 speed-up, 그리고 Jetson에서의 stage times를 보여준다.</p>
+<p>핵심 insight 중 하나는 kernel fusion과 4-bit weights가 가장 큰 도움을 준다는 것이다. 그러나 제공된 메모에 따르면 이 최적화는 두 모델에서만, Jetson에서만 존재한다.</p>
+<h2 id="figure-해설">Figure 해설</h2>
+<p><img alt="그림 1: Jetson AGX Thor(왼쪽)과 Ryzen AI Max+ PRO 395(오른쪽)에서 로드된 파라미터 수 대비 엔드투엔드 지연 시간. 각 참조 구성당 하나의 점을 표시한다." loading="lazy" decoding="async" width="1104" height="404" src="/_astro/fig-1.C75B8wu__1wcbWH.webp"></p>
+<p><em>그림 1: Jetson AGX Thor(왼쪽)과 Ryzen AI Max+ PRO 395(오른쪽)에서 로드된 파라미터 수 대비 엔드투엔드 지연 시간. 각 참조 구성당 하나의 점을 표시한다. (출처: 원 논문)</em></p>
+<p>Jetson AGX Thor와 AMD Ryzen AI Max+ PRO 395에서 loaded parameter count 대비 end-to-end latency를 보여준다. 각 점은 reference configuration 하나를 나타낸다. 이 그림은 지연이 파라미터 수만으로 설명되지 않음을 시각적으로 제시한다.</p>
+<p><img alt="그림 2: 한 번의 추론 호출을 구성하는 7단계. S0과 S5는 CPU에서, S2–S4는 GPU에서 실행된다." loading="lazy" decoding="async" width="1101" height="206" src="/_astro/fig-2.Dx7uam32_ZA2LdT.webp"></p>
+<p><em>그림 2: 한 번의 추론 호출을 구성하는 7단계. S0과 S5는 CPU에서, S2–S4는 GPU에서 실행된다. (출처: 원 논문)</em></p>
+<p>한 inference call의 7단계를 보여준다. S0과 S5는 CPU에서, S2부터 S4는 GPU에서 실행된다. 방법론의 단계 정의와 대응한다.</p>
+<p><img alt="그림 3: (a) Jetson, (b) AMD 플랫폼에서 19개 참조 구성의 단계별 분해. 융합된 단계는 이를 포함하는 단계에 집계한다." loading="lazy" decoding="async" width="1092" height="629" src="/_astro/fig-3.DXSqnkkb_Z2tmSFt.webp"></p>
+<p><em>그림 3: (a) Jetson, (b) AMD 플랫폼에서 19개 참조 구성의 단계별 분해. 융합된 단계는 이를 포함하는 단계에 집계한다. (출처: 원 논문)</em></p>
+<p>19개 reference configuration의 stage breakdown을 Jetson(a)과 AMD 플랫폼(b)에서 보여준다. fused stage는 그 stage를 포함하는 stage에 count된다. 구성별 시간 분포와 플랫폼별 차이를 비교할 수 있다.</p>
+<p><img alt="그림 4: 19개 참조 구성의 지연 시간. (a) Jetson(막대, 5~95퍼센타일 범위) 및 AMD 플랫폼(원)의 중앙값 지연 시간. (b) 청크 크기 H에 따른 지연 시간." loading="lazy" decoding="async" width="1103" height="373" src="/_astro/fig-4.CDVHGQ_i_ZfIPcX.webp"></p>
+<p><em>그림 4: 19개 참조 구성의 지연 시간. (a) Jetson(막대, 5~95퍼센타일 범위) 및 AMD 플랫폼(원)의 중앙값 지연 시간. (b) 청크 크기 H에 따른 지연 시간. (출처: 원 논문)</em></p>
+<p>19개 reference configuration의 latency를 보여준다. (a)는 Jetson의 median latency bar와 5th–95th percentile, AMD 플랫폼의 circles를 나타낸다. (b)는 chunk size <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi></mrow><annotation encoding="application/x-tex">H</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0813em;">H</span></span></span></span>에 따른 latency 변화를 보여준다.</p>
+<p><img alt="그림 5: \pi _ { 0 . 5 } 및 GR00T N1.7에 단계별로 적용한 최적화. (a, b) 각 단계까지의 최적화를 적용한 가장 빠른 구성의 지연 시간으로, 해당 단계의 속도 향상을 라벨로 표시한다. (c, d) Jetson에서의 해당 단계별 소요 시간." loading="lazy" decoding="async" width="1103" height="390" src="/_astro/fig-5.DtF71SlG_Z25WTD.webp"></p>
+<p><em>그림 5: <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>π</mi><mn>0.5</mn></msub></mrow><annotation encoding="application/x-tex">\pi _ { 0 . 5 }</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">0.5</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 및 GR00T N1.7에 단계별로 적용한 최적화. (a, b) 각 단계까지의 최적화를 적용한 가장 빠른 구성의 지연 시간으로, 해당 단계의 속도 향상을 라벨로 표시한다. (c, d) Jetson에서의 해당 단계별 소요 시간. (출처: 원 논문)</em></p>
+<p><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>π</mi><mn>0.5</mn></msub></mrow><annotation encoding="application/x-tex">\pi_{0.5}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">0.5</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>와 GR00T N1.7에 단계별로 적용한 최적화를 보여준다. (a, b)는 각 stage까지 최적화를 적용한 fastest configuration의 latency를 표시하고, 해당 stage의 speed-up을 라벨로 붙인다. (c, d)는 Jetson에서의 stage times를 보여준다.</p>
+<p><img alt="그림 6: 가장 빠른 구성들을 제한하는 요인. (a) 단계별 비중으로, 캡처된 그래프 내부의 단계는 해당 그래프의 커널로 구분하여 표시한다. (b) PyTorch의 14개 CPU 스레드와 1개 스레드를 각각 사용한 GR00T N1.7의 CPU 전처리 및 하위 단계. (c, d) 루프라인으로, 피크 메모리 대역폭을 기울어진 선으로, 각 수치 형식의 피크 성능을 수평선으로, 각 GPU 단계를 그 연산 강도 F / W와 달성 처리량에 표시한다." loading="lazy" decoding="async" width="428" height="259" src="/_astro/fig-9.B86_vxTk_24ct1z.webp"></p>
+<p><em>그림 6: 가장 빠른 구성들을 제한하는 요인. (a) 단계별 비중으로, 캡처된 그래프 내부의 단계는 해당 그래프의 커널로 구분하여 표시한다. (b) PyTorch의 14개 CPU 스레드와 1개 스레드를 각각 사용한 GR00T N1.7의 CPU 전처리 및 하위 단계. (c, d) 루프라인으로, 피크 메모리 대역폭을 기울어진 선으로, 각 수치 형식의 피크 성능을 수평선으로, 각 GPU 단계를 그 연산 강도 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi><mi mathvariant="normal">/</mi><mi>W</mi></mrow><annotation encoding="application/x-tex">F / W</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">F</span><span class="mord">/</span><span class="mord mathnormal" style="margin-right:0.1389em;">W</span></span></span></span>와 달성 처리량에 표시한다. (출처: 원 논문)</em></p>
+<p>fastest configurations를 제한하는 요인을 보여준다. (a)는 stage shares를 나타내며, captured graph 내부의 stage는 그 kernels로 분리한다. (b)는 GR00T N1.7의 CPU preprocessing과 sub-steps를 PyTorch의 14 CPU threads와 one thread 조건에서 보여준다. (c, d)는 rooflines를 보여주며, peak memory bandwidth는 기울어진 선, 각 number format의 peak는 수평선, 각 GPU stage는 arithmetic intensity <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi><mi mathvariant="normal">/</mi><mi>W</mi></mrow><annotation encoding="application/x-tex">F / W</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">F</span><span class="mord">/</span><span class="mord mathnormal" style="margin-right:0.1389em;">W</span></span></span></span>와 achieved throughput 위치에 표시된다.</p>
+<p><img alt="그림 7: 각 단계의 두 상한 중 더 큰 값에 따른 가장 빠른 구성들의 모든 GPU 단계 시간을 커널 클래스별로 구분하여 표시하며, 동작 생성은 디노이징 스텝당 측정한다." loading="lazy" decoding="async" width="690" height="509" src="/_astro/fig-10.CyFKVQPu_2vmpwm.webp"></p>
+<p><em>그림 7: 각 단계의 두 상한 중 더 큰 값에 따른 가장 빠른 구성들의 모든 GPU 단계 시간을 커널 클래스별로 구분하여 표시하며, 동작 생성은 디노이징 스텝당 측정한다. (출처: 원 논문)</em></p>
+<p>fastest configurations의 모든 GPU stage 시간을 두 bound 중 더 큰 값에 대해 보여준다. kernel class별로 나누며, action generation은 denoising step당 측정한다. 어떤 kernel class가 bound 대비 얼마나 차지하는지 확인할 수 있다.</p>
+<h2 id="실험-결과">실험 결과</h2>
+<p>주요 벤치마크는 19개 reference configuration을 Jetson AGX Thor와 AMD Ryzen AI Max+ PRO 395에서 측정한 latency다. 아래 표는 제공된 메모에서 완결된 Table 7 행을 발췌한 것이다.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>모델</th><th align="right">Jetson <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>50</mn></msub></mrow><annotation encoding="application/x-tex">p_{50}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">50</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> (ms)</th><th align="right">Jetson per action (ms)</th><th align="right">Ryzen <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>50</mn></msub></mrow><annotation encoding="application/x-tex">p_{50}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">50</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> (ms)</th><th align="right">Ryzen per action (ms)</th><th align="right">AMD / Jetson</th></tr></thead><tbody><tr><td>X-VLA</td><td align="right">76.7</td><td align="right">2.6</td><td align="right">206</td><td align="right">6.9</td><td align="right">2.69</td></tr><tr><td>VLA-Adapter</td><td align="right">92.7</td><td align="right">11.6</td><td align="right">114</td><td align="right">14.2</td><td align="right">1.23</td></tr><tr><td>GR00T N1.7</td><td align="right">119</td><td align="right">7.4</td><td align="right">297</td><td align="right">18.6</td><td align="right">2.50</td></tr><tr><td>SimpleVLA-RL</td><td align="right">129</td><td align="right">16.1</td><td align="right">446</td><td align="right">55.7</td><td align="right">3.46</td></tr><tr><td>SmolVLA</td><td align="right">191</td><td align="right">3.8</td><td align="right">140</td><td align="right">2.8</td><td align="right">0.73</td></tr><tr><td>InstructVLA</td><td align="right">235</td><td align="right">29.4</td><td align="right">357</td><td align="right">44.7</td><td align="right">1.52</td></tr><tr><td>OpenVLA-OFT</td><td align="right">250</td><td align="right">31.3</td><td align="right">495</td><td align="right">61.8</td><td align="right">1.98</td></tr></tbody></table>
+<p>핵심 수치는 다음과 같다.</p>
+<ul>
+<li>Jetson에서 reference configuration 간 지연은 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>82</mn><mo>×</mo></mrow><annotation encoding="application/x-tex">82\times</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">82</span><span class="mord">×</span></span></span></span> 범위까지 벌어진다.</li>
+<li>AMD 플랫폼에서는 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>157</mn><mo>×</mo></mrow><annotation encoding="application/x-tex">157\times</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">157</span><span class="mord">×</span></span></span></span> 범위까지 벌어진다.</li>
+<li>Jetson에서 19개 구성 중 14개에서 action generation이 가장 큰 stage다.</li>
+<li>time per action은 latency를 chunk size <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi></mrow><annotation encoding="application/x-tex">H</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0813em;">H</span></span></span></span>로 나눈 값이다.</li>
+<li>50 ms 초과 값은 해당 configuration이 LIBERO가 실행하는 속도보다 느리게 actions를 생성함을 의미한다.</li>
+</ul>
+<p>최적화 실험에서는 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>π</mi><mn>0.5</mn></msub></mrow><annotation encoding="application/x-tex">\pi_{0.5}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">0.5</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>와 GR00T N1.7에 대해 단계별 최적화를 적용하고, fastest configuration의 누적 latency와 stage speed-up을 Figure 5에서 보고한다. 제공된 메모에는 구체적인 speed-up 수치 표가 별도로 포함되어 있지 않다.</p>
+<p>최적화 이후 bottleneck 분석에서는 Jetson에서 소수 토큰을 처리하는 stage, 특히 denoising steps가 memory bandwidth로 제한되고, 나머지 stage는 software로 제한된다고 보고한다. 이 결과는 Figure 9와 Figure 10의 roofline 및 kernel class 분해와 연결된다.</p>
+<h2 id="한계">한계</h2>
+<p>제공된 메모에는 저자가 직접 밝힌 한계 섹션이 포함되어 있지 않다.</p>
+<h2 id="비판적-검토">비판적 검토</h2>
+<h3 id="강점">강점</h3>
+<ul>
+<li><strong>7단계 분해로 추론 병목 정량화</strong> — 비전-언어-액션(VLA, vision-language-action) 모델의 한 추론 호출(inference call)을 전처리, 호스트-디바이스 복사, 비전 인코딩(vision encoding), 프리필(prefill), 액션 생성(action generation), 후처리, 잔여항으로 나누어 엣지 디바이스(edge device)에서 시간이 어디에 쓰이는지를 측정한다 (근거: Abstract, Table 6).</li>
+<li><strong>액션 생성 방식별 비교 설계</strong> — flow matching, parallel decoding, autoregressive tokens, reasoning-then-actions로 모델을 묶고 각 구성의 소프트웨어, 카메라 뷰 수, 청크 크기 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi></mrow><annotation encoding="application/x-tex">H</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0813em;">H</span></span></span></span>, 실행 지평 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>H</mi><mi>e</mi></msub></mrow><annotation encoding="application/x-tex">H_e</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0813em;">H</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0813em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">e</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>를 명시하여 방식 간 지연 차이를 비교할 수 있게 한다 (근거: Abstract, Table 4).</li>
+<li><strong>플랫폼 간 지연 지표 제공</strong> — reference configuration에 대해 Jetson AGX Thor와 AMD Ryzen AI Max+ PRO 395의 median latency(<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>50</mn></msub></mrow><annotation encoding="application/x-tex">p_{50}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">50</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>), <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>5</mn></msub></mrow><annotation encoding="application/x-tex">p_5</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">5</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>–<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>95</mn></msub></mrow><annotation encoding="application/x-tex">p_{95}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">95</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>, action당 시간, AMD/Jetson 비율을 정리해 플랫폼 차이를 보여준다 (근거: Table 7 일부; 제공된 메모에는 전체 행이 없다).</li>
+</ul>
+<h3 id="약점의문">약점·의문</h3>
+<ul>
+<li><strong>핵심 insight의 실험 근거가 제공된 메모에 부족하다</strong> — Abstract은 커널 퓨전(kernel fusion)과 4-bit 가중치가 가장 큰 도움을 주며, 최적화 후에도 Jetson에서 소수 토큰 처리 단계는 메모리 대역폭(memory bandwidth)으로 제한되고 나머지는 소프트웨어로 제한된다고 주장하지만, 해당 효과를 뒷받침하는 표·그림·ablation 수치가 제공된 메모에 없다 (근거: Abstract; 제공된 메모에 관련 표 없음).</li>
+<li><strong>baseline 비교의 공정성 판단이 어렵다</strong> — 각 모델이 공개한 소프트웨어와 대체 백엔드(alternative backends)를 비교한다고 하나, 어떤 백엔드를 선택했는지, 동일 모델에서 동일한 최적화 수준으로 맞췄는지, 성능/정확도 trade-off를 어떻게 처리했는지가 제공된 메모에 없다 (근거: Abstract, Table 4; 제공된 메모에 backend 선택 기준 없음).</li>
+<li><strong>통계적 근거가 불충분하다</strong> — Table 7 일부에는 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>50</mn></msub></mrow><annotation encoding="application/x-tex">p_{50}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">50</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>과 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>5</mn></msub></mrow><annotation encoding="application/x-tex">p_5</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">5</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>–<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>95</mn></msub></mrow><annotation encoding="application/x-tex">p_{95}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">95</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>가 있으나 반복 실행 횟수, 표준편차, 통계적 유의성 검정은 제공된 메모에 없다. Abstract의 “Jetson에서 82×, AMD에서 157× 범위” 주장도 전체 Table 7이 없어 확인하기 어렵다 (근거: Abstract, Table 7 일부; 제공된 메모에 반복/분산/유의성 정보 없음).</li>
+<li><strong>모델 수와 구성 수의 관계가 명확하지 않다</strong> — Abstract은 18개 공개 VLA 모델을 측정한다고 하지만 Table 4는 19개 reference configuration을 나열한다. MolmoAct2의 flow/discrete/Think처럼 한 모델이 여러 구성으로 측정될 수 있어, 결론을 모델 단위인지 구성 단위인지로 일반화하는지 불명확하다 (근거: Abstract, Table 4)(해석).</li>
+<li><strong>잔여항과 CUDA graph 분리가 결론에 영향을 줄 수 있다</strong> — S6 Residual은 전체 latency에서 S0–S5를 뺀 유도값이고, captured CUDA graph 내부 stage 분리 방법은 Section 4.4에 의존한다. 그러나 제공된 메모에는 Section 4.4 본문이 없어 residual이 실제 병목을 얼마나 정확히 반영하는지 판단하기 어렵다 (근거: Table 6, A.2; 제공된 메모에 Section 4.4 본문 없음)(해석).</li>
+<li><strong>일반화 근거가 제한적이다</strong> — 측정은 두 엣지 플랫폼과 LIBERO checkpoint 중심이다. 다른 로봇 작업, 더 큰 모델, 다른 전력/클럭/메모리 대역폭 환경으로의 일반화를 뒷받침하는 실험이 제공된 메모에 없다 (근거: Abstract, Table 4, Table 5).</li>
+</ul>
+<h3 id="재현-가능성">재현 가능성</h3>
+<ul>
+<li>모델별 코드 저장소와 checkpoint 이름은 있으나 벤치마크 측정 코드, 백엔드 버전, GPU/CPU 클럭·전원 설정, 반복 횟수, 계산 비용이 제공된 메모에 없다 (근거: Table 4, Table 5; 제공된 메모에 재현성 섹션 없음).</li>
+</ul>
+<h2 id="내-생각">내 생각</h2>
+<h2 id="관련-논문">관련 논문</h2>
+<p>논문이 비교하거나 참조 구성으로 포함한 주요 VLA 모델과 실행 소프트웨어는 다음과 같다. GitHub stars와 HuggingFace downloads는 2026-09-26 기준이며, dash는 HuggingFace가 downloads를 count하지 않는 checkpoint를 나타낸다.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>모델</th><th>액션 생성 방식</th><th>코드 저장소 (stars)</th><th align="right">LIBERO checkpoint downloads</th></tr></thead><tbody><tr><td>X-VLA</td><td>Flow matching</td><td>2toinf/X-VLA (733)</td><td align="right">12,303</td></tr><tr><td>GR00T N1.7</td><td>Flow matching</td><td>NVIDIA/Isaac-GR00T (8,130)</td><td align="right">-</td></tr><tr><td>SmolVLA</td><td>Flow matching</td><td>huggingface/lerobot (27,783)</td><td align="right">68,467</td></tr><tr><td>InstructVLA</td><td>Flow matching</td><td>InternRobotics/InstructVLA (117)</td><td align="right">220</td></tr><tr><td><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>π</mi><mn>0.5</mn></msub></mrow><annotation encoding="application/x-tex">\pi_{0.5}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">0.5</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></td><td>Flow matching</td><td>Physical-Intelligence/openpi (13,997)</td><td align="right">174,582</td></tr><tr><td>NORA-1.5</td><td>Flow matching</td><td>declare-lab/nora-1.5 (109)</td><td align="right">109</td></tr><tr><td>Evo-1</td><td>Flow matching</td><td>MINT-SJTU/Evo-1 (364)</td><td align="right">823</td></tr><tr><td>FastWAM</td><td>Flow matching</td><td>yuantianyuan01/FastWAM (1,526)</td><td align="right">1,813</td></tr><tr><td>MolmoAct2</td><td>Flow / discrete</td><td>allenai/molmoact2 (772)</td><td align="right">5,449</td></tr><tr><td>InternVLA-A1.5</td><td>Flow matching</td><td>InternRobotics/InternVLA-A-series (558)</td><td align="right">449</td></tr><tr><td>VLA-Adapter</td><td>Parallel decoding</td><td>OpenHelix-Team/VLA-Adapter (2,314)</td><td align="right">1,171</td></tr><tr><td>SimpleVLA-RL</td><td>Parallel decoding</td><td>PRIME-RL/SimpleVLA-RL (1,865)</td><td align="right">631</td></tr><tr><td>OpenVLA-OFT</td><td>Parallel decoding</td><td>moojink/openvla-oft (1,399)</td><td align="right">36,876</td></tr><tr><td>RIPT-VLA</td><td>Parallel decoding</td><td>Ariostgx/ript-vla (172)</td><td align="right">-</td></tr><tr><td>pi0-FAST</td><td>Autoregressive tokens</td><td>Physical-Intelligence/openpi (13,997)</td><td align="right">68,122</td></tr><tr><td>VLA-0</td><td>Autoregressive tokens</td><td>NVlabs/vla0 (492)</td><td align="right">725</td></tr><tr><td>DeepThinkVLA</td><td>Reasoning, then actions</td><td>OpenBMB/DeepThinkVLA (531)</td><td align="right">1,052</td></tr><tr><td>MolmoAct2-Think</td><td>Reasoning, then actions</td><td>allenai/molmoact2 (772)</td><td align="right">1,927</td></tr></tbody></table>
+<p>실행 소프트웨어와 백엔드로는 각 모델의 authors’ code, LeRobot 0.6.1, Isaac-GR00T, 그리고 GR00T N1.7 backbone graph 관련 FlashRT 구성이 메모에 등장한다.</p><div class="notes-editor" hidden data-path="content/papers/vla-hwbench-where-the-time-goes/index.ko.md" data-notes data-pagefind-ignore data-astro-cid-krmc5xkp><button type="button" class="ne-open" data-astro-cid-krmc5xkp>내 생각 쓰기</button><form class="ne-form" hidden data-astro-cid-krmc5xkp><textarea rows="8" aria-label="내 생각 (markdown)" placeholder="markdown 으로 쓰기" data-astro-cid-krmc5xkp></textarea><div class="ne-actions" data-astro-cid-krmc5xkp><button type="submit" data-astro-cid-krmc5xkp>저장</button><button type="button" class="ne-delete" data-astro-cid-krmc5xkp>지우기</button><button type="button" class="ne-cancel" data-astro-cid-krmc5xkp>취소</button><span class="ne-status" role="status" data-astro-cid-krmc5xkp></span></div></form></div><div class="post-admin" hidden data-dir="content/papers/vla-hwbench-where-the-time-goes" data-lang="ko" data-incoming="[]" data-pagefind-ignore data-astro-cid-krmc5xkp></div></div><nav class="toc" aria-labelledby="toc-h" data-pagefind-ignore data-astro-cid-krmc5xkp><h2 id="toc-h" data-astro-cid-krmc5xkp>목차</h2><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#tldr" data-astro-cid-krmc5xkp>TL;DR</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#문제-정의" data-astro-cid-krmc5xkp>문제 정의</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#핵심-아이디어" data-astro-cid-krmc5xkp>핵심 아이디어</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#방법론" data-astro-cid-krmc5xkp>방법론</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#벤치마크-범위" data-astro-cid-krmc5xkp>벤치마크 범위</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#참조-구성" data-astro-cid-krmc5xkp>참조 구성</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#단계-정의와-측정" data-astro-cid-krmc5xkp>단계 정의와 측정</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#최적화-실험" data-astro-cid-krmc5xkp>최적화 실험</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#figure-해설" data-astro-cid-krmc5xkp>Figure 해설</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#실험-결과" data-astro-cid-krmc5xkp>실험 결과</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#한계" data-astro-cid-krmc5xkp>한계</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#비판적-검토" data-astro-cid-krmc5xkp>비판적 검토</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#강점" data-astro-cid-krmc5xkp>강점</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#약점의문" data-astro-cid-krmc5xkp>약점·의문</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#재현-가능성" data-astro-cid-krmc5xkp>재현 가능성</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#내-생각" data-astro-cid-krmc5xkp>내 생각</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#관련-논문" data-astro-cid-krmc5xkp>관련 논문</a></li></ol></nav></div></article></main><footer class="wrap" data-astro-cid-hkbrpulz><p class="site-footer" data-astro-cid-hkbrpulz>Tech Blog</p></footer><dialog class="search" aria-label="글 검색" data-unavailable="검색 색인은 사이트를 빌드할 때 만들어집니다. npm run build 후 npm run preview 에서 확인하세요." data-astro-cid-ac66eqjo><div class="search-head" data-astro-cid-ac66eqjo><h2 data-astro-cid-ac66eqjo>글 검색</h2><button type="button" class="close" data-search-close data-astro-cid-ac66eqjo>닫기</button></div><div id="pagefind" class="search-body" data-astro-cid-ac66eqjo></div></dialog><script type="module">var e=document.querySelector(`dialog.search`),t=e.querySelector(`#pagefind`),n=!1;async function r(){if(!n){n=!0;try{let e=document.createElement(`link`);e.rel=`stylesheet`,e.href=`/pagefind/pagefind-ui.css`,document.head.append(e),await new Promise((e,t)=>{let n=document.createElement(`script`);n.src=`/pagefind/pagefind-ui.js`,n.onload=()=>e(),n.onerror=()=>t(Error(`pagefind missing`)),document.head.append(n)}),new PagefindUI({element:t,showSubResults:!0,showImages:!1,autofocus:!0})}catch{t.textContent=e.dataset.unavailable??``}}}function i(){e.showModal(),r(),t.querySelector(`input`)?.focus()}document.querySelectorAll(`[data-search-open]`).forEach(e=>e.addEventListener(`click`,i)),e.querySelector(`[data-search-close]`).addEventListener(`click`,()=>e.close()),e.addEventListener(`click`,t=>{t.target===e&&e.close()}),document.addEventListener(`keydown`,t=>{let n=t.target.tagName;e.open||n===`INPUT`||n===`TEXTAREA`||(t.key===`/`||(t.metaKey||t.ctrlKey)&&t.key.toLowerCase()===`k`)&&(t.preventDefault(),i())});</script></body></html><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_0_lang.CMBxuFBs.js"></script><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_1_lang.DQvCU8Du.js"></script>

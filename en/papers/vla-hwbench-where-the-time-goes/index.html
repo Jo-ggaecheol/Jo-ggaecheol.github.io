@@ -1,0 +1,528 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-hkbrpulz><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>VLA-HWBench: Where the Time Goes When VLA Models Run on Edge Hardware | Tech Blog</title><meta name="description" content="VLA-HWBench measures 18 open VLA models on NVIDIA Jetson AGX Thor and AMD Ryzen AI Max+ PRO 395 with a seven-stage call breakdown, analyzing latency effects of compilation, specialized backends, and low-precision optimization. It finds that edge VLA latency is driven more by action-generation method, runtime, and platform than by model size."><meta property="og:title" content="VLA-HWBench: Where the Time Goes When VLA Models Run on Edge Hardware"><meta property="og:description" content="VLA-HWBench measures 18 open VLA models on NVIDIA Jetson AGX Thor and AMD Ryzen AI Max+ PRO 395 with a seven-stage call breakdown, analyzing latency effects of compilation, specialized backends, and low-precision optimization. It finds that edge VLA latency is driven more by action-generation method, runtime, and platform than by model size."><meta name="theme-color" content="#f4f6f9" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#0e131b" media="(prefers-color-scheme: dark)"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate" hreflang="ko" href="/ko/papers/vla-hwbench-where-the-time-goes/"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap"><script>
+      // 깜빡임 방지: 렌더 전에 테마 결정 (저장값 > 시스템 설정)
+      (() => {
+        let saved = null;
+        try {
+          saved = localStorage.getItem('theme');
+        } catch {}
+        const dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      })();
+    </script><link rel="stylesheet" href="/_astro/Base.DPAvT9-G.css"><style>.tagpath[data-astro-cid-jjfiepte]{font-size:var(--step--1);color:var(--ink-3);flex-wrap:wrap;align-items:baseline;gap:0 .3em;line-height:1.6;text-decoration:none;display:inline-flex}.leaf[data-astro-cid-jjfiepte]{color:var(--ink-2);font-weight:500}.sep[data-astro-cid-jjfiepte]{opacity:.55}.tagpath[data-astro-cid-jjfiepte]:hover .leaf[data-astro-cid-jjfiepte]{color:var(--ink);text-underline-offset:.2em;text-decoration:underline}.row[data-astro-cid-gc2g3jd6]{border-top:1px solid var(--rule);grid-template-columns:8.5rem 1fr;gap:.25rem 1.5rem;padding-block:1.6rem;display:grid}.meta[data-astro-cid-gc2g3jd6]{font-size:var(--step--1);color:var(--ink-3);font-variant-numeric:tabular-nums;flex-direction:column;gap:.15rem;padding-top:.3rem;display:flex}.type[data-astro-cid-gc2g3jd6]{color:var(--type);align-items:center;gap:.45rem;font-weight:600;display:inline-flex}.type[data-astro-cid-gc2g3jd6]:before{content:"";background:var(--type);border-radius:2px;width:.5rem;height:.5rem}.pending[data-astro-cid-gc2g3jd6]{color:var(--ink-3);align-self:flex-start;font-size:.75rem}.draft[data-astro-cid-gc2g3jd6]{border:1px dashed var(--rule-strong);border-radius:4px;align-self:flex-start;margin-top:.3rem;padding:0 .4rem;font-size:.75rem}.title[data-astro-cid-gc2g3jd6]{font-size:var(--step-2);margin:0;font-weight:600;line-height:1.35}.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]{background-image:linear-gradient(var(--type), var(--type));background-position:0 100%;background-repeat:no-repeat;background-size:0 2px;text-decoration:none;transition:background-size .2s}.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]:hover,.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]:focus-visible{background-size:100% 2px}.summary[data-astro-cid-gc2g3jd6]{max-width:62ch;color:var(--ink-2);margin:.45rem 0 0}.tags[data-astro-cid-gc2g3jd6]{flex-wrap:wrap;gap:.1rem 1.1rem;margin:.6rem 0 0;padding:0;list-style:none;display:flex}@media (width<=640px){.row[data-astro-cid-gc2g3jd6]{grid-template-columns:1fr;padding-block:1.25rem}.meta[data-astro-cid-gc2g3jd6]{flex-flow:wrap;gap:.75rem;padding-top:0}.draft[data-astro-cid-gc2g3jd6]{margin-top:0}.title[data-astro-cid-gc2g3jd6]{font-size:var(--step-1)}}
+</style><link rel="stylesheet" href="/_astro/_slug_.BU2vDBGq.css"></head><body data-astro-cid-hkbrpulz><a class="skip" href="#main" data-astro-cid-hkbrpulz>Skip to content</a><header class="site-header wrap" data-astro-cid-nen7h5rs><a class="wordmark" href="/en/" translate="no" data-astro-cid-nen7h5rs>Tech Blog</a><nav class="nav" aria-label="Main" data-astro-cid-nen7h5rs><ul data-astro-cid-nen7h5rs><li data-type="paper" data-astro-cid-nen7h5rs><a href="/en/papers/" aria-current="page" data-astro-cid-nen7h5rs>Papers</a></li><li data-type="study" data-astro-cid-nen7h5rs><a href="/en/study/" data-astro-cid-nen7h5rs>Study</a></li><li data-type="dev" data-astro-cid-nen7h5rs><a href="/en/dev/" data-astro-cid-nen7h5rs>Dev</a></li><li data-type="clip" data-astro-cid-nen7h5rs><a href="/en/clips/" data-astro-cid-nen7h5rs>Clips</a></li><li data-astro-cid-nen7h5rs><a href="/en/tags/" data-astro-cid-nen7h5rs>Tags</a></li></ul></nav><div class="tools" data-astro-cid-nen7h5rs><button class="icon-btn" type="button" data-search-open aria-label="Search" aria-keyshortcuts="/" data-astro-cid-nen7h5rs><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8" data-astro-cid-nen7h5rs></circle><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-astro-cid-nen7h5rs></path></svg></button><a class="lang" href="/ko/papers/vla-hwbench-where-the-time-goes/" hreflang="ko" aria-label="Read in Korean" data-astro-cid-nen7h5rs>한국어</a><button class="icon-btn" type="button" data-theme-toggle data-label-light="Switch to light mode" data-label-dark="Switch to dark mode" aria-label="Switch to dark mode" data-astro-cid-nen7h5rs><svg class="sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8" data-astro-cid-nen7h5rs></circle><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-astro-cid-nen7h5rs></path></svg><svg class="moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><path d="M19.5 14.6A7.8 7.8 0 0 1 9.4 4.5a7.8 7.8 0 1 0 10.1 10.1Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" data-astro-cid-nen7h5rs></path></svg></button></div></header><script type="module">var e=document.querySelector(`[data-theme-toggle]`),t=document.documentElement,n=()=>{let n=t.dataset.theme===`dark`;document.querySelectorAll(`meta[name="theme-color"]`).forEach(e=>{e.setAttribute(`content`,n?`#0e131b`:`#f4f6f9`),e.removeAttribute(`media`)}),e.setAttribute(`aria-label`,(n?e.dataset.labelLight:e.dataset.labelDark)??``),e.setAttribute(`aria-pressed`,String(n))};n(),e.addEventListener(`click`,()=>{t.dataset.theme=t.dataset.theme===`dark`?`light`:`dark`;try{localStorage.setItem(`theme`,t.dataset.theme)}catch{}n()});</script><main id="main" data-astro-cid-hkbrpulz><article class="post wrap" data-type="paper" data-pagefind-body data-astro-cid-krmc5xkp><header class="head" data-astro-cid-krmc5xkp><div class="meta" data-astro-cid-krmc5xkp><a class="type" href="/en/papers/" data-pagefind-ignore data-astro-cid-krmc5xkp>Papers</a><time datetime="2026-10-30" data-astro-cid-krmc5xkp>Oct 30, 2026</time><span class="pending" data-astro-cid-krmc5xkp>AI-written, not reviewed</span></div><h1 data-astro-cid-krmc5xkp>VLA-HWBench: Where the Time Goes When VLA Models Run on Edge Hardware</h1><p class="summary" data-astro-cid-krmc5xkp>VLA-HWBench measures 18 open VLA models on NVIDIA Jetson AGX Thor and AMD Ryzen AI Max+ PRO 395 with a seven-stage call breakdown, analyzing latency effects of compilation, specialized backends, and low-precision optimization. It finds that edge VLA latency is driven more by action-generation method, runtime, and platform than by model size.</p><dl class="source" data-astro-cid-krmc5xkp><dd class="byline" data-astro-cid-krmc5xkp>Borui Xu, Hongshi Tan, Wenqi Jiang, Bingsheng He, Ming Wu, Jason Zeng, Michael Heinrich, arXiv, 2026</dd><dt data-astro-cid-krmc5xkp>Source</dt><dd data-astro-cid-krmc5xkp><a href="https://arxiv.org/abs/2610.34717" rel="noopener" data-astro-cid-krmc5xkp>arXiv 2610.34717</a></dd><dd data-astro-cid-krmc5xkp><a href="https://doi.org/10.48550/arXiv.2610.34717" rel="noopener" data-astro-cid-krmc5xkp>DOI 10.48550/arXiv.2610.34717</a></dd></dl><ul class="tags" data-pagefind-ignore data-astro-cid-krmc5xkp><li data-astro-cid-krmc5xkp><a class="tagpath" href="/en/tags/task/benchmarking/" title="task/benchmarking" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Task</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Benchmarking</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/en/tags/method/architecture/vision-language-action/" title="method/architecture/vision-language-action" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Method</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="parent" data-astro-cid-jjfiepte>Architecture</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Vision-Language-Action (VLA)</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/en/tags/method/inference/" title="method/inference" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Method</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Inference</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/en/tags/domain/robotics/" title="domain/robotics" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Field</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Robotics</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/en/tags/domain/performance/" title="domain/performance" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Field</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Performance</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/en/tags/domain/hardware-architecture/" title="domain/hardware-architecture" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Field</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Hardware Architecture</span></a></li></ul><div class="tags-editor" hidden data-dir="content/papers/vla-hwbench-where-the-time-goes" data-pagefind-ignore data-astro-cid-krmc5xkp></div></header><div class="columns" data-astro-cid-krmc5xkp><div class="prose" data-astro-cid-krmc5xkp><p class="note" data-astro-cid-krmc5xkp>A local LLM wrote this from the source, and no one has reviewed it yet. Check numbers and claims against the original.</p><p class="note" data-astro-cid-krmc5xkp>Machine-translated from the Korean original.</p><details class="toc-inline" data-pagefind-ignore data-astro-cid-krmc5xkp><summary data-astro-cid-krmc5xkp>Contents</summary><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#tldr" data-astro-cid-krmc5xkp>TL;DR</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#problem-definition" data-astro-cid-krmc5xkp>Problem Definition</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#core-idea" data-astro-cid-krmc5xkp>Core Idea</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#methodology" data-astro-cid-krmc5xkp>Methodology</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#benchmark-scope" data-astro-cid-krmc5xkp>Benchmark Scope</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#reference-configurations" data-astro-cid-krmc5xkp>Reference Configurations</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#stage-definitions-and-measurement" data-astro-cid-krmc5xkp>Stage Definitions and Measurement</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#optimization-experiments" data-astro-cid-krmc5xkp>Optimization Experiments</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#figure-explanations" data-astro-cid-krmc5xkp>Figure Explanations</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#experimental-results" data-astro-cid-krmc5xkp>Experimental Results</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#limitations" data-astro-cid-krmc5xkp>Limitations</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#critical-review" data-astro-cid-krmc5xkp>Critical Review</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#strengths" data-astro-cid-krmc5xkp>Strengths</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#weaknesses--questions" data-astro-cid-krmc5xkp>Weaknesses &amp; Questions</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#reproducibility" data-astro-cid-krmc5xkp>Reproducibility</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#my-notes" data-astro-cid-krmc5xkp>My Notes</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#related-work" data-astro-cid-krmc5xkp>Related Work</a></li></ol></details><h2 id="tldr">TL;DR</h2>
+<ul>
+<li>VLA-HWBench decomposes the time of a single inference call into seven stages by running 18 open-source VLA models and 19 reference configurations on NVIDIA Jetson AGX Thor and AMD Ryzen AI Max+ PRO 395.</li>
+<li>The action generation method determines latency more significantly than model size; on Jetson, action generation is the dominant stage in 14 out of 19 configurations.</li>
+<li>Kernel fusion and 4-bit weights provide the most significant benefits, but these optimizations are only present for two models on Jetson. Even after optimization, denoising steps remain limited by memory bandwidth, while other stages are constrained by software overhead.</li>
+</ul>
+<h2 id="problem-definition">Problem Definition</h2>
+<p>VLA (vision-language-action) models are increasingly deployed on edge devices embedded in robots. In closed-loop robot control, inference latency can impose real-time constraints, yet most VLA papers report only task success rates.</p>
+<p>Existing research covers only some of the ways recent VLAs generate actions, divides a single inference call into at most three stages, and often fails to compare inference optimizations for the same model. This paper measures “where the time in a single call is spent” to determine how VLA models, inference software, and edge hardware should be designed.</p>
+<h2 id="core-idea">Core Idea</h2>
+<p>The core intuition is not to treat end-to-end latency as a single number, but to decompose it into CPU preprocessing, host-to-device copy, GPU vision encoding, prefill, action generation, CPU postprocessing, and residual time. This allows us to verify whether the action generation method, rather than the number of model parameters, determines the per-stage time distribution.</p>
+<p>The latency of a single inference call can be expressed as the sum of seven stages:</p>
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>T</mi><mrow><mi>c</mi><mi>a</mi><mi>l</mi><mi>l</mi></mrow></msub><mo>=</mo><msub><mi>T</mi><mrow><mi>S</mi><mn>0</mn></mrow></msub><mo>+</mo><msub><mi>T</mi><mrow><mi>S</mi><mn>1</mn></mrow></msub><mo>+</mo><msub><mi>T</mi><mrow><mi>S</mi><mn>2</mn></mrow></msub><mo>+</mo><msub><mi>T</mi><mrow><mi>S</mi><mn>3</mn></mrow></msub><mo>+</mo><msub><mi>T</mi><mrow><mi>S</mi><mn>4</mn></mrow></msub><mo>+</mo><msub><mi>T</mi><mrow><mi>S</mi><mn>5</mn></mrow></msub><mo>+</mo><msub><mi>T</mi><mrow><mi>S</mi><mn>6</mn></mrow></msub></mrow><annotation encoding="application/x-tex">T_{call}=T_{S0}+T_{S1}+T_{S2}+T_{S3}+T_{S4}+T_{S5}+T_{S6}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">c</span><span class="mord mathnormal mtight">a</span><span class="mord mathnormal mtight" style="margin-right:0.0197em;">l</span><span class="mord mathnormal mtight" style="margin-right:0.0197em;">l</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3283em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0576em;">S</span><span class="mord mtight">0</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3283em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0576em;">S</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3283em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0576em;">S</span><span class="mord mtight">2</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3283em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0576em;">S</span><span class="mord mtight">3</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3283em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0576em;">S</span><span class="mord mtight">4</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3283em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0576em;">S</span><span class="mord mtight">5</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3283em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0576em;">S</span><span class="mord mtight">6</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></span>
+<p>Here, <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>T</mi><mrow><mi>S</mi><mn>6</mn></mrow></msub></mrow><annotation encoding="application/x-tex">T_{S6}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3283em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0576em;">S</span><span class="mord mtight">6</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> is defined as the residual latency obtained by subtracting the sum of S0 through S5. We apply this decomposition to 18 open-source VLA models, their respective release software and alternative backends, and two edge platforms to compare the causes of latency.</p>
+<h2 id="methodology">Methodology</h2>
+<h3 id="benchmark-scope">Benchmark Scope</h3>
+<p>VLA-HWBench measures the following scope:</p>
+<ul>
+<li>18 open-source VLA models</li>
+<li>The software released by each model and alternative backends</li>
+<li>NVIDIA Jetson AGX Thor</li>
+<li>AMD Ryzen AI Max+ PRO 395</li>
+<li>A 7-stage decomposition for a single inference call</li>
+</ul>
+<p>Reference configurations are based on the software executed per call, the number of camera views, the chunk size <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi></mrow><annotation encoding="application/x-tex">H</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0813em;">H</span></span></span></span>, and the number of actions executed per call <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>H</mi><mi>e</mi></msub></mrow><annotation encoding="application/x-tex">H_e</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0813em;">H</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0813em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">e</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> in each release’s own LIBERO evaluation. There are 19 reference configurations in total, as some of the 18 models are included with different action generation settings, such as flow and discrete.</p>
+<h3 id="reference-configurations">Reference Configurations</h3>
+<p>Reference configurations are categorized by action generation method. The main configurations based on Table 4 are as follows:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Action generation</th><th>Model</th><th>Software</th><th align="right">Views</th><th align="right"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi></mrow><annotation encoding="application/x-tex">H</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0813em;">H</span></span></span></span></th><th align="right"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>H</mi><mi>e</mi></msub></mrow><annotation encoding="application/x-tex">H_e</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0813em;">H</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0813em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">e</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></th></tr></thead><tbody><tr><td>Flow matching</td><td>X-VLA</td><td>authors’ code</td><td align="right">2</td><td align="right">30</td><td align="right">30</td></tr><tr><td>Flow matching</td><td>GR00T N1.7</td><td>authors’ code</td><td align="right">2</td><td align="right">16</td><td align="right">8</td></tr><tr><td>Flow matching</td><td>SmolVLA</td><td>LeRobot 0.6.1</td><td align="right">3</td><td align="right">50</td><td align="right">50</td></tr><tr><td>Flow matching</td><td>InstructVLA</td><td>authors’ code</td><td align="right">2</td><td align="right">8</td><td align="right">8</td></tr><tr><td>Flow matching</td><td><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>π</mi><mn>0.5</mn></msub></mrow><annotation encoding="application/x-tex">\pi_{0.5}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">0.5</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></td><td>LeRobot 0.6.1</td><td align="right">2</td><td align="right">50</td><td align="right">50</td></tr><tr><td>Flow matching</td><td>NORA-1.5</td><td>authors’ code</td><td align="right">1</td><td align="right">5</td><td align="right">5</td></tr><tr><td>Flow matching</td><td>Evo-1</td><td>authors’ code</td><td align="right">2</td><td align="right">50</td><td align="right">50</td></tr><tr><td>Flow matching</td><td>FastWAM</td><td>LeRobot 0.6.1</td><td align="right">2</td><td align="right">32</td><td align="right">32</td></tr><tr><td>Flow matching</td><td>MolmoAct2 (flow)</td><td>LeRobot 0.6.1</td><td align="right">2</td><td align="right">10</td><td align="right">10</td></tr><tr><td>Flow matching</td><td>InternVLA-A1.5</td><td>authors’ code</td><td align="right">2</td><td align="right">8</td><td align="right">8</td></tr><tr><td>Parallel decoding</td><td>VLA-Adapter</td><td>authors’ code</td><td align="right">2</td><td align="right">8</td><td align="right">8</td></tr><tr><td>Parallel decoding</td><td>SimpleVLA-RL</td><td>authors’ code</td><td align="right">1</td><td align="right">8</td><td align="right">8</td></tr><tr><td>Parallel decoding</td><td>OpenVLA-OFT</td><td>authors’ code</td><td align="right">2</td><td align="right">8</td><td align="right">8</td></tr><tr><td>Parallel decoding</td><td>RIPT-VLA</td><td>authors’ code</td><td align="right">2</td><td align="right">8</td><td align="right">8</td></tr><tr><td>Autoregressive tokens</td><td>pi0-FAST</td><td>LeRobot 0.6.1</td><td align="right">2</td><td align="right">10</td><td align="right">10</td></tr><tr><td>Autoregressive tokens</td><td>MolmoAct2 (discrete)</td><td>LeRobot 0.6.1</td><td align="right">2</td><td align="right">10</td><td align="right">10</td></tr><tr><td>Autoregressive tokens</td><td>VLA-0</td><td>authors’ code</td><td align="right">2</td><td align="right">8</td><td align="right">1</td></tr><tr><td>Reasoning, then actions</td><td>DeepThinkVLA (CoT)</td><td>authors’ code</td><td align="right">2</td><td align="right">10</td><td align="right">10</td></tr><tr><td>Reasoning, then actions</td><td>MolmoAct2-Think (cold)</td><td>authors’ code</td><td align="right">2</td><td align="right">10</td><td align="right">10</td></tr></tbody></table>
+<p>Some releases ship with optimization options enabled by default. The <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>π</mi><mn>0.5</mn></msub></mrow><annotation encoding="application/x-tex">\pi_{0.5}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">0.5</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> and pi0-FAST checkpoints are shipped with LeRobot’s compile option on, and MolmoAct2 is shipped with CUDA graphs. However, in VLA-HWBench’s reference configuration, these items are measured in the off state. Appendix F reports these defaults.</p>
+<h3 id="stage-definitions-and-measurement">Stage Definitions and Measurement</h3>
+<p>A single inference call is divided into the 7 stages shown in Table 6.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Stage</th><th>Work</th><th>Unit</th><th>Measured by</th></tr></thead><tbody><tr><td>S0 Preprocessing</td><td>resize, normalize, tokenize</td><td>CPU</td><td>timer</td></tr><tr><td>S1 Host-to-device</td><td>copy the inputs</td><td>copy engine</td><td>timer</td></tr><tr><td>S2 Vision encoding</td><td>images to tokens</td><td>GPU</td><td>timer or kernel trace</td></tr><tr><td>S3 Prefill</td><td>language model, key-value cache</td><td>GPU</td><td>timer or kernel trace</td></tr><tr><td>S4 Action generation</td><td>denoising steps or decoded tokens</td><td>GPU</td><td>timer, step sweep or kernel trace</td></tr><tr><td>S5 Postprocessing</td><td>unnormalize, copy back</td><td>CPU</td><td>timer</td></tr><tr><td>S6 Residual</td><td>latency minus S0-S5</td><td>CPU</td><td>derived</td></tr></tbody></table>
+<p>The measurement rules are as follows:</p>
+<ul>
+<li>Stages executed within another stage by the release code are counted within that stage.</li>
+<li>Stages inside a captured CUDA graph are separated in the manner described in Section 4.4.</li>
+<li>Since LeRobot executes vision encoding, prefill, and action generation within a single policy call, we time the policy’s own calls:
+<ul>
+<li>vision encoding: image-embedding call</li>
+<li>prefill: language-model call that fills the key-value cache</li>
+<li>action generation: the remainder of the policy call</li>
+</ul>
+</li>
+<li>In FastWAM, vision encoding is the VAE encoding of the image, and prefill is the first frame pass of the text encoder and video transformer.</li>
+<li>In FlashRT’s GR00T N1.7 backbone graph, vision encoding ends at the first RMSNorm of the language model. The VL self-attention after the language model is counted as action generation, consistent with Isaac-GR00T. Each part holds its share in the graph’s kernel time.</li>
+</ul>
+<h3 id="optimization-experiments">Optimization Experiments</h3>
+<p>The paper applies optimizations step-by-step to <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>π</mi><mn>0.5</mn></msub></mrow><annotation encoding="application/x-tex">\pi_{0.5}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">0.5</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> and GR00T N1.7. Figure 5 shows the latency of the fastest configuration with optimizations applied up to each stage, the speed-up for that stage, and the stage times on Jetson.</p>
+<p>One key insight is that kernel fusion and 4-bit weights provide the most significant benefits. However, according to the provided notes, these optimizations exist only for two models and only on Jetson.</p>
+<h2 id="figure-explanations">Figure Explanations</h2>
+<p><img alt="Figure 1: End-to-end latency versus loaded parameter count on the Jetson AGX Thor (left) and the Ryzen AI Max+ PRO 395 (right), with one point per reference configuration." loading="lazy" decoding="async" width="1104" height="404" src="/_astro/fig-1.C75B8wu__1wcbWH.webp"></p>
+<p><em>Figure 1: End-to-end latency versus loaded parameter count on the Jetson AGX Thor (left) and the Ryzen AI Max+ PRO 395 (right), with one point per reference configuration. (Source: original paper)</em></p>
+<p>Shows end-to-end latency versus loaded parameter count on NVIDIA Jetson AGX Thor and AMD Ryzen AI Max+ PRO 395. Each point represents one reference configuration. This figure visually demonstrates that latency cannot be explained by parameter count alone.</p>
+<p><img alt="Figure 2: The seven stages of one inference call. S0 and S5 run on the CPU and S2–S4 on the GPU." loading="lazy" decoding="async" width="1101" height="206" src="/_astro/fig-2.Dx7uam32_ZA2LdT.webp"></p>
+<p><em>Figure 2: The seven stages of one inference call. S0 and S5 run on the CPU and S2–S4 on the GPU. (Source: original paper)</em></p>
+<p>Shows the 7 stages of a single inference call. S0 and S5 are executed on the CPU, while S2 through S4 are executed on the GPU. It corresponds to the stage definitions in the methodology.</p>
+<p><img alt="Figure 3: Stage breakdown of the 19 reference configurations on the Jetson (a) and the AMD platform (b), with a fused stage counted in the stage that contains it." loading="lazy" decoding="async" width="1092" height="629" src="/_astro/fig-3.DXSqnkkb_Z2tmSFt.webp"></p>
+<p><em>Figure 3: Stage breakdown of the 19 reference configurations on the Jetson (a) and the AMD platform (b), with a fused stage counted in the stage that contains it. (Source: original paper)</em></p>
+<p>Shows the stage breakdown for 19 reference configurations on Jetson (a) and the AMD platform (b). Fused stages are counted within the stage that contains them. It allows comparison of time distribution per configuration and differences between platforms.</p>
+<p><img alt="Figure 4: Latency of the 19 reference configurations. (a) Median latency on the Jetson (bars, 5th–95th percentile) and the AMD platform (circles). (b) Latency over the chunk size H." loading="lazy" decoding="async" width="1103" height="373" src="/_astro/fig-4.CDVHGQ_i_ZfIPcX.webp"></p>
+<p><em>Figure 4: Latency of the 19 reference configurations. (a) Median latency on the Jetson (bars, 5th–95th percentile) and the AMD platform (circles). (b) Latency over the chunk size H. (Source: original paper)</em></p>
+<p>Shows the latency for 19 reference configurations. (a) displays the median latency bar and 5th–95th percentile for Jetson, and circles for the AMD platform. (b) shows how latency changes with chunk size <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi></mrow><annotation encoding="application/x-tex">H</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0813em;">H</span></span></span></span>.</p>
+<p><img alt="Figure 5: Optimizations applied in stages to \pi _ { 0 . 5 } and GR00T N1.7. (a, b) Latency of the fastest configuration with the optimizations up to each stage, labeled with the speed-up of the stage. (c, d) Their stage times on the Jetson." loading="lazy" decoding="async" width="1103" height="390" src="/_astro/fig-5.DtF71SlG_Z25WTD.webp"></p>
+<p><em>Figure 5: Optimizations applied in stages to <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>π</mi><mn>0.5</mn></msub></mrow><annotation encoding="application/x-tex">\pi _ { 0 . 5 }</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">0.5</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> and GR00T N1.7. (a, b) Latency of the fastest configuration with the optimizations up to each stage, labeled with the speed-up of the stage. (c, d) Their stage times on the Jetson. (Source: original paper)</em></p>
+<p>Shows optimizations applied step-by-step to <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>π</mi><mn>0.5</mn></msub></mrow><annotation encoding="application/x-tex">\pi_{0.5}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">0.5</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> and GR00T N1.7. (a, b) display the latency of the fastest configuration with optimizations applied up to each stage, labeling the speed-up for that stage. (c, d) show the stage times on Jetson.</p>
+<p><img alt="Figure 6: What limits the fastest configurations. (a) Stage shares, with the stages inside a captured graph separated by its kernels. (b) CPU preprocessing of GR00T N1.7 and its sub-steps with PyTorch’s 14 CPU threads and with one thread. (c, d) Rooflines, with the peak memory bandwidth as the sloped line, the peak of each number format as a flat line and each GPU stage at its arithmetic intensity F / W and achieved throughput." loading="lazy" decoding="async" width="428" height="259" src="/_astro/fig-9.B86_vxTk_24ct1z.webp"></p>
+<p><em>Figure 6: What limits the fastest configurations. (a) Stage shares, with the stages inside a captured graph separated by its kernels. (b) CPU preprocessing of GR00T N1.7 and its sub-steps with PyTorch’s 14 CPU threads and with one thread. (c, d) Rooflines, with the peak memory bandwidth as the sloped line, the peak of each number format as a flat line and each GPU stage at its arithmetic intensity <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi><mi mathvariant="normal">/</mi><mi>W</mi></mrow><annotation encoding="application/x-tex">F / W</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">F</span><span class="mord">/</span><span class="mord mathnormal" style="margin-right:0.1389em;">W</span></span></span></span> and achieved throughput. (Source: original paper)</em></p>
+<p>Shows the factors limiting the fastest configurations. (a) displays stage shares, where stages inside a captured graph are separated by their kernels. (b) shows CPU preprocessing and sub-steps for GR00T N1.7 under PyTorch’s 14 CPU threads and one thread conditions. (c, d) show rooflines, where peak memory bandwidth is represented by sloped lines, the peak for each number format by horizontal lines, and each GPU stage is plotted at its arithmetic intensity <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi><mi mathvariant="normal">/</mi><mi>W</mi></mrow><annotation encoding="application/x-tex">F / W</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">F</span><span class="mord">/</span><span class="mord mathnormal" style="margin-right:0.1389em;">W</span></span></span></span> and achieved throughput position.</p>
+<p><img alt="Figure 7: Time of every GPU stage of the fastest configurations over the larger of its two bounds, split by kernel class, with action generation measured per denoising step." loading="lazy" decoding="async" width="690" height="509" src="/_astro/fig-10.CyFKVQPu_2vmpwm.webp"></p>
+<p><em>Figure 7: Time of every GPU stage of the fastest configurations over the larger of its two bounds, split by kernel class, with action generation measured per denoising step. (Source: original paper)</em></p>
+<p>Shows all GPU stage times for the fastest configurations against the larger of two bounds. It is divided by kernel class, with action generation measured per denoising step. It allows checking how much each kernel class occupies relative to the bound.</p>
+<h2 id="experimental-results">Experimental Results</h2>
+<p>The main benchmark measures the latency of 19 reference configurations on NVIDIA Jetson AGX Thor and AMD Ryzen AI Max+ PRO 395. The table below excerpts completed rows from Table 7 based on the provided notes.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Model</th><th align="right">Jetson <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>50</mn></msub></mrow><annotation encoding="application/x-tex">p_{50}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">50</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> (ms)</th><th align="right">Jetson per action (ms)</th><th align="right">Ryzen <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>50</mn></msub></mrow><annotation encoding="application/x-tex">p_{50}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">50</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> (ms)</th><th align="right">Ryzen per action (ms)</th><th align="right">AMD / Jetson</th></tr></thead><tbody><tr><td>X-VLA</td><td align="right">76.7</td><td align="right">2.6</td><td align="right">206</td><td align="right">6.9</td><td align="right">2.69</td></tr><tr><td>VLA-Adapter</td><td align="right">92.7</td><td align="right">11.6</td><td align="right">114</td><td align="right">14.2</td><td align="right">1.23</td></tr><tr><td>GR00T N1.7</td><td align="right">119</td><td align="right">7.4</td><td align="right">297</td><td align="right">18.6</td><td align="right">2.50</td></tr><tr><td>SimpleVLA-RL</td><td align="right">129</td><td align="right">16.1</td><td align="right">446</td><td align="right">55.7</td><td align="right">3.46</td></tr><tr><td>SmolVLA</td><td align="right">191</td><td align="right">3.8</td><td align="right">140</td><td align="right">2.8</td><td align="right">0.73</td></tr><tr><td>InstructVLA</td><td align="right">235</td><td align="right">29.4</td><td align="right">357</td><td align="right">44.7</td><td align="right">1.52</td></tr><tr><td>OpenVLA-OFT</td><td align="right">250</td><td align="right">31.3</td><td align="right">495</td><td align="right">61.8</td><td align="right">1.98</td></tr></tbody></table>
+<p>The key metrics are as follows:</p>
+<ul>
+<li>On Jetson, latency varies by up to an <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>82</mn><mo>×</mo></mrow><annotation encoding="application/x-tex">82\times</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">82</span><span class="mord">×</span></span></span></span> range across reference configurations.</li>
+<li>On the AMD platform, it varies by up to a <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>157</mn><mo>×</mo></mrow><annotation encoding="application/x-tex">157\times</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">157</span><span class="mord">×</span></span></span></span> range.</li>
+<li>On Jetson, action generation is the largest stage in 14 out of 19 configurations.</li>
+<li>Time per action is calculated by dividing latency by the chunk size <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi></mrow><annotation encoding="application/x-tex">H</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0813em;">H</span></span></span></span>.</li>
+<li>Values exceeding 50 ms indicate that the configuration generates actions slower than the speed at which LIBERO executes them.</li>
+</ul>
+<p>In the optimization experiments, step-by-step optimizations are applied to <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>π</mi><mn>0.5</mn></msub></mrow><annotation encoding="application/x-tex">\pi_{0.5}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">0.5</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> and GR00T N1.7, and the cumulative latency and stage speed-up of the fastest configuration are reported in Figure 5. The provided notes do not include a separate table with specific speed-up values.</p>
+<p>In the bottleneck analysis after optimization, it is reported that on Jetson, stages processing a small number of tokens, particularly denoising steps, are limited by memory bandwidth, while other stages are limited by software. This result connects to the roofline and kernel class decomposition in Figure 9 and Figure 10.</p>
+<h2 id="limitations">Limitations</h2>
+<p>The provided notes do not include a limitations section explicitly stated by the authors.</p>
+<h2 id="critical-review">Critical Review</h2>
+<h3 id="strengths">Strengths</h3>
+<ul>
+<li><strong>Quantification of inference bottlenecks via 7-stage decomposition</strong> — Measures where time is spent on edge devices by dividing a single inference call of a Vision-Language-Action (VLA) model into preprocessing, host-device copy, vision encoding, prefill, action generation, postprocessing, and residual terms (Evidence: Abstract, Table 6).</li>
+<li><strong>Comparison design by action generation method</strong> — Groups models by flow matching, parallel decoding, autoregressive tokens, and reasoning-then-actions, specifying the software, number of camera views, chunk size <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>H</mi></mrow><annotation encoding="application/x-tex">H</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0813em;">H</span></span></span></span>, and execution horizon <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>H</mi><mi>e</mi></msub></mrow><annotation encoding="application/x-tex">H_e</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0813em;">H</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0813em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">e</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> for each configuration to enable comparison of latency differences between methods (Evidence: Abstract, Table 4).</li>
+<li><strong>Provision of cross-platform latency metrics</strong> — Organizes median latency (<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>50</mn></msub></mrow><annotation encoding="application/x-tex">p_{50}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">50</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>), <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>5</mn></msub></mrow><annotation encoding="application/x-tex">p_5</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">5</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>–<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>95</mn></msub></mrow><annotation encoding="application/x-tex">p_{95}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">95</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>, time per action, and AMD/Jetson ratio for reference configurations on NVIDIA Jetson AGX Thor and AMD Ryzen AI Max+ PRO 395 to show platform differences (Evidence: Part of Table 7; the provided notes do not contain all rows).</li>
+</ul>
+<h3 id="weaknesses--questions">Weaknesses &#x26; Questions</h3>
+<ul>
+<li><strong>Lack of experimental evidence for core insights in the provided notes</strong> — The Abstract claims that kernel fusion and 4-bit weights provide the most significant benefits, and that after optimization, stages processing a small number of tokens on Jetson are limited by memory bandwidth while others are limited by software. However, tables, figures, or ablation values supporting these effects are not present in the provided notes (Evidence: Abstract; no related tables in provided notes).</li>
+<li><strong>Difficulty judging fairness of baseline comparisons</strong> — While comparing software released by each model and alternative backends, the provided notes do not specify which backends were selected, whether the same optimization level was applied to the same model, or how performance/accuracy trade-offs were handled (Evidence: Abstract, Table 4; no backend selection criteria in provided notes).</li>
+<li><strong>Insufficient statistical evidence</strong> — Part of Table 7 includes <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>50</mn></msub></mrow><annotation encoding="application/x-tex">p_{50}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">50</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> and <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>5</mn></msub></mrow><annotation encoding="application/x-tex">p_5</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">5</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>–<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>p</mi><mn>95</mn></msub></mrow><annotation encoding="application/x-tex">p_{95}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">95</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>, but the number of repeated runs, standard deviation, and statistical significance tests are not present in the provided notes. The Abstract’s claim of an “82× range on Jetson, 157× on AMD” is difficult to verify without the full Table 7 (Evidence: Abstract, Part of Table 7; no repetition/variance/significance info in provided notes).</li>
+<li><strong>Unclear relationship between model count and configuration count</strong> — The Abstract states that 18 open-source VLA models are measured, but Table 4 lists 19 reference configurations. Since one model can be measured with multiple configurations (e.g., MolmoAct2’s flow/discrete/Think), it is unclear whether conclusions are generalized at the model level or the configuration level (Evidence: Abstract, Table 4) (Interpretation).</li>
+<li><strong>Residual term and CUDA graph separation may affect conclusions</strong> — S6 Residual is a derived value obtained by subtracting S0–S5 from total latency, and the method for separating stages inside a captured CUDA graph relies on Section 4.4. However, since the text of Section 4.4 is not in the provided notes, it is difficult to judge how accurately the residual reflects actual bottlenecks (Evidence: Table 6, A.2; no Section 4.4 text in provided notes) (Interpretation).</li>
+<li><strong>Limited basis for generalization</strong> — Measurements are centered on two edge platforms and LIBERO checkpoints. There are no experiments in the provided notes supporting generalization to other robot tasks, larger models, or different power/clock/memory bandwidth environments (Evidence: Abstract, Table 4, Table 5).</li>
+</ul>
+<h3 id="reproducibility">Reproducibility</h3>
+<ul>
+<li>While model-specific code repositories and checkpoint names are available, benchmark measurement code, backend versions, GPU/CPU clock/power settings, number of repetitions, and computational costs are not present in the provided notes (Evidence: Table 4, Table 5; no reproducibility section in provided notes).</li>
+</ul>
+<h2 id="my-notes">My Notes</h2>
+<h2 id="related-work">Related Work</h2>
+<p>The main VLA models and execution software compared or included as reference configurations in the paper are as follows. GitHub stars and HuggingFace downloads are as of 2026-09-26, and a dash indicates checkpoints for which HuggingFace does not count downloads.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Model</th><th>Action Generation Method</th><th>Code Repository (stars)</th><th align="right">LIBERO checkpoint downloads</th></tr></thead><tbody><tr><td>X-VLA</td><td>Flow matching</td><td>2toinf/X-VLA (733)</td><td align="right">12,303</td></tr><tr><td>GR00T N1.7</td><td>Flow matching</td><td>NVIDIA/Isaac-GR00T (8,130)</td><td align="right">-</td></tr><tr><td>SmolVLA</td><td>Flow matching</td><td>huggingface/lerobot (27,783)</td><td align="right">68,467</td></tr><tr><td>InstructVLA</td><td>Flow matching</td><td>InternRobotics/InstructVLA (117)</td><td align="right">220</td></tr><tr><td><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>π</mi><mn>0.5</mn></msub></mrow><annotation encoding="application/x-tex">\pi_{0.5}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">0.5</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></td><td>Flow matching</td><td>Physical-Intelligence/openpi (13,997)</td><td align="right">174,582</td></tr><tr><td>NORA-1.5</td><td>Flow matching</td><td>declare-lab/nora-1.5 (109)</td><td align="right">109</td></tr><tr><td>Evo-1</td><td>Flow matching</td><td>MINT-SJTU/Evo-1 (364)</td><td align="right">823</td></tr><tr><td>FastWAM</td><td>Flow matching</td><td>yuantianyuan01/FastWAM (1,526)</td><td align="right">1,813</td></tr><tr><td>MolmoAct2</td><td>Flow / discrete</td><td>allenai/molmoact2 (772)</td><td align="right">5,449</td></tr><tr><td>InternVLA-A1.5</td><td>Flow matching</td><td>InternRobotics/InternVLA-A-series (558)</td><td align="right">449</td></tr><tr><td>VLA-Adapter</td><td>Parallel decoding</td><td>OpenHelix-Team/VLA-Adapter (2,314)</td><td align="right">1,171</td></tr><tr><td>SimpleVLA-RL</td><td>Parallel decoding</td><td>PRIME-RL/SimpleVLA-RL (1,865)</td><td align="right">631</td></tr><tr><td>OpenVLA-OFT</td><td>Parallel decoding</td><td>moojink/openvla-oft (1,399)</td><td align="right">36,876</td></tr><tr><td>RIPT-VLA</td><td>Parallel decoding</td><td>Ariostgx/ript-vla (172)</td><td align="right">-</td></tr><tr><td>pi0-FAST</td><td>Autoregressive tokens</td><td>Physical-Intelligence/openpi (13,997)</td><td align="right">68,122</td></tr><tr><td>VLA-0</td><td>Autoregressive tokens</td><td>NVlabs/vla0 (492)</td><td align="right">725</td></tr><tr><td>DeepThinkVLA</td><td>Reasoning, then actions</td><td>OpenBMB/DeepThinkVLA (531)</td><td align="right">1,052</td></tr><tr><td>MolmoAct2-Think</td><td>Reasoning, then actions</td><td>allenai/molmoact2 (772)</td><td align="right">1,927</td></tr></tbody></table>
+<p>The execution software and backends mentioned in the notes include each model’s authors’ code, LeRobot 0.6.1, Isaac-GR00T, and FlashRT configurations related to the GR00T N1.7 backbone graph.</p><div class="notes-editor" hidden data-path="content/papers/vla-hwbench-where-the-time-goes/index.ko.md" data-notes data-pagefind-ignore data-astro-cid-krmc5xkp><button type="button" class="ne-open" data-astro-cid-krmc5xkp>내 생각 쓰기</button><form class="ne-form" hidden data-astro-cid-krmc5xkp><textarea rows="8" aria-label="내 생각 (markdown)" placeholder="markdown 으로 쓰기" data-astro-cid-krmc5xkp></textarea><div class="ne-actions" data-astro-cid-krmc5xkp><button type="submit" data-astro-cid-krmc5xkp>저장</button><button type="button" class="ne-delete" data-astro-cid-krmc5xkp>지우기</button><button type="button" class="ne-cancel" data-astro-cid-krmc5xkp>취소</button><span class="ne-status" role="status" data-astro-cid-krmc5xkp></span></div></form></div><div class="post-admin" hidden data-dir="content/papers/vla-hwbench-where-the-time-goes" data-lang="en" data-incoming="[]" data-pagefind-ignore data-astro-cid-krmc5xkp></div></div><nav class="toc" aria-labelledby="toc-h" data-pagefind-ignore data-astro-cid-krmc5xkp><h2 id="toc-h" data-astro-cid-krmc5xkp>Contents</h2><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#tldr" data-astro-cid-krmc5xkp>TL;DR</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#problem-definition" data-astro-cid-krmc5xkp>Problem Definition</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#core-idea" data-astro-cid-krmc5xkp>Core Idea</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#methodology" data-astro-cid-krmc5xkp>Methodology</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#benchmark-scope" data-astro-cid-krmc5xkp>Benchmark Scope</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#reference-configurations" data-astro-cid-krmc5xkp>Reference Configurations</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#stage-definitions-and-measurement" data-astro-cid-krmc5xkp>Stage Definitions and Measurement</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#optimization-experiments" data-astro-cid-krmc5xkp>Optimization Experiments</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#figure-explanations" data-astro-cid-krmc5xkp>Figure Explanations</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#experimental-results" data-astro-cid-krmc5xkp>Experimental Results</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#limitations" data-astro-cid-krmc5xkp>Limitations</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#critical-review" data-astro-cid-krmc5xkp>Critical Review</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#strengths" data-astro-cid-krmc5xkp>Strengths</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#weaknesses--questions" data-astro-cid-krmc5xkp>Weaknesses &amp; Questions</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#reproducibility" data-astro-cid-krmc5xkp>Reproducibility</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#my-notes" data-astro-cid-krmc5xkp>My Notes</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#related-work" data-astro-cid-krmc5xkp>Related Work</a></li></ol></nav></div></article></main><footer class="wrap" data-astro-cid-hkbrpulz><p class="site-footer" data-astro-cid-hkbrpulz>Tech Blog</p></footer><dialog class="search" aria-label="Search posts" data-unavailable="The search index is built with the site. Run npm run build, then npm run preview." data-astro-cid-ac66eqjo><div class="search-head" data-astro-cid-ac66eqjo><h2 data-astro-cid-ac66eqjo>Search posts</h2><button type="button" class="close" data-search-close data-astro-cid-ac66eqjo>Close</button></div><div id="pagefind" class="search-body" data-astro-cid-ac66eqjo></div></dialog><script type="module">var e=document.querySelector(`dialog.search`),t=e.querySelector(`#pagefind`),n=!1;async function r(){if(!n){n=!0;try{let e=document.createElement(`link`);e.rel=`stylesheet`,e.href=`/pagefind/pagefind-ui.css`,document.head.append(e),await new Promise((e,t)=>{let n=document.createElement(`script`);n.src=`/pagefind/pagefind-ui.js`,n.onload=()=>e(),n.onerror=()=>t(Error(`pagefind missing`)),document.head.append(n)}),new PagefindUI({element:t,showSubResults:!0,showImages:!1,autofocus:!0})}catch{t.textContent=e.dataset.unavailable??``}}}function i(){e.showModal(),r(),t.querySelector(`input`)?.focus()}document.querySelectorAll(`[data-search-open]`).forEach(e=>e.addEventListener(`click`,i)),e.querySelector(`[data-search-close]`).addEventListener(`click`,()=>e.close()),e.addEventListener(`click`,t=>{t.target===e&&e.close()}),document.addEventListener(`keydown`,t=>{let n=t.target.tagName;e.open||n===`INPUT`||n===`TEXTAREA`||(t.key===`/`||(t.metaKey||t.ctrlKey)&&t.key.toLowerCase()===`k`)&&(t.preventDefault(),i())});</script></body></html><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_0_lang.CMBxuFBs.js"></script><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_1_lang.DQvCU8Du.js"></script>
