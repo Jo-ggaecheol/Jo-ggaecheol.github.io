@@ -1,0 +1,655 @@
+<!DOCTYPE html><html lang="ko" data-astro-cid-hkbrpulz><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>트랜스포머 이해하기: 처음부터 끝까지 | Tech Blog</title><meta name="description" content="트랜스포머의 토큰화, 임베딩, 셀프/멀티헤드 어텐션, 위치 인코딩, 블록 구조, 인코더-디코더 마스킹, 학습과 생성까지 전체 흐름을 정리한 공부 노트."><meta property="og:title" content="트랜스포머 이해하기: 처음부터 끝까지"><meta property="og:description" content="트랜스포머의 토큰화, 임베딩, 셀프/멀티헤드 어텐션, 위치 인코딩, 블록 구조, 인코더-디코더 마스킹, 학습과 생성까지 전체 흐름을 정리한 공부 노트."><meta name="theme-color" content="#f4f6f9" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#0e131b" media="(prefers-color-scheme: dark)"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate" hreflang="en" href="/en/study/understanding-transformers-from-start-to-finish/"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap"><script>
+      // 깜빡임 방지: 렌더 전에 테마 결정 (저장값 > 시스템 설정)
+      (() => {
+        let saved = null;
+        try {
+          saved = localStorage.getItem('theme');
+        } catch {}
+        const dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      })();
+    </script><link rel="stylesheet" href="/_astro/Base.DPAvT9-G.css"><style>.tagpath[data-astro-cid-jjfiepte]{font-size:var(--step--1);color:var(--ink-3);flex-wrap:wrap;align-items:baseline;gap:0 .3em;line-height:1.6;text-decoration:none;display:inline-flex}.leaf[data-astro-cid-jjfiepte]{color:var(--ink-2);font-weight:500}.sep[data-astro-cid-jjfiepte]{opacity:.55}.tagpath[data-astro-cid-jjfiepte]:hover .leaf[data-astro-cid-jjfiepte]{color:var(--ink);text-underline-offset:.2em;text-decoration:underline}.row[data-astro-cid-gc2g3jd6]{border-top:1px solid var(--rule);grid-template-columns:8.5rem 1fr;gap:.25rem 1.5rem;padding-block:1.6rem;display:grid}.meta[data-astro-cid-gc2g3jd6]{font-size:var(--step--1);color:var(--ink-3);font-variant-numeric:tabular-nums;flex-direction:column;gap:.15rem;padding-top:.3rem;display:flex}.type[data-astro-cid-gc2g3jd6]{color:var(--type);align-items:center;gap:.45rem;font-weight:600;display:inline-flex}.type[data-astro-cid-gc2g3jd6]:before{content:"";background:var(--type);border-radius:2px;width:.5rem;height:.5rem}.pending[data-astro-cid-gc2g3jd6]{color:var(--ink-3);align-self:flex-start;font-size:.75rem}.draft[data-astro-cid-gc2g3jd6]{border:1px dashed var(--rule-strong);border-radius:4px;align-self:flex-start;margin-top:.3rem;padding:0 .4rem;font-size:.75rem}.title[data-astro-cid-gc2g3jd6]{font-size:var(--step-2);margin:0;font-weight:600;line-height:1.35}.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]{background-image:linear-gradient(var(--type), var(--type));background-position:0 100%;background-repeat:no-repeat;background-size:0 2px;text-decoration:none;transition:background-size .2s}.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]:hover,.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]:focus-visible{background-size:100% 2px}.summary[data-astro-cid-gc2g3jd6]{max-width:62ch;color:var(--ink-2);margin:.45rem 0 0}.tags[data-astro-cid-gc2g3jd6]{flex-wrap:wrap;gap:.1rem 1.1rem;margin:.6rem 0 0;padding:0;list-style:none;display:flex}@media (width<=640px){.row[data-astro-cid-gc2g3jd6]{grid-template-columns:1fr;padding-block:1.25rem}.meta[data-astro-cid-gc2g3jd6]{flex-flow:wrap;gap:.75rem;padding-top:0}.draft[data-astro-cid-gc2g3jd6]{margin-top:0}.title[data-astro-cid-gc2g3jd6]{font-size:var(--step-1)}}
+</style><link rel="stylesheet" href="/_astro/_slug_.BU2vDBGq.css"></head><body data-astro-cid-hkbrpulz><a class="skip" href="#main" data-astro-cid-hkbrpulz>본문 바로가기</a><header class="site-header wrap" data-astro-cid-nen7h5rs><a class="wordmark" href="/ko/" translate="no" data-astro-cid-nen7h5rs>Tech Blog</a><nav class="nav" aria-label="주 메뉴" data-astro-cid-nen7h5rs><ul data-astro-cid-nen7h5rs><li data-type="paper" data-astro-cid-nen7h5rs><a href="/ko/papers/" data-astro-cid-nen7h5rs>논문</a></li><li data-type="study" data-astro-cid-nen7h5rs><a href="/ko/study/" aria-current="page" data-astro-cid-nen7h5rs>공부</a></li><li data-type="dev" data-astro-cid-nen7h5rs><a href="/ko/dev/" data-astro-cid-nen7h5rs>개발</a></li><li data-type="clip" data-astro-cid-nen7h5rs><a href="/ko/clips/" data-astro-cid-nen7h5rs>클립</a></li><li data-astro-cid-nen7h5rs><a href="/ko/tags/" data-astro-cid-nen7h5rs>태그</a></li></ul></nav><div class="tools" data-astro-cid-nen7h5rs><button class="icon-btn" type="button" data-search-open aria-label="검색" aria-keyshortcuts="/" data-astro-cid-nen7h5rs><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8" data-astro-cid-nen7h5rs></circle><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-astro-cid-nen7h5rs></path></svg></button><a class="lang" href="/en/study/understanding-transformers-from-start-to-finish/" hreflang="en" aria-label="영어로 보기" data-astro-cid-nen7h5rs>English</a><button class="icon-btn" type="button" data-theme-toggle data-label-light="라이트 모드로 전환" data-label-dark="다크 모드로 전환" aria-label="다크 모드로 전환" data-astro-cid-nen7h5rs><svg class="sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8" data-astro-cid-nen7h5rs></circle><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-astro-cid-nen7h5rs></path></svg><svg class="moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><path d="M19.5 14.6A7.8 7.8 0 0 1 9.4 4.5a7.8 7.8 0 1 0 10.1 10.1Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" data-astro-cid-nen7h5rs></path></svg></button></div></header><script type="module">var e=document.querySelector(`[data-theme-toggle]`),t=document.documentElement,n=()=>{let n=t.dataset.theme===`dark`;document.querySelectorAll(`meta[name="theme-color"]`).forEach(e=>{e.setAttribute(`content`,n?`#0e131b`:`#f4f6f9`),e.removeAttribute(`media`)}),e.setAttribute(`aria-label`,(n?e.dataset.labelLight:e.dataset.labelDark)??``),e.setAttribute(`aria-pressed`,String(n))};n(),e.addEventListener(`click`,()=>{t.dataset.theme=t.dataset.theme===`dark`?`light`:`dark`;try{localStorage.setItem(`theme`,t.dataset.theme)}catch{}n()});</script><main id="main" data-astro-cid-hkbrpulz><article class="post wrap" data-type="study" data-pagefind-body data-astro-cid-krmc5xkp><header class="head" data-astro-cid-krmc5xkp><div class="meta" data-astro-cid-krmc5xkp><a class="type" href="/ko/study/" data-pagefind-ignore data-astro-cid-krmc5xkp>공부</a><time datetime="2026-10-28" data-astro-cid-krmc5xkp>2026년 10월 28일</time></div><h1 data-astro-cid-krmc5xkp>트랜스포머 이해하기: 처음부터 끝까지</h1><p class="summary" data-astro-cid-krmc5xkp>트랜스포머의 토큰화, 임베딩, 셀프/멀티헤드 어텐션, 위치 인코딩, 블록 구조, 인코더-디코더 마스킹, 학습과 생성까지 전체 흐름을 정리한 공부 노트.</p><dl class="source" data-astro-cid-krmc5xkp><dt data-astro-cid-krmc5xkp>첨부</dt><dd data-astro-cid-krmc5xkp><a href="/files/study/understanding-transformers-from-start-to-finish/transformer_summary.md" rel="noopener" data-astro-cid-krmc5xkp>원본 Markdown</a></dd></dl><ul class="tags" data-pagefind-ignore data-astro-cid-krmc5xkp><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/method/architecture/transformer/" title="method/architecture/transformer" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>방법론</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="parent" data-astro-cid-jjfiepte>아키텍처</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>트랜스포머</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/method/attention/" title="method/attention" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>방법론</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>어텐션</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/task/language-modeling/" title="task/language-modeling" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>태스크</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>언어 모델링</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/domain/nlp/" title="domain/nlp" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>분야</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>자연어처리</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/method/training/pretraining/" title="method/training/pretraining" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>방법론</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="parent" data-astro-cid-jjfiepte>학습</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>사전학습</span></a></li></ul><div class="tags-editor" hidden data-dir="content/study/understanding-transformers-from-start-to-finish" data-pagefind-ignore data-astro-cid-krmc5xkp></div></header><div class="columns" data-astro-cid-krmc5xkp><div class="prose" data-astro-cid-krmc5xkp><details class="toc-inline" data-pagefind-ignore data-astro-cid-krmc5xkp><summary data-astro-cid-krmc5xkp>목차</summary><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#s1" data-astro-cid-krmc5xkp>01 왜 트랜스포머가 나왔나</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s2" data-astro-cid-krmc5xkp>02 토큰과 임베딩</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s3" data-astro-cid-krmc5xkp>03 셀프 어텐션 (Q, K, V)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-1" data-astro-cid-krmc5xkp>직접 눌러보기: 이 단어는 어디를 볼까?</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s4" data-astro-cid-krmc5xkp>04 멀티헤드 어텐션</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s5" data-astro-cid-krmc5xkp>05 위치 인코딩</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s6" data-astro-cid-krmc5xkp>06 트랜스포머 블록</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s7" data-astro-cid-krmc5xkp>07 인코더 · 디코더 · 마스킹</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-2" data-astro-cid-krmc5xkp>마스크: 미래 훔쳐보기 금지</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s8" data-astro-cid-krmc5xkp>08 학습과 생성</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-3" data-astro-cid-krmc5xkp>벡터를 다음 토큰으로</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-4" data-astro-cid-krmc5xkp>고르는 방법과 temperature</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-5" data-astro-cid-krmc5xkp>생성: 한 토큰씩 뽑아서 다시 넣기</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-6" data-astro-cid-krmc5xkp>학습: 다음 토큰 맞히기 (Q2, Q5)</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s9" data-astro-cid-krmc5xkp>09 전체 흐름 한 장 정리</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#qa" data-astro-cid-krmc5xkp>Q&amp;#x26;A 질문 &amp;#x26; 답변</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#check" data-astro-cid-krmc5xkp>✓ 헷갈렸던 개념</a></li></ol></details><style>
+.rawhtml { --fg: var(--ink); --text: var(--ink); --muted: var(--ink-3); --line: var(--rule); --border: var(--rule) }
+.rawhtml :is(h2, h3) > span:first-child:not(:only-child) { margin-right: 0.5em }
+.rawhtml { --acc: #2f6bd8; --acc-soft: #e2ebfb; --warm: #c9701c; --warm-soft: #fbecd9; --green: #23875a; --green-soft: #dcf1e6; --red: #c24141; --red-soft: #f9e0e0 }
+@media (prefers-color-scheme: dark) {
+:root:not([data-theme="light"]) .rawhtml { --acc: #6d9cf0; --acc-soft: #1f2d48; --warm: #e7a15a; --warm-soft: #3a2b1a; --green: #5cc493; --green-soft: #183527; --red: #e57777; --red-soft: #3d1f22 }
+}
+:root[data-theme="dark"] .rawhtml { --acc: #6d9cf0; --acc-soft: #1f2d48; --warm: #e7a15a; --warm-soft: #3a2b1a; --green: #5cc493; --green-soft: #183527; --red: #e57777; --red-soft: #3d1f22 }
+.rawhtml h2 .num { font-family: var(--font-mono); font-size: .95rem; color: var(--acc); background: var(--acc-soft); border-radius: 6px; padding: 2px 8px }
+.rawhtml .lead { color: var(--muted); margin: 0 }
+.rawhtml .meta { color: var(--muted); font-size: .9rem; margin-top: 12px }
+.rawhtml nav.toc { margin: 32px 0 0; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px }
+.rawhtml nav.toc ol { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 16px }
+.rawhtml nav.toc a { text-decoration: none; color: var(--fg); font-size: .95rem }
+.rawhtml nav.toc a:hover { color: var(--acc) }
+.rawhtml nav.toc .n { font-family: var(--font-mono); color: var(--muted); margin-right: 8px; font-size: .85rem }
+.rawhtml figure { margin: 24px 0; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px }
+.rawhtml figure svg { display: block; width: 100%; height: auto }
+.rawhtml figcaption { color: var(--muted); font-size: .88rem; margin-top: 12px }
+.rawhtml figcaption b { color: var(--fg) }
+.rawhtml .table-wrap { overflow-x: auto }
+.rawhtml .callout { border-left: 4px solid var(--acc); background: var(--acc-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0 }
+.rawhtml .callout.warm { border-color: var(--warm); background: var(--warm-soft) }
+.rawhtml .summary { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; margin: 24px 0 }
+.rawhtml .summary h4 { margin: 0 0 6px; font-size: .9rem; color: var(--muted); font-weight: 500 }
+.rawhtml .summary ul { margin: 0; padding-left: 20px }
+.rawhtml .formula { font-family: var(--font-mono); font-size: 1.05rem; text-align: center; padding: 18px 8px; margin: 16px 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; white-space: nowrap }
+.rawhtml .frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; margin: 0 4px }
+.rawhtml .frac > span:first-child { border-bottom: 1.5px solid var(--fg); padding: 0 4px }
+.rawhtml .frac > span:last-child { padding: 0 4px }
+.rawhtml svg text { font-family: var(--font-sans); font-size: 13px; fill: var(--fg) }
+.rawhtml svg .mut { fill: var(--muted); font-size: 12px }
+.rawhtml svg .small { font-size: 11px }
+.rawhtml svg .bold { font-weight: 700 }
+.rawhtml svg .mono { font-family: var(--font-mono) }
+.rawhtml .s-box { fill: var(--surface); stroke: var(--line); stroke-width: 1.5 }
+.rawhtml .s-acc { fill: var(--acc-soft); stroke: var(--acc); stroke-width: 1.5 }
+.rawhtml .s-warm { fill: var(--warm-soft); stroke: var(--warm); stroke-width: 1.5 }
+.rawhtml .s-green { fill: var(--green-soft); stroke: var(--green); stroke-width: 1.5 }
+.rawhtml .s-red { fill: var(--red-soft); stroke: var(--red); stroke-width: 1.5 }
+.rawhtml .s-frame { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 5 4 }
+.rawhtml .s-line { fill: none; stroke: var(--muted); stroke-width: 1.5 }
+.rawhtml .s-accline { fill: none; stroke: var(--acc) }
+.rawhtml .s-warmline { fill: none; stroke: var(--warm); stroke-width: 2 }
+.rawhtml .s-ahead { fill: var(--muted) }
+.rawhtml .s-ahead-warm { fill: var(--warm) }
+.rawhtml .s-dot-acc { fill: var(--acc) }
+.rawhtml .s-dot-warm { fill: var(--warm) }
+.rawhtml .s-dot-green { fill: var(--green) }
+.rawhtml .bars { display: grid; grid-template-columns: auto auto 1fr; gap: 6px 12px; align-items: center; font-size: .92rem }
+.rawhtml .bars .tok { font-weight: 500 }
+.rawhtml .bars .score { font-family: var(--font-mono); color: var(--muted); font-size: .85rem; text-align: right }
+.rawhtml .bar { position: relative; height: 22px; background: var(--code-bg); border-radius: 4px; overflow: hidden }
+.rawhtml .bar > i { position: absolute; inset: 0 auto 0 0; background: var(--acc); border-radius: 4px; transition: width .25s }
+.rawhtml .bar > span { position: absolute; left: 8px; white-space: nowrap; top: 0; line-height: 22px; font-family: var(--font-mono); font-size: .8rem; color: var(--fg); mix-blend-mode: normal }
+.rawhtml .bars .hdr { color: var(--muted); font-size: .8rem }
+.rawhtml .tokens { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 16px }
+.rawhtml .tokens button { font: inherit; font-size: .95rem; padding: 6px 10px; border-radius: 8px; border: 1.5px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; transition: background .2s, border-color .2s }
+.rawhtml .tokens button[aria-pressed="true"] { border-color: var(--warm); outline: 2px solid var(--warm); outline-offset: 1px }
+.rawhtml .hint { font-size: .85rem; color: var(--muted) }
+.rawhtml .control { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; font-size: .92rem }
+.rawhtml .control input[type="range"] { flex: 1; min-width: 160px; accent-color: var(--acc) }
+.rawhtml .control output { font-family: var(--font-mono); min-width: 3.5em }
+.rawhtml .readout { font-family: var(--font-mono); font-size: .82rem; color: var(--muted); margin-top: 8px; overflow-x: auto; white-space: nowrap }
+.rawhtml .gen { display: grid; gap: 10px }
+.rawhtml .gen-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: .92rem }
+.rawhtml .gen-row .step { font-family: var(--font-mono); color: var(--muted); font-size: .8rem; width: 34px }
+.rawhtml .chip { padding: 3px 9px; border-radius: 6px; background: var(--code-bg); border: 1px solid var(--line) }
+.rawhtml .chip.new { background: var(--warm-soft); border-color: var(--warm) }
+.rawhtml .chip.end { background: var(--green-soft); border-color: var(--green) }
+.rawhtml .gen-row .arrow { color: var(--muted); margin: 0 4px }
+.rawhtml .pipeline { display: grid; gap: 0; counter-reset: p }
+.rawhtml .pipe-step { display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: start; padding: 12px 0; border-bottom: 1px dashed var(--line) }
+.rawhtml .pipe-step:last-child { border-bottom: none }
+.rawhtml .pipe-step .badge { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--acc); color: var(--surface); font-weight: 700; font-size: .9rem }
+.rawhtml .pipe-step .what { font-weight: 700 }
+.rawhtml .pipe-step .ex { font-family: var(--font-mono); font-size: .84rem; color: var(--muted) }
+.rawhtml .pipe-step .ref { font-size: .8rem; color: var(--acc); margin-left: 6px; font-weight: 400 }
+.rawhtml .qa-tools { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap }
+.rawhtml .qa-tools button { font: inherit; font-size: .88rem; padding: 6px 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--fg) }
+.rawhtml details.qa { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; margin: 12px 0; padding: 0 }
+.rawhtml details.qa summary { cursor: pointer; padding: 16px 20px; list-style: none; display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: baseline }
+.rawhtml details.qa summary::-webkit-details-marker { display: none }
+.rawhtml details.qa .qn { font-family: var(--font-mono); font-weight: 600; color: var(--warm); background: var(--warm-soft); border-radius: 6px; padding: 1px 8px; font-size: .9rem }
+.rawhtml details.qa .qt { font-weight: 500 }
+.rawhtml details.qa .stage { display: block; color: var(--muted); font-size: .8rem; font-weight: 400 }
+.rawhtml details.qa .ans { padding: 0 20px 16px 20px; border-top: 1px solid var(--line) }
+.rawhtml details.qa .ans ul { padding-left: 20px }
+.rawhtml details.qa[open] summary .qt::after { content: "" }
+.rawhtml .checklist { list-style: none; padding: 0 }
+.rawhtml .checklist li { padding: 10px 14px 10px 40px; position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; margin: 8px 0 }
+.rawhtml .checklist li::before { content: "✓"; position: absolute; left: 14px; top: 10px; color: var(--green); font-weight: 700 }
+.rawhtml .checklist .ref { color: var(--muted); font-size: .85rem }
+@media (max-width: 560px) {
+.rawhtml figure { padding: 12px }
+.rawhtml .bars { grid-template-columns: auto 1fr }
+.rawhtml .bars .score { display: none }
+}
+</style>
+<div class="rawhtml">
+<svg aria-hidden="true" height="0" style="position:absolute" width="0">
+<defs>
+<marker id="ah" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="9" refY="5" viewBox="0 0 10 10">
+<path class="s-ahead" d="M0,0 L10,5 L0,10 z"></path>
+</marker>
+<marker id="ah-warm" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="9" refY="5" viewBox="0 0 10 10">
+<path class="s-ahead-warm" d="M0,0 L10,5 L0,10 z"></path>
+</marker>
+</defs>
+</svg>
+
+
+
+
+<section>
+<h2 id="s1"><span class="num">01</span>왜 트랜스포머가 나왔나</h2>
+<p>언어를 이해한다는 건 결국 <b>어떤 단어가 어떤 단어와 관련 있는지 아는 것</b>이다.</p>
+<div class="callout">"<b>그 동물</b>은 길을 건너지 않았다. 왜냐하면 <b>그것</b>이 너무 피곤했기 때문이다."<br>"그것"을 이해하려면 앞의 "그 동물"과 연결해야 한다.</div>
+<p>예전에 많이 쓰던 <b>RNN</b>은 문장을 한 단어씩 순서대로 읽는다. 메모장 한 장에 요약을 계속 덧쓰는 것과 비슷해서, 문장이 길어지면 <b>앞 내용을 잊어버리고</b>, 앞 단어가 끝나야 다음으로 갈 수 있어서 <b>느리다</b>.</p>
+<p>트랜스포머(2017, <i>Attention Is All You Need</i>)의 아이디어는 단순하다. <b>모든 단어가 다른 모든 단어를 한 번에 직접 보게 하자.</b> 어디에 얼마나 집중할지 정하는 것이 <b>어텐션</b>이다.</p>
+<figure>
+<svg aria-label="RNN은 단어를 순서대로 처리하며 앞 정보가 흐려지고, 트랜스포머는 그것이가 모든 단어를 직접 보며 동물은에 0.70 가중치를 준다" role="img" viewBox="0 0 720 240">
+
+<text class="bold" x="10" y="24">RNN · 한 단어씩 순서대로</text>
+<text class="mut" x="10" y="70">'동물은' 정보가 점점 흐려진다 →</text>
+<g>
+<circle class="s-acc" cx="39" cy="110" fill-opacity="1" r="16"></circle>
+<circle class="s-acc" cx="105" cy="110" r="16" style="fill-opacity:.7"></circle>
+<circle class="s-acc" cx="171" cy="110" r="16" style="fill-opacity:.45"></circle>
+<circle class="s-acc" cx="237" cy="110" r="16" style="fill-opacity:.22"></circle>
+<circle class="s-acc" cx="303" cy="110" r="16" style="fill-opacity:.08"></circle>
+<text class="small mono" text-anchor="middle" x="39" y="114">h1</text>
+<text class="small mono" text-anchor="middle" x="105" y="114">h2</text>
+<text class="small mono" text-anchor="middle" x="171" y="114">h3</text>
+<text class="small mono" text-anchor="middle" x="237" y="114">h4</text>
+<text class="small mono" text-anchor="middle" x="303" y="114">h5</text>
+<line class="s-line" marker-end="url(#ah)" x1="55" x2="87" y1="110" y2="110"></line>
+<line class="s-line" marker-end="url(#ah)" x1="121" x2="153" y1="110" y2="110"></line>
+<line class="s-line" marker-end="url(#ah)" x1="187" x2="219" y1="110" y2="110"></line>
+<line class="s-line" marker-end="url(#ah)" x1="253" x2="285" y1="110" y2="110"></line>
+</g>
+<g>
+<rect class="s-box" height="34" rx="6" width="58" x="10" y="170"></rect>
+<rect class="s-box" height="34" rx="6" width="58" x="76" y="170"></rect>
+<rect class="s-box" height="34" rx="6" width="58" x="142" y="170"></rect>
+<rect class="s-box" height="34" rx="6" width="58" x="208" y="170"></rect>
+<rect class="s-warm" height="34" rx="6" width="58" x="274" y="170"></rect>
+<text text-anchor="middle" x="39" y="192">동물은</text>
+<text text-anchor="middle" x="105" y="192">길을</text>
+<text text-anchor="middle" x="171" y="192">건너지</text>
+<text text-anchor="middle" x="237" y="192">않았다</text>
+<text text-anchor="middle" x="303" y="192">그것이</text>
+<line class="s-line" marker-end="url(#ah)" x1="39" x2="39" y1="168" y2="129"></line>
+<line class="s-line" marker-end="url(#ah)" x1="105" x2="105" y1="168" y2="129"></line>
+<line class="s-line" marker-end="url(#ah)" x1="171" x2="171" y1="168" y2="129"></line>
+<line class="s-line" marker-end="url(#ah)" x1="237" x2="237" y1="168" y2="129"></line>
+<line class="s-line" marker-end="url(#ah)" x1="303" x2="303" y1="168" y2="129"></line>
+</g>
+<line stroke="var(--line)" stroke-dasharray="4 4" x1="356" x2="356" y1="10" y2="230"></line>
+
+<text class="bold" x="380" y="24">트랜스포머 · 전체를 한 번에</text>
+<path class="s-warmline" d="M673 170 Q541 59 409 170" style="stroke-width:7;opacity:.9"></path>
+<path class="s-warmline" d="M673 170 Q574 87 475 170" style="stroke-width:1.5;opacity:.6"></path>
+<path class="s-warmline" d="M673 170 Q607 115 541 170" style="stroke-width:1.5;opacity:.6"></path>
+<path class="s-warmline" d="M673 170 Q640 142 607 170" style="stroke-width:3;opacity:.8"></path>
+<rect class="s-box" height="34" rx="6" width="58" x="380" y="170"></rect>
+<rect class="s-box" height="34" rx="6" width="58" x="446" y="170"></rect>
+<rect class="s-box" height="34" rx="6" width="58" x="512" y="170"></rect>
+<rect class="s-box" height="34" rx="6" width="58" x="578" y="170"></rect>
+<rect class="s-warm" height="34" rx="6" width="58" x="644" y="170"></rect>
+<text text-anchor="middle" x="409" y="192">동물은</text>
+<text text-anchor="middle" x="475" y="192">길을</text>
+<text text-anchor="middle" x="541" y="192">건너지</text>
+<text text-anchor="middle" x="607" y="192">않았다</text>
+<text text-anchor="middle" x="673" y="192">그것이</text>
+<text class="mono bold" style="fill:var(--warm)" text-anchor="middle" x="409" y="226">0.70</text>
+<text class="mono mut" text-anchor="middle" x="475" y="226">0.05</text>
+<text class="mono mut" text-anchor="middle" x="541" y="226">0.05</text>
+<text class="mono mut" text-anchor="middle" x="607" y="226">0.20</text>
+<text class="mut small" text-anchor="middle" x="673" y="226">(기준)</text>
+</svg>
+<figcaption><b>그림 1.</b> 왼쪽: RNN은 기억(h)을 한 칸씩 넘기며 덮어써서 앞 단어 정보가 흐려진다. 오른쪽: 트랜스포머에서는 "그것이"가 모든 단어를 직접 보고 "동물은"에 가장 크게 집중한다(선 굵기 = 어텐션 가중치, 예시 값).</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<tbody><tr><th></th><th>RNN</th><th>트랜스포머</th></tr>
+<tr><td>읽는 방식</td><td>한 단어씩 순서대로</td><td>전체를 한 번에</td></tr>
+<tr><td>먼 단어와의 관계</td><td>점점 잊음</td><td>어텐션으로 바로 연결</td></tr>
+<tr><td>속도</td><td>병렬 처리 어려움</td><td>병렬 처리 가능 (GPU에 적합)</td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+<h2 id="s2"><span class="num">02</span>토큰과 임베딩</h2>
+<p>컴퓨터는 숫자만 계산할 수 있으니, 문장을 숫자로 바꾸는 단계가 필요하다.</p>
+<pre><code>"나는 고양이를 좋아해"
+  ↓ 토큰화      ["나", "는", "고양이", "를", "좋아", "해"]
+  ↓ 토큰 ID     [312, 45, 8821, 67, 1590, 23]
+  ↓ 임베딩      [[0.2, -1.3, 0.8, ...], ...]   (토큰마다 768개 숫자)</code></pre>
+<ul>
+<li><b>토큰</b>: 모델이 다루는 글자 조각. 자주 나오는 건 크게, 드문 건 잘게 자른다(BPE 등).</li>
+<li><b>토큰 ID</b>: 사물함 번호일 뿐, 숫자가 가깝다고 의미가 비슷한 게 아니다.</li>
+<li><b>임베딩</b>: 토큰을 의미를 담은 벡터로 바꾼 것. <b>의미가 비슷하면 벡터도 가깝다.</b> 각 숫자의 뜻은 사람이 정하지 않고 학습으로 정해진다.</li>
+<li>구현은 <code>(토큰 수 × 768)</code> 크기의 표 하나. ID번째 줄을 꺼내면 그 토큰의 벡터다.</li>
+</ul>
+<figure>
+<svg aria-label="임베딩 공간에서 동물, 과일, 탈것이 각각 무리 지어 있고 배는 과일과 탈것 사이에 있다" role="img" viewBox="0 0 560 320">
+<line class="s-line" marker-end="url(#ah)" x1="50" x2="535" y1="285" y2="285"></line>
+<line class="s-line" marker-end="url(#ah)" x1="50" x2="50" y1="285" y2="18"></line>
+<text class="mut" text-anchor="end" x="535" y="305">차원 1</text>
+<text class="mut" x="58" y="24">차원 2</text>
+<ellipse class="s-frame" cx="135" cy="95" rx="72" ry="52"></ellipse>
+<text class="mut small" text-anchor="middle" x="135" y="168">동물</text>
+<circle class="s-dot-acc" cx="115" cy="80" r="5"></circle><text x="124" y="84">고양이</text>
+<circle class="s-dot-acc" cx="150" cy="105" r="5"></circle><text x="159" y="109">강아지</text>
+<circle class="s-dot-acc" cx="98" cy="118" r="5"></circle><text x="70" y="140">호랑이</text>
+<ellipse class="s-frame" cx="365" cy="80" rx="72" ry="48"></ellipse>
+<text class="mut small" text-anchor="middle" x="365" y="148">과일</text>
+<circle class="s-dot-green" cx="335" cy="70" r="5"></circle><text x="344" y="74">사과</text>
+<circle class="s-dot-green" cx="385" cy="55" r="5"></circle><text x="394" y="59">바나나</text>
+<circle class="s-dot-green" cx="370" cy="100" r="5"></circle><text x="379" y="104">포도</text>
+<ellipse class="s-frame" cx="420" cy="240" rx="80" ry="34"></ellipse>
+<text class="mut small" x="506" y="244">탈것</text>
+<circle class="s-dot-acc" cx="380" cy="240" r="5" style="fill:var(--muted)"></circle><text x="389" y="244">자동차</text>
+<circle class="s-dot-acc" cx="450" cy="228" r="5" style="fill:var(--muted)"></circle><text x="459" y="232">버스</text>
+<circle class="s-dot-acc" cx="440" cy="258" r="5" style="fill:var(--muted)"></circle><text x="449" y="262">기차</text>
+<circle class="s-dot-warm" cx="300" cy="170" r="7"></circle>
+<text class="bold" style="fill:var(--warm)" x="312" y="175">배</text>
+<text class="mut small" x="180" y="205">과일? 탈것? 몸?</text>
+<text class="mut small" x="180" y="221">→ 문맥이 필요 (3단계)</text>
+</svg>
+<figcaption><b>그림 2.</b> 임베딩 공간을 2차원으로 줄여 본 모습(실제는 768차원). 비슷한 의미끼리 모인다. 하지만 "배"는 문맥 없이는 하나의 점이라 뜻이 애매하다.</figcaption>
+</figure>
+</section>
+
+<section>
+<h2 id="s3"><span class="num">03</span>셀프 어텐션 (Q, K, V)</h2>
+<p>각 단어가 문장 속 다른 단어들을 보고 <b>자기 벡터를 문맥에 맞게 고치는 과정</b>이다. 도서관 검색에 비유하면 각 단어는 세 가지 역할을 동시에 한다.</p>
+<div class="table-wrap"><table>
+<tbody><tr><th>역할</th><th>비유</th><th>의미</th></tr>
+<tr><td><b>Query (Q)</b></td><td>검색창에 치는 검색어</td><td>나는 이런 정보가 필요해</td></tr>
+<tr><td><b>Key (K)</b></td><td>책 표지의 키워드</td><td>나는 이런 정보를 갖고 있어</td></tr>
+<tr><td><b>Value (V)</b></td><td>책의 실제 내용</td><td>나를 고르면 이걸 줄게</td></tr>
+</tbody></table></div>
+<figure>
+<svg aria-label="임베딩에서 QKV를 만들고 점수, softmax 가중치를 거쳐 V를 섞은 출력이 나온다" role="img" viewBox="0 0 720 130">
+<rect class="s-box" height="64" rx="8" width="112" x="5" y="30"></rect>
+<text class="bold" text-anchor="middle" x="61" y="58">임베딩 x</text>
+<text class="mut small" text-anchor="middle" x="61" y="78">+ 위치 정보</text>
+<rect class="s-acc" height="64" rx="8" width="125" x="150" y="30"></rect>
+<text class="bold" text-anchor="middle" x="212" y="58">Q · K · V</text>
+<text class="mut small mono" text-anchor="middle" x="212" y="78">x × W_Q/W_K/W_V</text>
+<rect class="s-box" height="64" rx="8" width="125" x="308" y="30"></rect>
+<text class="bold" text-anchor="middle" x="370" y="58">① 점수</text>
+<text class="mut small mono" text-anchor="middle" x="370" y="78">Q·Kᵀ / √d_k</text>
+<rect class="s-box" height="64" rx="8" width="105" x="466" y="30"></rect>
+<text class="bold" text-anchor="middle" x="518" y="58">② 가중치</text>
+<text class="mut small mono" text-anchor="middle" x="518" y="78">softmax</text>
+<rect class="s-warm" height="64" rx="8" width="110" x="604" y="30"></rect>
+<text class="bold" text-anchor="middle" x="659" y="58">③ 출력</text>
+<text class="mut small mono" text-anchor="middle" x="659" y="78">가중치 × V</text>
+<line class="s-line" marker-end="url(#ah)" x1="118" x2="147" y1="62" y2="62"></line>
+<line class="s-line" marker-end="url(#ah)" x1="276" x2="305" y1="62" y2="62"></line>
+<line class="s-line" marker-end="url(#ah)" x1="434" x2="463" y1="62" y2="62"></line>
+<line class="s-line" marker-end="url(#ah)" x1="572" x2="601" y1="62" y2="62"></line>
+<text class="mut small" text-anchor="middle" x="212" y="118">W는 학습으로 정해짐</text>
+<text class="mut small" text-anchor="middle" x="440" y="118">Q3: 점수 → 가중치 → 어텐션 출력</text>
+<text class="mut small" text-anchor="middle" x="659" y="118">문맥 반영된 벡터</text>
+</svg>
+<figcaption><b>그림 3.</b> 셀프 어텐션의 계산 흐름. 모든 단어가 이 과정을 <b>동시에</b> 한다(행렬 곱 한 번).</figcaption>
+</figure>
+<p><b>예시: "배를 타고 바다로 갔다"</b>에서 "배"의 Q가 각 단어의 K와 비교된 결과.</p>
+<figure>
+<div class="bars" id="qkBars"></div>
+<figcaption><b>그림 4.</b> 점수(Q·K)를 softmax하면 합이 1인 가중치가 된다. "타고", "바다로"의 V가 많이 섞여서 "배"가 <b>탈것</b> 쪽 의미로 바뀐다. (예시 값)</figcaption>
+</figure>
+<div class="formula">Attention(Q, K, V) = softmax(<span class="frac"><span>QKᵀ</span><span>√d<sub>k</sub></span></span>) V</div>
+<p>"셀프"인 이유는 Q, K, V가 모두 <b>같은 문장</b>에서 나오기 때문이다.</p>
+<h3 id="sec-1">직접 눌러보기: 이 단어는 어디를 볼까?</h3>
+<p class="hint">단어를 누르면 그 단어의 Query 기준으로 다른 단어에 주는 어텐션 가중치를 색 진하기와 막대로 보여준다. 이해를 돕기 위한 예시 값이고, 실제 모델의 값은 아니다.</p>
+<figure>
+<div aria-label="기준 단어 선택" class="tokens" id="attnTokens" role="group"></div>
+<div class="bars" id="attnBars"></div>
+<figcaption><b>그림 5.</b> "그것이"를 누르면 "동물은"에 가장 크게 집중한다. "건너지"는 "길을"을, "피곤했기"는 "그것이"와 "동물은"을 본다.</figcaption>
+</figure>
+</section>
+
+<section>
+<h2 id="s4"><span class="num">04</span>멀티헤드 어텐션</h2>
+<p>"<b>철수가</b> 어제 공원에서 산 빨간 <b>공을</b> 던졌다"에서 "던졌다"는 <b>누가</b>(철수), <b>무엇을</b>(공), <b>언제</b>(어제)를 동시에 알고 싶다. 어텐션 한 번으로는 이 관계들이 평균내져 흐려진다.</p>
+<p>그래서 어텐션을 <b>여러 개(헤드) 나란히</b> 돌린다. 헤드마다 자기만의 W_Q, W_K, W_V를 가져서 다른 관계를 잡고, 역할 분담은 학습으로 저절로 생긴다.</p>
+<pre><code>입력 (768)
+ ├─ 헤드 1  (64) ─┐
+ ├─ 헤드 2  (64) ─┤
+ ├─ ...           ├─ 이어 붙이기 (12 × 64 = 768) → W_O → 출력 (768)
+ └─ 헤드 12 (64) ─┘</code></pre>
+<p>768을 12개가 64씩 나눠 쓰니 전체 계산량은 어텐션 한 번과 비슷하다. 입력과 출력이 모두 768이라 여러 층을 쌓을 수 있다.</p>
+<figure>
+<svg aria-label="헤드는 한 층 안에서 옆으로 나란히 병렬로 돌고, 층은 위로 쌓여 순차적으로 N번 반복된다" role="img" viewBox="0 0 640 330">
+
+<rect class="s-box" height="60" rx="10" width="420" x="80" y="50"></rect>
+<text class="bold" x="20" y="78">3층</text><text class="mut small" x="20" y="96">가중치 ③</text>
+
+<rect class="s-box" height="60" rx="10" width="420" x="80" y="140"></rect>
+<text class="bold" x="20" y="168">2층</text><text class="mut small" x="20" y="186">가중치 ②</text>
+
+<rect class="s-box" height="60" rx="10" width="420" x="80" y="230"></rect>
+<text class="bold" x="20" y="258">1층</text><text class="mut small" x="20" y="276">가중치 ①</text>
+<g id="heads">
+<rect class="s-acc" height="34" rx="6" width="90" x="95" y="63"></rect><text text-anchor="middle" x="140" y="85">헤드 1</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="195" y="63"></rect><text text-anchor="middle" x="240" y="85">헤드 2</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="295" y="63"></rect><text text-anchor="middle" x="340" y="85">…</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="395" y="63"></rect><text text-anchor="middle" x="440" y="85">헤드 12</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="95" y="153"></rect><text text-anchor="middle" x="140" y="175">헤드 1</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="195" y="153"></rect><text text-anchor="middle" x="240" y="175">헤드 2</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="295" y="153"></rect><text text-anchor="middle" x="340" y="175">…</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="395" y="153"></rect><text text-anchor="middle" x="440" y="175">헤드 12</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="95" y="243"></rect><text text-anchor="middle" x="140" y="265">헤드 1</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="195" y="243"></rect><text text-anchor="middle" x="240" y="265">헤드 2</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="295" y="243"></rect><text text-anchor="middle" x="340" y="265">…</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="395" y="243"></rect><text text-anchor="middle" x="440" y="265">헤드 12</text>
+</g>
+<line class="s-line" marker-end="url(#ah)" x1="290" x2="290" y1="228" y2="203"></line>
+<line class="s-line" marker-end="url(#ah)" x1="290" x2="290" y1="138" y2="113"></line>
+<line class="s-line" marker-end="url(#ah)" x1="290" x2="290" y1="48" y2="26"></line>
+<text class="mut small" x="300" y="22">출력 → 다음 토큰 예측</text>
+<line class="s-line" marker-end="url(#ah)" x1="290" x2="290" y1="318" y2="293"></line>
+<text class="mut small" x="300" y="318">입력 (임베딩 + 위치)</text>
+<line class="s-warmline" marker-end="url(#ah-warm)" style="stroke-width:2.5" x1="535" x2="535" y1="290" y2="52"></line>
+<text class="bold" style="fill:var(--warm)" x="548" y="150">순차</text>
+<text style="fill:var(--warm)" x="548" y="170">N번 반복</text>
+<text class="mut small" x="548" y="188">(for문)</text>
+</svg>
+<figcaption><b>그림 6 (Q4).</b> <b>헤드</b>는 한 층 안에서 <b>옆으로 나란히</b> 동시에 돈다(서로의 결과를 보지 않음). <b>"N번 반복"</b>은 서로 다른 가중치를 가진 <b>층을 위로 쌓은 것</b>이고, 아래층 출력이 위층 입력이 된다.</figcaption>
+</figure>
+</section>
+
+<section>
+<h2 id="s5"><span class="num">05</span>위치 인코딩</h2>
+<p>어텐션은 모든 단어를 한 번에 보기 때문에 <b>순서를 모른다.</b> "Dog bites man"과 "Man bites dog"이 같은 단어 주머니로 보인다. 그래서 순서 정보를 따로 넣어준다.</p>
+<div class="callout"><b>최종 입력 = 토큰 임베딩 + 위치 인코딩</b> (둘 다 768 크기라 그대로 더할 수 있다)</div>
+<p>1, 2, 3을 그대로 넣으면 값이 커져서 단어 의미를 덮어버린다. 원 논문은 <b>빠르기가 다른 sin/cos 파동</b>을 쓴다. 시계의 초침·분침·시침처럼, 여러 파동 값을 같이 보면 위치가 하나로 정해진다. 값은 항상 -1~1 사이다.</p>
+<figure>
+<svg aria-label="빠르기가 다른 네 개의 사인 파동과 선택한 위치에서의 값" id="peSvg" role="img" viewBox="0 0 640 270"></svg>
+<div class="control">
+<label for="peSlider">위치</label>
+<input id="peSlider" max="63" min="0" type="range" value="10">
+<output id="peOut">10</output>
+</div>
+<div class="readout" id="peReadout"></div>
+<figcaption><b>그림 7.</b> 슬라이더로 위치를 바꿔보자. 빠른 파동(초침)은 바로 옆 위치를 구분하고, 느린 파동(시침)은 멀리 떨어진 위치를 구분한다. 실제로는 이런 파동이 768칸에 걸쳐 들어간다.</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<tbody><tr><th>방식</th><th>설명</th><th>쓰는 모델</th></tr>
+<tr><td>sin/cos (고정)</td><td>공식으로 계산, 학습 안 함</td><td>원 논문</td></tr>
+<tr><td>학습형 위치 임베딩</td><td>위치별 벡터를 표로 만들어 학습</td><td>BERT, GPT-2</td></tr>
+<tr><td>RoPE</td><td>더하는 대신 Q, K를 위치만큼 회전</td><td>LLaMA 등 요즘 LLM</td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+<h2 id="s6"><span class="num">06</span>트랜스포머 블록</h2>
+<p>지금까지의 부품을 하나로 조립한 것이 <b>트랜스포머 블록</b>이고, 이것을 N개 쌓은 것이 Q4의 "N번 반복"이다.</p>
+<figure>
+<svg aria-label="트랜스포머 블록: 입력 x가 멀티헤드 어텐션을 거친 뒤 원래 x와 더해지고 정규화, FFN을 거친 뒤 다시 더해지고 정규화된다" role="img" style="max-width:470px;margin:0 auto" viewBox="0 0 470 560">
+<rect class="s-box" height="36" rx="8" width="200" x="160" y="10"></rect>
+<text class="bold" text-anchor="middle" x="260" y="33">입력 x</text>
+<rect class="s-acc" height="46" rx="8" width="200" x="160" y="90"></rect>
+<text class="bold" text-anchor="middle" x="260" y="118">멀티헤드 어텐션</text>
+<text class="small" style="fill:var(--acc)" x="370" y="110">어텐션(x)</text>
+<text class="small mut" x="370" y="126">= residual</text>
+<circle class="s-warm" cx="260" cy="180" r="16"></circle>
+<text class="bold" text-anchor="middle" x="260" y="185">+</text>
+<text class="small mut mono" x="286" y="184">x + 어텐션(x)</text>
+<rect class="s-box" height="36" rx="8" width="200" x="160" y="220"></rect>
+<text text-anchor="middle" x="260" y="243">LayerNorm</text>
+<rect class="s-green" height="46" rx="8" width="200" x="160" y="300"></rect>
+<text class="bold" text-anchor="middle" x="260" y="320">FFN</text>
+<text class="small mut mono" text-anchor="middle" x="260" y="337">768 → 3072 → 768</text>
+<circle class="s-warm" cx="260" cy="390" r="16"></circle>
+<text class="bold" text-anchor="middle" x="260" y="395">+</text>
+<text class="small mut mono" x="286" y="394">x + FFN(x)</text>
+<rect class="s-box" height="36" rx="8" width="200" x="160" y="430"></rect>
+<text text-anchor="middle" x="260" y="453">LayerNorm</text>
+<rect class="s-box" height="36" rx="8" width="200" x="160" y="508"></rect>
+<text class="bold" text-anchor="middle" x="260" y="531">출력 → 다음 블록</text>
+
+<line class="s-line" marker-end="url(#ah)" x1="260" x2="260" y1="46" y2="87"></line>
+<line class="s-line" marker-end="url(#ah)" x1="260" x2="260" y1="136" y2="161"></line>
+<line class="s-line" marker-end="url(#ah)" x1="260" x2="260" y1="196" y2="217"></line>
+<line class="s-line" marker-end="url(#ah)" x1="260" x2="260" y1="256" y2="297"></line>
+<line class="s-line" marker-end="url(#ah)" x1="260" x2="260" y1="346" y2="371"></line>
+<line class="s-line" marker-end="url(#ah)" x1="260" x2="260" y1="406" y2="427"></line>
+<line class="s-line" marker-end="url(#ah)" x1="260" x2="260" y1="466" y2="505"></line>
+
+<path class="s-warmline" d="M260 66 L100 66 L100 180 L241 180" marker-end="url(#ah-warm)"></path>
+<circle class="s-dot-warm" cx="260" cy="66" r="3.5"></circle>
+<text class="small bold" style="fill:var(--warm)" text-anchor="end" x="92" y="118">x (원본)</text>
+<text class="small mut" text-anchor="end" x="92" y="134">우회로</text>
+<path class="s-warmline" d="M260 276 L100 276 L100 390 L241 390" marker-end="url(#ah-warm)"></path>
+<circle class="s-dot-warm" cx="260" cy="276" r="3.5"></circle>
+<text class="small bold" style="fill:var(--warm)" text-anchor="end" x="92" y="328">x (원본)</text>
+<text class="small mut" text-anchor="end" x="92" y="344">우회로</text>
+</svg>
+<figcaption><b>그림 8 (Q6).</b> 주황색 우회로가 <b>잔차 연결</b>이다. 우회로로 건너오는 것은 <b>원래 입력 x</b>이고, 어텐션/FFN이 만든 결과가 <b>residual(변화량)</b>이다. 원 논문은 더한 뒤 정규화(Post-LN, 그림)하고, 요즘 LLM은 넣기 전에 정규화(Pre-LN)한다.</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<tbody><tr><th>부품</th><th>하는 일</th><th>비유</th></tr>
+<tr><td>멀티헤드 어텐션</td><td>단어 <b>사이</b>의 정보 교환</td><td>회의</td></tr>
+<tr><td>FFN</td><td>단어 <b>각자</b> 정보 가공. 4배로 넓혔다가 줄이고, 활성화 함수로 비선형성을 넣는다. 파라미터의 약 2/3</td><td>각자 자리에서 정리</td></tr>
+<tr><td>잔차 연결</td><td>원래 입력 x를 결과에 더한다. 층은 "변화량"만 학습. 깊어져도 정보와 학습 신호가 잘 전달된다</td><td>원본에 수정 메모 붙이기</td></tr>
+<tr><td>LayerNorm</td><td>벡터 값을 평균 0, 크기 1 근처로 맞춘다</td><td>점수 표준화</td></tr>
+</tbody></table></div>
+<div class="table-wrap"><table>
+<tbody><tr><th>모델</th><th>블록 수 (N)</th></tr>
+<tr><td>원 논문 트랜스포머</td><td>인코더 6 + 디코더 6</td></tr>
+<tr><td>BERT-base, GPT-2 small</td><td>12</td></tr>
+<tr><td>LLaMA-7B</td><td>32</td></tr>
+<tr><td>GPT-3</td><td>96</td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+<h2 id="s7"><span class="num">07</span>인코더 · 디코더 · 마스킹</h2>
+<p>원 논문은 번역기였다. 원문을 <b>읽고 이해하는 인코더</b>와 번역문을 <b>한 단어씩 쓰는 디코더</b>로 이루어져 있다.</p>
+<figure>
+<svg aria-label="인코더는 원문을 셀프 어텐션과 FFN으로 처리하고, 그 출력이 디코더의 크로스 어텐션에 K와 V로 들어간다" role="img" viewBox="0 0 640 270">
+<text class="bold" text-anchor="middle" x="150" y="28">인코더 × N</text>
+<rect class="s-frame" height="150" rx="12" width="220" x="40" y="40"></rect>
+<rect class="s-green" height="44" rx="8" width="180" x="60" y="62"></rect>
+<text text-anchor="middle" x="150" y="89">FFN</text>
+<rect class="s-acc" height="44" rx="8" width="180" x="60" y="130"></rect>
+<text text-anchor="middle" x="150" y="150">셀프 어텐션</text>
+<text class="small mut" text-anchor="middle" x="150" y="166">앞뒤 모두 봄</text>
+<line class="s-line" marker-end="url(#ah)" x1="150" x2="150" y1="128" y2="109"></line>
+<line class="s-line" marker-end="url(#ah)" x1="150" x2="150" y1="222" y2="177"></line>
+<text class="mono" text-anchor="middle" x="150" y="240">"I love cats"</text>
+<text class="bold" text-anchor="middle" x="490" y="28">디코더 × N</text>
+<rect class="s-frame" height="150" rx="12" width="220" x="380" y="40"></rect>
+<rect class="s-green" height="36" rx="8" width="180" x="400" y="50"></rect>
+<text text-anchor="middle" x="490" y="73">FFN</text>
+<rect class="s-warm" height="36" rx="8" width="180" x="400" y="98"></rect>
+<text text-anchor="middle" x="490" y="121">크로스 어텐션</text>
+<rect class="s-acc" height="36" rx="8" width="180" x="400" y="146"></rect>
+<text text-anchor="middle" x="490" y="169">마스크 셀프 어텐션</text>
+<line class="s-line" x1="490" x2="490" y1="144" y2="137"></line>
+<line class="s-line" x1="490" x2="490" y1="96" y2="89"></line>
+<line class="s-line" marker-end="url(#ah)" x1="490" x2="490" y1="222" y2="185"></line>
+<text class="mono" text-anchor="middle" x="490" y="240">"&#x3C;시작> 나는 고양이를"</text>
+<text class="small mut" text-anchor="middle" x="490" y="262">→ 다음 단어: "좋아해"</text>
+<path class="s-warmline" d="M240 84 L320 84 L320 116 L397 116" marker-end="url(#ah-warm)"></path>
+<text class="small" style="fill:var(--warm)" text-anchor="middle" x="320" y="72">원문 → K, V</text>
+<text class="small mut" text-anchor="middle" x="320" y="140">Q는 디코더에서</text>
+</svg>
+<figcaption><b>그림 9.</b> 디코더는 두 가지가 다르다. ① <b>마스크</b>로 미래 단어를 못 보게 하고, ② <b>크로스 어텐션</b>으로 원문을 참고한다(Q는 디코더, K·V는 인코더에서).</figcaption>
+</figure>
+<h3 id="sec-2">마스크: 미래 훔쳐보기 금지</h3>
+<p>학습할 때는 정답 문장이 통째로 들어간다. 뒤를 볼 수 있으면 정답을 그냥 베낀다. 그래서 각 단어는 <b>자기와 앞 단어만</b> 보게 한다. 어텐션 점수의 미래 자리를 <b>−∞</b>로 바꾸면 softmax 후 0이 된다.</p>
+<figure>
+<svg aria-label="4×4 인과 마스크: 아래 삼각형은 볼 수 있고 위 삼각형은 마이너스 무한대로 막힌다" role="img" style="max-width:440px;margin:0 auto" viewBox="0 0 440 300">
+<text class="mut small" text-anchor="middle" x="270" y="22">볼 수 있는 단어 (Key) →</text>
+<g class="small" text-anchor="middle">
+<text x="165" y="50">&#x3C;시작></text><text x="235" y="50">나는</text><text x="305" y="50">고양이를</text><text x="375" y="50">좋아해</text>
+</g>
+<g text-anchor="end">
+<text x="122" y="91">&#x3C;시작></text><text x="122" y="141">나는</text><text x="122" y="191">고양이를</text><text x="122" y="241">좋아해</text>
+</g>
+<g id="maskGrid"></g>
+<text class="mut small" x="20" y="290">↑ 지금 예측하는 위치 (Query)</text>
+</svg>
+<figcaption><b>그림 10.</b> 삼각형 모양이라 <b>causal mask</b>라고 한다. 이 마스크 덕분에 학습할 때 문장 하나로 모든 위치의 "다음 단어"를 <b>동시에</b> 맞힐 수 있다(8단계).</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<tbody><tr><th>종류</th><th>잘하는 일</th><th>대표 모델</th></tr>
+<tr><td>인코더만</td><td>이해 · 분류</td><td>BERT</td></tr>
+<tr><td><b>디코더만</b></td><td>생성</td><td><b>GPT, LLaMA, Claude</b> 등 대부분의 LLM</td></tr>
+<tr><td>인코더 + 디코더</td><td>변환 (번역, 요약)</td><td>T5, BART</td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+<h2 id="s8"><span class="num">08</span>학습과 생성</h2>
+<h3 id="sec-3">벡터를 다음 토큰으로</h3>
+<p>마지막 위치의 벡터(768) → 출력 행렬(768 → 사전 크기) → 토큰별 점수(logit) → softmax → 확률 → 하나 고르기. 임베딩의 반대 방향이다.</p>
+<h3 id="sec-4">고르는 방법과 temperature</h3>
+<p><b>greedy</b>는 항상 1등을 고르고, <b>sampling</b>은 확률대로 뽑는다. <b>temperature</b>는 확률 분포를 조절하는 손잡이다.</p>
+<figure>
+<div class="bars" id="tempBars"></div>
+<div class="control">
+<label for="tempSlider">temperature</label>
+<input id="tempSlider" max="2" min="0.1" step="0.1" type="range" value="1">
+<output id="tempOut">1.0</output>
+</div>
+<figcaption><b>그림 11.</b> "나는 고양이를" 다음 토큰 확률. 온도를 낮추면 1등에 몰리고(정확하지만 딱딱함), 높이면 고르게 퍼진다(창의적이지만 엉뚱함).</figcaption>
+</figure>
+<h3 id="sec-5">생성: 한 토큰씩 뽑아서 다시 넣기</h3>
+<figure>
+<div class="gen">
+<div class="gen-row"><span class="step">1회</span><span class="chip">나는</span><span class="arrow">→ 모델 →</span><span class="chip new">고양이를</span></div>
+<div class="gen-row"><span class="step">2회</span><span class="chip">나는</span><span class="chip">고양이를</span><span class="arrow">→ 모델 →</span><span class="chip new">좋아해</span></div>
+<div class="gen-row"><span class="step">3회</span><span class="chip">나는</span><span class="chip">고양이를</span><span class="chip">좋아해</span><span class="arrow">→ 모델 →</span><span class="chip new">.</span></div>
+<div class="gen-row"><span class="step">4회</span><span class="chip">나는</span><span class="chip">고양이를</span><span class="chip">좋아해</span><span class="chip">.</span><span class="arrow">→ 모델 →</span><span class="chip end">&#x3C;끝></span></div>
+</div>
+<figcaption><b>그림 12.</b> <b>자기회귀 생성</b>. 한 번에 한 토큰만 예측하고, 뽑은 토큰을 붙여 다시 넣는다. 챗봇 답변이 한 글자씩 흘러나오는 이유다.</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<tbody><tr><th>"반복"</th><th>어디서</th><th>내용</th></tr>
+<tr><td>층 N개 (Q4)</td><td>모델 안</td><td>블록 1 → 블록 2 → … (예측 한 번마다)</td></tr>
+<tr><td>생성 루프</td><td>모델 밖</td><td>토큰 뽑고 → 붙이고 → 다시 실행</td></tr>
+<tr><td>학습 스텝 (Q5)</td><td>학습할 때</td><td>예측 → 오차 → 가중치 수정</td></tr>
+</tbody></table></div>
+<h3 id="sec-6">학습: 다음 토큰 맞히기 (Q2, Q5)</h3>
+<ol>
+<li>모든 가중치(임베딩, 모든 층의 W_Q·W_K·W_V·W_O, FFN, 출력 행렬)가 <b>랜덤</b>으로 시작한다.</li>
+<li>사람이 쓴 대량의 텍스트가 <b>문제이자 정답</b>이다. 따로 정답을 달 필요가 없다.</li>
+<li>마스크 덕분에 문장 하나로 <b>모든 위치를 동시에</b> 예측한다.</li>
+<li>정답 토큰에 준 확률이 낮을수록 오차가 크다(크로스 엔트로피).</li>
+<li><b>역전파</b>로 오차를 출력층 → 블록 N → … → 임베딩까지 거꾸로 보내고 <b>모든 가중치를 동시에</b> 조금씩 고친다.</li>
+<li>수십만~수백만 번 반복하면 임베딩 의미, 어텐션 관계, 헤드 역할, 층별 역할이 <b>저절로</b> 생긴다.</li>
+<li>이후 파인튜닝(SFT), RLHF 등으로 대화형 비서로 다듬는다. 구조는 그대로이고 가중치만 바뀐다.</li>
+</ol>
+<figure>
+<svg aria-label="순전파는 임베딩부터 출력층까지 올라가고, 역전파는 오차를 거꾸로 보내 모든 층의 가중치를 동시에 수정한다" role="img" viewBox="0 0 680 200">
+<g text-anchor="middle">
+<rect class="s-box" height="50" rx="8" width="100" x="10" y="60"></rect><text x="60" y="90">임베딩</text>
+<rect class="s-acc" height="50" rx="8" width="100" x="140" y="60"></rect><text x="190" y="90">블록 1</text>
+<rect class="s-acc" height="50" rx="8" width="100" x="270" y="60"></rect><text x="320" y="90">…</text>
+<rect class="s-acc" height="50" rx="8" width="100" x="400" y="60"></rect><text x="450" y="90">블록 N</text>
+<rect class="s-warm" height="50" rx="8" width="140" x="530" y="60"></rect><text x="600" y="82">예측 vs 정답</text><text class="small mut" x="600" y="100">오차 (loss)</text>
+</g>
+<line class="s-line" marker-end="url(#ah)" x1="111" x2="137" y1="75" y2="75"></line>
+<line class="s-line" marker-end="url(#ah)" x1="241" x2="267" y1="75" y2="75"></line>
+<line class="s-line" marker-end="url(#ah)" x1="371" x2="397" y1="75" y2="75"></line>
+<line class="s-line" marker-end="url(#ah)" x1="501" x2="527" y1="75" y2="75"></line>
+<text class="mut" text-anchor="middle" x="320" y="40">① 순전파: 앞으로 계산 →</text>
+<path class="s-warmline" d="M600 112 L600 150 L60 150 L60 114" marker-end="url(#ah-warm)"></path>
+<line class="s-warmline" marker-end="url(#ah-warm)" x1="190" x2="190" y1="150" y2="114"></line>
+<line class="s-warmline" marker-end="url(#ah-warm)" x1="320" x2="320" y1="150" y2="114"></line>
+<line class="s-warmline" marker-end="url(#ah-warm)" x1="450" x2="450" y1="150" y2="114"></line>
+<text style="fill:var(--warm)" text-anchor="middle" x="330" y="180">② 역전파: ← 오차를 거꾸로 보내 모든 가중치를 동시에 수정</text>
+</svg>
+<figcaption><b>그림 13 (Q2, Q5).</b> 학습 1스텝. 가중치는 다른 모델이 만들어 주는 게 아니라, 이 과정을 반복하며 <b>모델 자신의 모든 층이 한꺼번에</b> 학습된다. 결과물은 가중치 파일(예: <code>model.safetensors</code>)이다.</figcaption>
+</figure>
+</section>
+
+<section>
+<h2 id="s9"><span class="num">09</span>전체 흐름 한 장 정리</h2>
+<figure>
+<div class="pipeline">
+<div class="pipe-step"><div class="badge">1</div><div><div class="what">토큰화<span class="ref">02</span></div><div class="ex">"나는 고양이를" → [312, 8821, 67]</div></div></div>
+<div class="pipe-step"><div class="badge">2</div><div><div class="what">임베딩 + 위치 인코딩<span class="ref">02 · 05</span></div><div class="ex">토큰마다 768 크기 벡터</div></div></div>
+<div class="pipe-step"><div class="badge">3</div><div><div class="what">트랜스포머 블록 × N<span class="ref">03 · 04 · 06 · 07</span></div><div class="ex">마스크 멀티헤드 어텐션 → 잔차+정규화 → FFN → 잔차+정규화</div></div></div>
+<div class="pipe-step"><div class="badge">4</div><div><div class="what">출력 행렬 + softmax<span class="ref">08</span></div><div class="ex">다음 토큰 확률 → "좋아해"</div></div></div>
+<div class="pipe-step"><div class="badge">5</div><div><div class="what">붙여서 다시 1번으로<span class="ref">08</span></div><div class="ex">&#x3C;끝>이 나올 때까지 반복</div></div></div>
+</div>
+</figure>
+</section>
+
+<section>
+<h2 id="qa"><span class="num">Q&#x26;A</span>질문 &#x26; 답변</h2>
+<div class="qa-tools">
+<p class="hint">공부하면서 직접 했던 질문들. 답을 먼저 떠올려 본 뒤 펼쳐보자.</p>
+<button id="toggleAll" type="button">모두 펼치기</button>
+</div>
+<details class="qa">
+<summary><span class="qn">Q1</span><span class="qt">임베딩 차원 768은 특별한 이유가 있나?<span class="stage">2단계 · 토큰과 임베딩</span></span></summary>
+<div class="ans"><ul>
+<li>수학적으로 특별한 의미는 없다. 사람이 정하는 <b>하이퍼파라미터(d_model)</b>다.</li>
+<li>BERT-base, GPT-2 small이 써서 유명해졌다.</li>
+<li>크면 표현력이 좋아지지만 계산량과 메모리가 늘어나는 트레이드오프가 있다.</li>
+<li>실용적인 이유: 헤드 수로 나누어 떨어져야 한다(<b>12헤드 × 64 = 768</b>). 64·128의 배수가 GPU 연산에 효율적이다.</li>
+<li>다른 모델: BERT-large 1024, LLaMA-7B 4096, GPT-3 12288.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q2</span><span class="qt">W_Q, W_K, W_V 같은 행렬은 미리 큰 모델이 학습해둔 건가? 사람이 만든 텍스트로?<span class="stage">3단계 · 셀프 어텐션</span></span></summary>
+<div class="ans"><ul>
+<li>다른 모델이 만들어 주는 게 아니다. 이 행렬들은 <b>트랜스포머 자기 자신의 파라미터</b>다.</li>
+<li>처음엔 랜덤이다. 사람이 쓴 대량의 텍스트로 "다음 토큰 맞히기"를 반복하며 역전파로 고쳐진다 → <b>사전학습</b>.</li>
+<li>임베딩 표, W_Q/W_K/W_V, 이후 층들까지 <b>모두 함께</b> 학습된다(end-to-end).</li>
+<li>학습이 끝나면 값이 고정되고, 모델을 쓸 때(추론)는 계산만 한다. → <a href="#s8">그림 13</a></li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q3</span><span class="qt">Q·K 값을 어텐션이라고 부르나?<span class="stage">3단계 · 셀프 어텐션</span></span></summary>
+<div class="ans">
+<p>일부만 맞다. 단계마다 이름이 다르다.</p>
+<div class="table-wrap"><table>
+<tbody><tr><th>단계</th><th>이름</th><th>의미</th></tr>
+<tr><td><code>Q·Kᵀ / √d_k</code></td><td>어텐션 <b>점수</b></td><td>관련도 원점수</td></tr>
+<tr><td>softmax 후</td><td>어텐션 <b>가중치</b></td><td>합이 1인 비율. "어텐션 맵"은 보통 이것</td></tr>
+<tr><td>가중치 × V까지</td><td><b>어텐션</b> (연산 전체)</td><td>결과: 문맥이 반영된 벡터</td></tr>
+</tbody></table></div>
+</div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q4</span><span class="qt">"어텐션을 N번 반복한다(for문)"는 게 헤드가 병렬로 처리하는 것, 즉 같은 어텐션이 반복하며 자리를 찾아가는 것인가?<span class="stage">4단계 · 멀티헤드 어텐션</span></span></summary>
+<div class="ans"><ul>
+<li>아니다. 두 개념이 섞였다. → <a href="#s4">그림 6</a></li>
+<li><b>헤드</b>: 같은 층 안에서 <b>옆으로 나란히(병렬)</b> 돈다. 서로 독립적이다.</li>
+<li><b>N번 반복</b>: <b>층(블록)을 위로 N개 쌓은 것</b>이다. 1층 출력이 2층 입력이 되는 <b>순차</b> 구조라 for문으로 쓴다.</li>
+<li>층마다 <b>서로 다른 가중치</b>를 가진다. 수렴할 때까지 도는 게 아니라 정해진 수만큼 통과한다.</li>
+<li>"점점 자리를 찾아간다"는 감각은 층에 대해서는 맞다. 아래층은 문법·인접 관계, 위층은 의미·지시 관계를 잡는 경향이 있다.</li>
+</ul>
+<pre><code>x = embed(tokens)
+for layer in layers:   # ← "N번 반복" (층)
+    x = layer(x)       #   안에서 헤드들은 동시에 계산</code></pre>
+</div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q5</span><span class="qt">층마다 각자 W_Q 등을 가진다면, 그 값들은 어디서 학습된 건가?<span class="stage">5단계 이후 · Q2 재질문</span></span></summary>
+<div class="ans"><ul>
+<li>사전학습 <b>한 번에 모든 층이 동시에</b> 학습된다. 층별로 따로 학습하지 않는다.</li>
+<li>학습 1스텝: 순전파(1층 → … → N층 → 예측) → 오차 계산 → 역전파(N층 → … → 1층) → <b>모든 층의 가중치를 동시에</b> 수정. → <a href="#s8">그림 13</a></li>
+<li>층마다 값이 다른 이유: 처음 랜덤 값이 다르고, 받는 입력과 위치가 달라 맡는 일이 달라진다.</li>
+<li>누가: 모델을 만드는 회사·연구팀이 GPU 수천 장으로 몇 주~몇 달 학습한다. 결과물은 가중치 파일이다.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q6</span><span class="qt">잔차 연결은 residual을 더하는, 즉 원본 어텐션을 더해주는 부분인가?<span class="stage">6단계 · 트랜스포머 블록</span></span></summary>
+<div class="ans"><ul>
+<li>큰 그림은 맞지만 <b>원본과 residual이 반대</b>다. → <a href="#s6">그림 8</a></li>
+<li><code>출력 = x + 어텐션(x)</code></li>
+<li><b>x</b> = 블록에 들어온 <b>원래 입력</b>. 우회로로 와서 더해지는 원본이다.</li>
+<li><b>어텐션(x)</b> = 층이 계산한 <b>변화량 = residual(잔차)</b>.</li>
+<li>잔차 = "출력 − 입력"의 차이. 층은 결과 전체가 아니라 <b>얼마나 바꿀지만</b> 학습한다.</li>
+<li>FFN 뒤도 <code>x + FFN(x)</code>로 똑같다. skip connection, shortcut이라고도 하고 ResNet(2015)에서 유명해졌다.</li>
+</ul></div>
+</details>
+</section>
+
+<section>
+<h2 id="check"><span class="num">✓</span>헷갈렸던 개념</h2>
+<ul class="checklist">
+<li><b>임베딩 차원(d_model)</b>: 하이퍼파라미터이고, 헤드 수로 나누어 떨어지는 GPU 친화적 크기다. <span class="ref">Q1</span></li>
+<li><b>가중치의 출처</b>: 별도 모델이 아니라 모델 자신이 사전학습으로 한꺼번에 학습한다. <span class="ref">Q2 · Q5</span></li>
+<li><b>어텐션 용어</b>: 점수 / 가중치 / 어텐션 출력으로 구분한다. <span class="ref">Q3</span></li>
+<li><b>헤드 vs 층</b>: 헤드는 병렬·독립이고, "N번 반복"은 서로 다른 가중치를 가진 층을 순차로 쌓은 것이다. <span class="ref">Q4</span></li>
+<li><b>잔차 연결</b>: 원본 = 입력 x, residual = 층이 만든 변화량이다. <span class="ref">Q6</span></li>
+</ul>
+</section>
+
+
+</div>
+<div class="notes-editor" hidden data-path="content/study/understanding-transformers-from-start-to-finish/index.ko.md" data-notes data-pagefind-ignore data-astro-cid-krmc5xkp><button type="button" class="ne-open" data-astro-cid-krmc5xkp>내 생각 쓰기</button><form class="ne-form" hidden data-astro-cid-krmc5xkp><textarea rows="8" aria-label="내 생각 (markdown)" placeholder="markdown 으로 쓰기" data-astro-cid-krmc5xkp></textarea><div class="ne-actions" data-astro-cid-krmc5xkp><button type="submit" data-astro-cid-krmc5xkp>저장</button><button type="button" class="ne-delete" data-astro-cid-krmc5xkp>지우기</button><button type="button" class="ne-cancel" data-astro-cid-krmc5xkp>취소</button><span class="ne-status" role="status" data-astro-cid-krmc5xkp></span></div></form></div><div class="post-admin" hidden data-dir="content/study/understanding-transformers-from-start-to-finish" data-lang="ko" data-incoming="[]" data-pagefind-ignore data-astro-cid-krmc5xkp></div></div><nav class="toc" aria-labelledby="toc-h" data-pagefind-ignore data-astro-cid-krmc5xkp><h2 id="toc-h" data-astro-cid-krmc5xkp>목차</h2><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#s1" data-astro-cid-krmc5xkp>01 왜 트랜스포머가 나왔나</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s2" data-astro-cid-krmc5xkp>02 토큰과 임베딩</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s3" data-astro-cid-krmc5xkp>03 셀프 어텐션 (Q, K, V)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-1" data-astro-cid-krmc5xkp>직접 눌러보기: 이 단어는 어디를 볼까?</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s4" data-astro-cid-krmc5xkp>04 멀티헤드 어텐션</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s5" data-astro-cid-krmc5xkp>05 위치 인코딩</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s6" data-astro-cid-krmc5xkp>06 트랜스포머 블록</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s7" data-astro-cid-krmc5xkp>07 인코더 · 디코더 · 마스킹</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-2" data-astro-cid-krmc5xkp>마스크: 미래 훔쳐보기 금지</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s8" data-astro-cid-krmc5xkp>08 학습과 생성</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-3" data-astro-cid-krmc5xkp>벡터를 다음 토큰으로</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-4" data-astro-cid-krmc5xkp>고르는 방법과 temperature</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-5" data-astro-cid-krmc5xkp>생성: 한 토큰씩 뽑아서 다시 넣기</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-6" data-astro-cid-krmc5xkp>학습: 다음 토큰 맞히기 (Q2, Q5)</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s9" data-astro-cid-krmc5xkp>09 전체 흐름 한 장 정리</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#qa" data-astro-cid-krmc5xkp>Q&amp;#x26;A 질문 &amp;#x26; 답변</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#check" data-astro-cid-krmc5xkp>✓ 헷갈렸던 개념</a></li></ol></nav></div></article></main><footer class="wrap" data-astro-cid-hkbrpulz><p class="site-footer" data-astro-cid-hkbrpulz>Tech Blog</p></footer><dialog class="search" aria-label="글 검색" data-unavailable="검색 색인은 사이트를 빌드할 때 만들어집니다. npm run build 후 npm run preview 에서 확인하세요." data-astro-cid-ac66eqjo><div class="search-head" data-astro-cid-ac66eqjo><h2 data-astro-cid-ac66eqjo>글 검색</h2><button type="button" class="close" data-search-close data-astro-cid-ac66eqjo>닫기</button></div><div id="pagefind" class="search-body" data-astro-cid-ac66eqjo></div></dialog><script type="module">var e=document.querySelector(`dialog.search`),t=e.querySelector(`#pagefind`),n=!1;async function r(){if(!n){n=!0;try{let e=document.createElement(`link`);e.rel=`stylesheet`,e.href=`/pagefind/pagefind-ui.css`,document.head.append(e),await new Promise((e,t)=>{let n=document.createElement(`script`);n.src=`/pagefind/pagefind-ui.js`,n.onload=()=>e(),n.onerror=()=>t(Error(`pagefind missing`)),document.head.append(n)}),new PagefindUI({element:t,showSubResults:!0,showImages:!1,autofocus:!0})}catch{t.textContent=e.dataset.unavailable??``}}}function i(){e.showModal(),r(),t.querySelector(`input`)?.focus()}document.querySelectorAll(`[data-search-open]`).forEach(e=>e.addEventListener(`click`,i)),e.querySelector(`[data-search-close]`).addEventListener(`click`,()=>e.close()),e.addEventListener(`click`,t=>{t.target===e&&e.close()}),document.addEventListener(`keydown`,t=>{let n=t.target.tagName;e.open||n===`INPUT`||n===`TEXTAREA`||(t.key===`/`||(t.metaKey||t.ctrlKey)&&t.key.toLowerCase()===`k`)&&(t.preventDefault(),i())});</script></body></html><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_0_lang.CMBxuFBs.js"></script><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_1_lang.DQvCU8Du.js"></script>

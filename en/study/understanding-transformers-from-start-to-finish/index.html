@@ -1,0 +1,633 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-hkbrpulz><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Understanding Transformers: From Start to Finish | Tech Blog</title><meta name="description" content="A study note covering the full Transformer pipeline from tokenization and embeddings to self/multi-head attention, positional encoding, blocks, encoder-decoder masking, training, and generation."><meta property="og:title" content="Understanding Transformers: From Start to Finish"><meta property="og:description" content="A study note covering the full Transformer pipeline from tokenization and embeddings to self/multi-head attention, positional encoding, blocks, encoder-decoder masking, training, and generation."><meta name="theme-color" content="#f4f6f9" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#0e131b" media="(prefers-color-scheme: dark)"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate" hreflang="ko" href="/ko/study/understanding-transformers-from-start-to-finish/"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap"><script>
+      // 깜빡임 방지: 렌더 전에 테마 결정 (저장값 > 시스템 설정)
+      (() => {
+        let saved = null;
+        try {
+          saved = localStorage.getItem('theme');
+        } catch {}
+        const dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      })();
+    </script><link rel="stylesheet" href="/_astro/Base.DPAvT9-G.css"><style>.tagpath[data-astro-cid-jjfiepte]{font-size:var(--step--1);color:var(--ink-3);flex-wrap:wrap;align-items:baseline;gap:0 .3em;line-height:1.6;text-decoration:none;display:inline-flex}.leaf[data-astro-cid-jjfiepte]{color:var(--ink-2);font-weight:500}.sep[data-astro-cid-jjfiepte]{opacity:.55}.tagpath[data-astro-cid-jjfiepte]:hover .leaf[data-astro-cid-jjfiepte]{color:var(--ink);text-underline-offset:.2em;text-decoration:underline}.row[data-astro-cid-gc2g3jd6]{border-top:1px solid var(--rule);grid-template-columns:8.5rem 1fr;gap:.25rem 1.5rem;padding-block:1.6rem;display:grid}.meta[data-astro-cid-gc2g3jd6]{font-size:var(--step--1);color:var(--ink-3);font-variant-numeric:tabular-nums;flex-direction:column;gap:.15rem;padding-top:.3rem;display:flex}.type[data-astro-cid-gc2g3jd6]{color:var(--type);align-items:center;gap:.45rem;font-weight:600;display:inline-flex}.type[data-astro-cid-gc2g3jd6]:before{content:"";background:var(--type);border-radius:2px;width:.5rem;height:.5rem}.pending[data-astro-cid-gc2g3jd6]{color:var(--ink-3);align-self:flex-start;font-size:.75rem}.draft[data-astro-cid-gc2g3jd6]{border:1px dashed var(--rule-strong);border-radius:4px;align-self:flex-start;margin-top:.3rem;padding:0 .4rem;font-size:.75rem}.title[data-astro-cid-gc2g3jd6]{font-size:var(--step-2);margin:0;font-weight:600;line-height:1.35}.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]{background-image:linear-gradient(var(--type), var(--type));background-position:0 100%;background-repeat:no-repeat;background-size:0 2px;text-decoration:none;transition:background-size .2s}.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]:hover,.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]:focus-visible{background-size:100% 2px}.summary[data-astro-cid-gc2g3jd6]{max-width:62ch;color:var(--ink-2);margin:.45rem 0 0}.tags[data-astro-cid-gc2g3jd6]{flex-wrap:wrap;gap:.1rem 1.1rem;margin:.6rem 0 0;padding:0;list-style:none;display:flex}@media (width<=640px){.row[data-astro-cid-gc2g3jd6]{grid-template-columns:1fr;padding-block:1.25rem}.meta[data-astro-cid-gc2g3jd6]{flex-flow:wrap;gap:.75rem;padding-top:0}.draft[data-astro-cid-gc2g3jd6]{margin-top:0}.title[data-astro-cid-gc2g3jd6]{font-size:var(--step-1)}}
+</style><link rel="stylesheet" href="/_astro/_slug_.BU2vDBGq.css"></head><body data-astro-cid-hkbrpulz><a class="skip" href="#main" data-astro-cid-hkbrpulz>Skip to content</a><header class="site-header wrap" data-astro-cid-nen7h5rs><a class="wordmark" href="/en/" translate="no" data-astro-cid-nen7h5rs>Tech Blog</a><nav class="nav" aria-label="Main" data-astro-cid-nen7h5rs><ul data-astro-cid-nen7h5rs><li data-type="paper" data-astro-cid-nen7h5rs><a href="/en/papers/" data-astro-cid-nen7h5rs>Papers</a></li><li data-type="study" data-astro-cid-nen7h5rs><a href="/en/study/" aria-current="page" data-astro-cid-nen7h5rs>Study</a></li><li data-type="dev" data-astro-cid-nen7h5rs><a href="/en/dev/" data-astro-cid-nen7h5rs>Dev</a></li><li data-type="clip" data-astro-cid-nen7h5rs><a href="/en/clips/" data-astro-cid-nen7h5rs>Clips</a></li><li data-astro-cid-nen7h5rs><a href="/en/tags/" data-astro-cid-nen7h5rs>Tags</a></li></ul></nav><div class="tools" data-astro-cid-nen7h5rs><button class="icon-btn" type="button" data-search-open aria-label="Search" aria-keyshortcuts="/" data-astro-cid-nen7h5rs><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8" data-astro-cid-nen7h5rs></circle><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-astro-cid-nen7h5rs></path></svg></button><a class="lang" href="/ko/study/understanding-transformers-from-start-to-finish/" hreflang="ko" aria-label="Read in Korean" data-astro-cid-nen7h5rs>한국어</a><button class="icon-btn" type="button" data-theme-toggle data-label-light="Switch to light mode" data-label-dark="Switch to dark mode" aria-label="Switch to dark mode" data-astro-cid-nen7h5rs><svg class="sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8" data-astro-cid-nen7h5rs></circle><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-astro-cid-nen7h5rs></path></svg><svg class="moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><path d="M19.5 14.6A7.8 7.8 0 0 1 9.4 4.5a7.8 7.8 0 1 0 10.1 10.1Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" data-astro-cid-nen7h5rs></path></svg></button></div></header><script type="module">var e=document.querySelector(`[data-theme-toggle]`),t=document.documentElement,n=()=>{let n=t.dataset.theme===`dark`;document.querySelectorAll(`meta[name="theme-color"]`).forEach(e=>{e.setAttribute(`content`,n?`#0e131b`:`#f4f6f9`),e.removeAttribute(`media`)}),e.setAttribute(`aria-label`,(n?e.dataset.labelLight:e.dataset.labelDark)??``),e.setAttribute(`aria-pressed`,String(n))};n(),e.addEventListener(`click`,()=>{t.dataset.theme=t.dataset.theme===`dark`?`light`:`dark`;try{localStorage.setItem(`theme`,t.dataset.theme)}catch{}n()});</script><main id="main" data-astro-cid-hkbrpulz><article class="post wrap" data-type="study" data-pagefind-body data-astro-cid-krmc5xkp><header class="head" data-astro-cid-krmc5xkp><div class="meta" data-astro-cid-krmc5xkp><a class="type" href="/en/study/" data-pagefind-ignore data-astro-cid-krmc5xkp>Study</a><time datetime="2026-10-28" data-astro-cid-krmc5xkp>Oct 28, 2026</time></div><h1 data-astro-cid-krmc5xkp>Understanding Transformers: From Start to Finish</h1><p class="summary" data-astro-cid-krmc5xkp>A study note covering the full Transformer pipeline from tokenization and embeddings to self/multi-head attention, positional encoding, blocks, encoder-decoder masking, training, and generation.</p><dl class="source" data-astro-cid-krmc5xkp><dt data-astro-cid-krmc5xkp>Files</dt><dd data-astro-cid-krmc5xkp><a href="/files/study/understanding-transformers-from-start-to-finish/transformer_summary.md" rel="noopener" data-astro-cid-krmc5xkp>Markdown source</a></dd></dl><ul class="tags" data-pagefind-ignore data-astro-cid-krmc5xkp><li data-astro-cid-krmc5xkp><a class="tagpath" href="/en/tags/method/architecture/transformer/" title="method/architecture/transformer" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Method</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="parent" data-astro-cid-jjfiepte>Architecture</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Transformer</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/en/tags/method/attention/" title="method/attention" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Method</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Attention</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/en/tags/task/language-modeling/" title="task/language-modeling" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Task</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Language Modeling</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/en/tags/domain/nlp/" title="domain/nlp" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Field</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Computation and Language</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/en/tags/method/training/pretraining/" title="method/training/pretraining" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Method</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="parent" data-astro-cid-jjfiepte>Training</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Pretraining</span></a></li></ul><div class="tags-editor" hidden data-dir="content/study/understanding-transformers-from-start-to-finish" data-pagefind-ignore data-astro-cid-krmc5xkp></div></header><div class="columns" data-astro-cid-krmc5xkp><div class="prose" data-astro-cid-krmc5xkp><p class="note" data-astro-cid-krmc5xkp>Machine-translated from the Korean original.</p><details class="toc-inline" data-pagefind-ignore data-astro-cid-krmc5xkp><summary data-astro-cid-krmc5xkp>Contents</summary><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#s1" data-astro-cid-krmc5xkp>01 Why Transformers Were Introduced</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s2" data-astro-cid-krmc5xkp>02 Tokens and Embeddings</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s3" data-astro-cid-krmc5xkp>03 Self-Attention (Q, K, V)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-1" data-astro-cid-krmc5xkp>Try It: Where Does This Word Look?</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s4" data-astro-cid-krmc5xkp>04 Multi-Head Attention</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s5" data-astro-cid-krmc5xkp>05 Positional Encoding</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s6" data-astro-cid-krmc5xkp>06 Transformer Block</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s7" data-astro-cid-krmc5xkp>07 Encoder · Decoder · Masking</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-2" data-astro-cid-krmc5xkp>Masking: No Peeking into the Future</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s8" data-astro-cid-krmc5xkp>08 Learning and Generation</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-3" data-astro-cid-krmc5xkp>From Vectors to the Next Token</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-4" data-astro-cid-krmc5xkp>Selection Methods and Temperature</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-5" data-astro-cid-krmc5xkp>Generation: Sampling One Token at a Time and Feeding It Back</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-6" data-astro-cid-krmc5xkp>Learning: Predicting the Next Token (Q2, Q5)</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s9" data-astro-cid-krmc5xkp>09 The Entire Flow on One Page</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#qa" data-astro-cid-krmc5xkp>Q&amp;#x26;A Questions &amp;#x26; Answers</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#check" data-astro-cid-krmc5xkp>✓ Confusing Concepts</a></li></ol></details><style>
+.rawhtml { --fg: var(--ink); --text: var(--ink); --muted: var(--ink-3); --line: var(--rule); --border: var(--rule) }
+.rawhtml :is(h2, h3) > span:first-child:not(:only-child) { margin-right: 0.5em }
+.rawhtml { --acc: #2f6bd8; --acc-soft: #e2ebfb; --warm: #c9701c; --warm-soft: #fbecd9; --green: #23875a; --green-soft: #dcf1e6; --red: #c24141; --red-soft: #f9e0e0 }
+@media (prefers-color-scheme: dark) {
+:root:not([data-theme="light"]) .rawhtml { --acc: #6d9cf0; --acc-soft: #1f2d48; --warm: #e7a15a; --warm-soft: #3a2b1a; --green: #5cc493; --green-soft: #183527; --red: #e57777; --red-soft: #3d1f22 }
+}
+:root[data-theme="dark"] .rawhtml { --acc: #6d9cf0; --acc-soft: #1f2d48; --warm: #e7a15a; --warm-soft: #3a2b1a; --green: #5cc493; --green-soft: #183527; --red: #e57777; --red-soft: #3d1f22 }
+.rawhtml h2 .num { font-family: var(--font-mono); font-size: .95rem; color: var(--acc); background: var(--acc-soft); border-radius: 6px; padding: 2px 8px }
+.rawhtml .lead { color: var(--muted); margin: 0 }
+.rawhtml .meta { color: var(--muted); font-size: .9rem; margin-top: 12px }
+.rawhtml nav.toc { margin: 32px 0 0; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px }
+.rawhtml nav.toc ol { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 16px }
+.rawhtml nav.toc a { text-decoration: none; color: var(--fg); font-size: .95rem }
+.rawhtml nav.toc a:hover { color: var(--acc) }
+.rawhtml nav.toc .n { font-family: var(--font-mono); color: var(--muted); margin-right: 8px; font-size: .85rem }
+.rawhtml figure { margin: 24px 0; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px }
+.rawhtml figure svg { display: block; width: 100%; height: auto }
+.rawhtml figcaption { color: var(--muted); font-size: .88rem; margin-top: 12px }
+.rawhtml figcaption b { color: var(--fg) }
+.rawhtml .table-wrap { overflow-x: auto }
+.rawhtml .callout { border-left: 4px solid var(--acc); background: var(--acc-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0 }
+.rawhtml .callout.warm { border-color: var(--warm); background: var(--warm-soft) }
+.rawhtml .summary { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; margin: 24px 0 }
+.rawhtml .summary h4 { margin: 0 0 6px; font-size: .9rem; color: var(--muted); font-weight: 500 }
+.rawhtml .summary ul { margin: 0; padding-left: 20px }
+.rawhtml .formula { font-family: var(--font-mono); font-size: 1.05rem; text-align: center; padding: 18px 8px; margin: 16px 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; white-space: nowrap }
+.rawhtml .frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; margin: 0 4px }
+.rawhtml .frac > span:first-child { border-bottom: 1.5px solid var(--fg); padding: 0 4px }
+.rawhtml .frac > span:last-child { padding: 0 4px }
+.rawhtml svg text { font-family: var(--font-sans); font-size: 13px; fill: var(--fg) }
+.rawhtml svg .mut { fill: var(--muted); font-size: 12px }
+.rawhtml svg .small { font-size: 11px }
+.rawhtml svg .bold { font-weight: 700 }
+.rawhtml svg .mono { font-family: var(--font-mono) }
+.rawhtml .s-box { fill: var(--surface); stroke: var(--line); stroke-width: 1.5 }
+.rawhtml .s-acc { fill: var(--acc-soft); stroke: var(--acc); stroke-width: 1.5 }
+.rawhtml .s-warm { fill: var(--warm-soft); stroke: var(--warm); stroke-width: 1.5 }
+.rawhtml .s-green { fill: var(--green-soft); stroke: var(--green); stroke-width: 1.5 }
+.rawhtml .s-red { fill: var(--red-soft); stroke: var(--red); stroke-width: 1.5 }
+.rawhtml .s-frame { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 5 4 }
+.rawhtml .s-line { fill: none; stroke: var(--muted); stroke-width: 1.5 }
+.rawhtml .s-accline { fill: none; stroke: var(--acc) }
+.rawhtml .s-warmline { fill: none; stroke: var(--warm); stroke-width: 2 }
+.rawhtml .s-ahead { fill: var(--muted) }
+.rawhtml .s-ahead-warm { fill: var(--warm) }
+.rawhtml .s-dot-acc { fill: var(--acc) }
+.rawhtml .s-dot-warm { fill: var(--warm) }
+.rawhtml .s-dot-green { fill: var(--green) }
+.rawhtml .bars { display: grid; grid-template-columns: auto auto 1fr; gap: 6px 12px; align-items: center; font-size: .92rem }
+.rawhtml .bars .tok { font-weight: 500 }
+.rawhtml .bars .score { font-family: var(--font-mono); color: var(--muted); font-size: .85rem; text-align: right }
+.rawhtml .bar { position: relative; height: 22px; background: var(--code-bg); border-radius: 4px; overflow: hidden }
+.rawhtml .bar > i { position: absolute; inset: 0 auto 0 0; background: var(--acc); border-radius: 4px; transition: width .25s }
+.rawhtml .bar > span { position: absolute; left: 8px; white-space: nowrap; top: 0; line-height: 22px; font-family: var(--font-mono); font-size: .8rem; color: var(--fg); mix-blend-mode: normal }
+.rawhtml .bars .hdr { color: var(--muted); font-size: .8rem }
+.rawhtml .tokens { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 16px }
+.rawhtml .tokens button { font: inherit; font-size: .95rem; padding: 6px 10px; border-radius: 8px; border: 1.5px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; transition: background .2s, border-color .2s }
+.rawhtml .tokens button[aria-pressed="true"] { border-color: var(--warm); outline: 2px solid var(--warm); outline-offset: 1px }
+.rawhtml .hint { font-size: .85rem; color: var(--muted) }
+.rawhtml .control { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; font-size: .92rem }
+.rawhtml .control input[type="range"] { flex: 1; min-width: 160px; accent-color: var(--acc) }
+.rawhtml .control output { font-family: var(--font-mono); min-width: 3.5em }
+.rawhtml .readout { font-family: var(--font-mono); font-size: .82rem; color: var(--muted); margin-top: 8px; overflow-x: auto; white-space: nowrap }
+.rawhtml .gen { display: grid; gap: 10px }
+.rawhtml .gen-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: .92rem }
+.rawhtml .gen-row .step { font-family: var(--font-mono); color: var(--muted); font-size: .8rem; width: 34px }
+.rawhtml .chip { padding: 3px 9px; border-radius: 6px; background: var(--code-bg); border: 1px solid var(--line) }
+.rawhtml .chip.new { background: var(--warm-soft); border-color: var(--warm) }
+.rawhtml .chip.end { background: var(--green-soft); border-color: var(--green) }
+.rawhtml .gen-row .arrow { color: var(--muted); margin: 0 4px }
+.rawhtml .pipeline { display: grid; gap: 0; counter-reset: p }
+.rawhtml .pipe-step { display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: start; padding: 12px 0; border-bottom: 1px dashed var(--line) }
+.rawhtml .pipe-step:last-child { border-bottom: none }
+.rawhtml .pipe-step .badge { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--acc); color: var(--surface); font-weight: 700; font-size: .9rem }
+.rawhtml .pipe-step .what { font-weight: 700 }
+.rawhtml .pipe-step .ex { font-family: var(--font-mono); font-size: .84rem; color: var(--muted) }
+.rawhtml .pipe-step .ref { font-size: .8rem; color: var(--acc); margin-left: 6px; font-weight: 400 }
+.rawhtml .qa-tools { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap }
+.rawhtml .qa-tools button { font: inherit; font-size: .88rem; padding: 6px 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--fg) }
+.rawhtml details.qa { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; margin: 12px 0; padding: 0 }
+.rawhtml details.qa summary { cursor: pointer; padding: 16px 20px; list-style: none; display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: baseline }
+.rawhtml details.qa summary::-webkit-details-marker { display: none }
+.rawhtml details.qa .qn { font-family: var(--font-mono); font-weight: 600; color: var(--warm); background: var(--warm-soft); border-radius: 6px; padding: 1px 8px; font-size: .9rem }
+.rawhtml details.qa .qt { font-weight: 500 }
+.rawhtml details.qa .stage { display: block; color: var(--muted); font-size: .8rem; font-weight: 400 }
+.rawhtml details.qa .ans { padding: 0 20px 16px 20px; border-top: 1px solid var(--line) }
+.rawhtml details.qa .ans ul { padding-left: 20px }
+.rawhtml details.qa[open] summary .qt::after { content: "" }
+.rawhtml .checklist { list-style: none; padding: 0 }
+.rawhtml .checklist li { padding: 10px 14px 10px 40px; position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; margin: 8px 0 }
+.rawhtml .checklist li::before { content: "✓"; position: absolute; left: 14px; top: 10px; color: var(--green); font-weight: 700 }
+.rawhtml .checklist .ref { color: var(--muted); font-size: .85rem }
+@media (max-width: 560px) {
+.rawhtml figure { padding: 12px }
+.rawhtml .bars { grid-template-columns: auto 1fr }
+.rawhtml .bars .score { display: none }
+}
+</style>
+<div class="rawhtml">
+<svg aria-hidden="true" height="0" style="position:absolute" width="0">
+<defs>
+<marker id="ah" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="9" refY="5" viewBox="0 0 10 10">
+<path class="s-ahead" d="M0,0 L10,5 L0,10 z"></path>
+</marker>
+<marker id="ah-warm" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="9" refY="5" viewBox="0 0 10 10">
+<path class="s-ahead-warm" d="M0,0 L10,5 L0,10 z"></path>
+</marker>
+</defs>
+</svg>
+<section>
+<h2 id="s1"><span class="num">01</span>Why Transformers Were Introduced</h2>
+<p>Understanding language is ultimately about <b>knowing which words are related to which other words</b>.</p>
+<div class="callout">"<b>The animal</b> did not cross the road because <b>it</b> was too tired."<br>To understand "it," you must connect it back to "the animal."</div>
+<p>The <b>RNN</b>, which was widely used in the past, reads a sentence word by word in sequence. It is similar to continuously overwriting a summary on a single notepad; as sentences get longer, it <b>forgets earlier content</b>, and because it must finish processing one word before moving to the next, it is <b>slow</b>.</p>
+<p>The idea behind the Transformer (2017, <i>Attention Is All You Need</i>) is simple. <b>Let every word directly see all other words at once.</b> Determining where and how much to focus is called <b>attention</b>.</p>
+<figure>
+<svg aria-label="RNN processes words sequentially, causing earlier information to fade, while the Transformer allows &#x27;it&#x27; to directly see all words, assigning a weight of 0.70 to &#x27;the animal&#x27;" role="img" viewBox="0 0 720 240">
+<text class="bold" x="10" y="24">RNN · Sequentially, word by word</text>
+<text class="mut" x="10" y="70">'The animal' information gradually fades →</text>
+<g>
+<circle class="s-acc" cx="39" cy="110" fill-opacity="1" r="16"></circle>
+<circle class="s-acc" cx="105" cy="110" r="16" style="fill-opacity:.7"></circle>
+<circle class="s-acc" cx="171" cy="110" r="16" style="fill-opacity:.45"></circle>
+<circle class="s-acc" cx="237" cy="110" r="16" style="fill-opacity:.22"></circle>
+<circle class="s-acc" cx="303" cy="110" r="16" style="fill-opacity:.08"></circle>
+<text class="small mono" text-anchor="middle" x="39" y="114">h1</text>
+<text class="small mono" text-anchor="middle" x="105" y="114">h2</text>
+<text class="small mono" text-anchor="middle" x="171" y="114">h3</text>
+<text class="small mono" text-anchor="middle" x="237" y="114">h4</text>
+<text class="small mono" text-anchor="middle" x="303" y="114">h5</text>
+<line class="s-line" marker-end="url(#ah)" x1="55" x2="87" y1="110" y2="110"></line>
+<line class="s-line" marker-end="url(#ah)" x1="121" x2="153" y1="110" y2="110"></line>
+<line class="s-line" marker-end="url(#ah)" x1="187" x2="219" y1="110" y2="110"></line>
+<line class="s-line" marker-end="url(#ah)" x1="253" x2="285" y1="110" y2="110"></line>
+</g>
+<g>
+<rect class="s-box" height="34" rx="6" width="58" x="10" y="170"></rect>
+<rect class="s-box" height="34" rx="6" width="58" x="76" y="170"></rect>
+<rect class="s-box" height="34" rx="6" width="58" x="142" y="170"></rect>
+<rect class="s-box" height="34" rx="6" width="58" x="208" y="170"></rect>
+<rect class="s-warm" height="34" rx="6" width="58" x="274" y="170"></rect>
+<text text-anchor="middle" x="39" y="192">The animal</text>
+<text text-anchor="middle" x="105" y="192">the road</text>
+<text text-anchor="middle" x="171" y="192">cross</text>
+<text text-anchor="middle" x="237" y="192">did not</text>
+<text text-anchor="middle" x="303" y="192">it</text>
+<line class="s-line" marker-end="url(#ah)" x1="39" x2="39" y1="168" y2="129"></line>
+<line class="s-line" marker-end="url(#ah)" x1="105" x2="105" y1="168" y2="129"></line>
+<line class="s-line" marker-end="url(#ah)" x1="171" x2="171" y1="168" y2="129"></line>
+<line class="s-line" marker-end="url(#ah)" x1="237" x2="237" y1="168" y2="129"></line>
+<line class="s-line" marker-end="url(#ah)" x1="303" x2="303" y1="168" y2="129"></line>
+</g>
+<line stroke="var(--line)" stroke-dasharray="4 4" x1="356" x2="356" y1="10" y2="230"></line>
+<text class="bold" x="380" y="24">Transformer · All at once</text>
+<path class="s-warmline" d="M673 170 Q541 59 409 170" style="stroke-width:7;opacity:.9"></path>
+<path class="s-warmline" d="M673 170 Q574 87 475 170" style="stroke-width:1.5;opacity:.6"></path>
+<path class="s-warmline" d="M673 170 Q607 115 541 170" style="stroke-width:1.5;opacity:.6"></path>
+<path class="s-warmline" d="M673 170 Q640 142 607 170" style="stroke-width:3;opacity:.8"></path>
+<rect class="s-box" height="34" rx="6" width="58" x="380" y="170"></rect>
+<rect class="s-box" height="34" rx="6" width="58" x="446" y="170"></rect>
+<rect class="s-box" height="34" rx="6" width="58" x="512" y="170"></rect>
+<rect class="s-box" height="34" rx="6" width="58" x="578" y="170"></rect>
+<rect class="s-warm" height="34" rx="6" width="58" x="644" y="170"></rect>
+<text text-anchor="middle" x="409" y="192">The animal</text>
+<text text-anchor="middle" x="475" y="192">the road</text>
+<text text-anchor="middle" x="541" y="192">cross</text>
+<text text-anchor="middle" x="607" y="192">did not</text>
+<text text-anchor="middle" x="673" y="192">it</text>
+<text class="mono bold" style="fill:var(--warm)" text-anchor="middle" x="409" y="226">0.70</text>
+<text class="mono mut" text-anchor="middle" x="475" y="226">0.05</text>
+<text class="mono mut" text-anchor="middle" x="541" y="226">0.05</text>
+<text class="mono mut" text-anchor="middle" x="607" y="226">0.20</text>
+<text class="mut small" text-anchor="middle" x="673" y="226">(reference)</text>
+</svg>
+<figcaption><b>Figure 1.</b> Left: The RNN passes memory (h) one step at a time, overwriting it so that information from earlier words fades. Right: In the Transformer, "it" directly sees all words and focuses most heavily on "the animal" (line thickness = attention weight, example values).</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<tbody><tr><th></th><th>RNN</th><th>Transformer</th></tr>
+<tr><td>Reading method</td><td>Sequentially, word by word</td><td>All at once</td></tr>
+<tr><td>Relation to distant words</td><td>Gradually forgotten</td><td>Directly connected via attention</td></tr>
+<tr><td>Speed</td><td>Difficult to parallelize</td><td>Parallelizable (suitable for GPUs)</td></tr>
+</tbody></table></div>
+</section>
+<section>
+<h2 id="s2"><span class="num">02</span>Tokens and Embeddings</h2>
+<p>Since computers can only process numbers, a step is needed to convert sentences into numbers.</p>
+<pre><code>"나는 고양이를 좋아해" (I like cats)
+  ↓ Tokenization      ["나", "는", "고양이", "를", "좋아", "해"]
+  ↓ Token ID     [312, 45, 8821, 67, 1590, 23]
+  ↓ Embedding      [[0.2, -1.3, 0.8, ...], ...]   (768 numbers per token)</code></pre>
+<ul>
+<li><b>Token</b>: A piece of text handled by the model. Frequent words are kept larger, while rare ones are split into smaller pieces (e.g., BPE).</li>
+<li><b>Token ID</b>: Just a locker number; close numbers do not imply similar meanings.</li>
+<li><b>Embedding</b>: A token converted into a vector carrying meaning. <b>If meanings are similar, the vectors are close.</b> The meaning of each number is not defined by humans but determined through learning.</li>
+<li>The implementation is a single table of size <code>(number of tokens × 768)</code>. Retrieving the row corresponding to an ID yields that token's vector.</li>
+</ul>
+<figure>
+<svg aria-label="In embedding space, animals, fruits, and vehicles form separate clusters, with &#x27;boat&#x27; located between fruits and vehicles" role="img" viewBox="0 0 560 320">
+<line class="s-line" marker-end="url(#ah)" x1="50" x2="535" y1="285" y2="285"></line>
+<line class="s-line" marker-end="url(#ah)" x1="50" x2="50" y1="285" y2="18"></line>
+<text class="mut" text-anchor="end" x="535" y="305">Dimension 1</text>
+<text class="mut" x="58" y="24">Dimension 2</text>
+<ellipse class="s-frame" cx="135" cy="95" rx="72" ry="52"></ellipse>
+<text class="mut small" text-anchor="middle" x="135" y="168">Animals</text>
+<circle class="s-dot-acc" cx="115" cy="80" r="5"></circle><text x="124" y="84">Cat</text>
+<circle class="s-dot-acc" cx="150" cy="105" r="5"></circle><text x="159" y="109">Dog</text>
+<circle class="s-dot-acc" cx="98" cy="118" r="5"></circle><text x="70" y="140">Tiger</text>
+<ellipse class="s-frame" cx="365" cy="80" rx="72" ry="48"></ellipse>
+<text class="mut small" text-anchor="middle" x="365" y="148">Fruits</text>
+<circle class="s-dot-green" cx="335" cy="70" r="5"></circle><text x="344" y="74">Apple</text>
+<circle class="s-dot-green" cx="385" cy="55" r="5"></circle><text x="394" y="59">Banana</text>
+<circle class="s-dot-green" cx="370" cy="100" r="5"></circle><text x="379" y="104">Grape</text>
+<ellipse class="s-frame" cx="420" cy="240" rx="80" ry="34"></ellipse>
+<text class="mut small" x="506" y="244">Vehicles</text>
+<circle class="s-dot-acc" cx="380" cy="240" r="5" style="fill:var(--muted)"></circle><text x="389" y="244">Car</text>
+<circle class="s-dot-acc" cx="450" cy="228" r="5" style="fill:var(--muted)"></circle><text x="459" y="232">Bus</text>
+<circle class="s-dot-acc" cx="440" cy="258" r="5" style="fill:var(--muted)"></circle><text x="449" y="262">Train</text>
+<circle class="s-dot-warm" cx="300" cy="170" r="7"></circle>
+<text class="bold" style="fill:var(--warm)" x="312" y="175">Boat</text>
+<text class="mut small" x="180" y="205">Fruit? Vehicle? Body part?</text>
+<text class="mut small" x="180" y="221">→ Context is needed (Step 3)</text>
+</svg>
+<figcaption><b>Figure 2.</b> A view of embedding space reduced to 2 dimensions (actually 768 dimensions). Similar meanings cluster together. However, "boat" is ambiguous without context, appearing as a single point.</figcaption>
+</figure>
+</section>
+<section>
+<h2 id="s3"><span class="num">03</span>Self-Attention (Q, K, V)</h2>
+<p>This is the process where each word looks at other words in the sentence and <b>adjusts its own vector to fit the context</b>. To use a library search analogy, each word simultaneously plays three roles.</p>
+<div class="table-wrap"><table>
+<tbody><tr><th>Role</th><th>Analogy</th><th>Meaning</th></tr>
+<tr><td><b>Query (Q)</b></td><td>The search term typed into the search bar</td><td>I need this kind of information</td></tr>
+<tr><td><b>Key (K)</b></td><td>Keywords on a book cover</td><td>I have this kind of information</td></tr>
+<tr><td><b>Value (V)</b></td><td>The actual content of the book</td><td>If you pick me, I will give you this</td></tr>
+</tbody></table></div>
+<figure>
+<svg aria-label="QKV are generated from embeddings, and after scoring and softmax weighting, a mixed output of V is produced" role="img" viewBox="0 0 720 130">
+<rect class="s-box" height="64" rx="8" width="112" x="5" y="30"></rect>
+<text class="bold" text-anchor="middle" x="61" y="58">Embedding x</text>
+<text class="mut small" text-anchor="middle" x="61" y="78">+ Position Info</text>
+<rect class="s-acc" height="64" rx="8" width="125" x="150" y="30"></rect>
+<text class="bold" text-anchor="middle" x="212" y="58">Q · K · V</text>
+<text class="mut small mono" text-anchor="middle" x="212" y="78">x × W_Q/W_K/W_V</text>
+<rect class="s-box" height="64" rx="8" width="125" x="308" y="30"></rect>
+<text class="bold" text-anchor="middle" x="370" y="58">① Scores</text>
+<text class="mut small mono" text-anchor="middle" x="370" y="78">Q·Kᵀ / √d_k</text>
+<rect class="s-box" height="64" rx="8" width="105" x="466" y="30"></rect>
+<text class="bold" text-anchor="middle" x="518" y="58">② Weights</text>
+<text class="mut small mono" text-anchor="middle" x="518" y="78">softmax</text>
+<rect class="s-warm" height="64" rx="8" width="110" x="604" y="30"></rect>
+<text class="bold" text-anchor="middle" x="659" y="58">③ Output</text>
+<text class="mut small mono" text-anchor="middle" x="659" y="78">Weights × V</text>
+<line class="s-line" marker-end="url(#ah)" x1="118" x2="147" y1="62" y2="62"></line>
+<line class="s-line" marker-end="url(#ah)" x1="276" x2="305" y1="62" y2="62"></line>
+<line class="s-line" marker-end="url(#ah)" x1="434" x2="463" y1="62" y2="62"></line>
+<line class="s-line" marker-end="url(#ah)" x1="572" x2="601" y1="62" y2="62"></line>
+<text class="mut small" text-anchor="middle" x="212" y="118">W is determined by learning</text>
+<text class="mut small" text-anchor="middle" x="440" y="118">Q3: Scores → Weights → Attention Output</text>
+<text class="mut small" text-anchor="middle" x="659" y="118">Context-aware vector</text>
+</svg>
+<figcaption><b>Figure 3.</b> The computational flow of self-attention. All words perform this process <b>simultaneously</b> (in a single matrix multiplication).</figcaption>
+</figure>
+<p><b>Example: "배를 타고 바다로 갔다" (I went to the sea by boat)</b> shows the result of comparing the Q of "boat" with the K of each word.</p>
+<figure>
+<div class="bars" id="qkBars"></div>
+<figcaption><b>Figure 4.</b> Applying softmax to scores (Q·K) yields weights that sum to 1. The V of "riding" and "to the sea" are mixed in heavily, shifting "boat" toward the meaning of a <b>vehicle</b>. (Example values)</figcaption>
+</figure>
+<div class="formula">Attention(Q, K, V) = softmax(<span class="frac"><span>QKᵀ</span><span>√d<sub>k</sub></span></span>) V</div>
+<p>The reason it is called "self" is that Q, K, and V all come from the <b>same sentence</b>.</p>
+<h3 id="sec-1">Try It: Where Does This Word Look?</h3>
+<p class="hint">Clicking a word displays the attention weights it assigns to other words based on its Query, shown by color intensity and bars. These are example values for illustration and do not represent actual model values.</p>
+<figure>
+<div aria-label="Select reference word" class="tokens" id="attnTokens" role="group"></div>
+<div class="bars" id="attnBars"></div>
+<figcaption><b>Figure 5.</b> Clicking "that" focuses most strongly on "the animal." "cross" looks at "the road," and "was tired" looks at both "that" and "the animal."</figcaption>
+</figure>
+</section>
+<section>
+<h2 id="s4"><span class="num">04</span>Multi-Head Attention</h2>
+<p>In "철수가 어제 공원에서 산 빨간 공을 던졌다" (Chulsoo threw the red ball he bought at the park yesterday), "던졌다" (threw) wants to know <b>who</b> (Chulsoo), <b>what</b> (ball), and <b>when</b> (yesterday) simultaneously. A single attention pass averages these relationships, blurring them.</p>
+<p>So we run attention in <b>parallel across multiple heads</b>. Each head has its own W_Q, W_K, W_V to capture different relationships, and the division of roles emerges naturally through learning.</p>
+<pre><code>Input (768)
+ ├─ Head 1  (64) ─┐
+ ├─ Head 2  (64) ─┤
+ ├─ ...           ├─ Concatenate (12 × 64 = 768) → W_O → Output (768)
+ └─ Head 12 (64) ─┘</code></pre>
+<p>Splitting 768 into 12 parts of 64 each keeps the total computation similar to a single attention pass. Since both input and output are 768, multiple layers can be stacked.</p>
+<figure>
+<svg aria-label="Heads run in parallel side-by-side within a layer, while layers stack vertically and repeat sequentially N times" role="img" viewBox="0 0 640 330">
+<rect class="s-box" height="60" rx="10" width="420" x="80" y="50"></rect>
+<text class="bold" x="20" y="78">Layer 3</text><text class="mut small" x="20" y="96">Weights ③</text>
+<rect class="s-box" height="60" rx="10" width="420" x="80" y="140"></rect>
+<text class="bold" x="20" y="168">Layer 2</text><text class="mut small" x="20" y="186">Weights ②</text>
+<rect class="s-box" height="60" rx="10" width="420" x="80" y="230"></rect>
+<text class="bold" x="20" y="258">Layer 1</text><text class="mut small" x="20" y="276">Weights ①</text>
+<g id="heads">
+<rect class="s-acc" height="34" rx="6" width="90" x="95" y="63"></rect><text text-anchor="middle" x="140" y="85">Head 1</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="195" y="63"></rect><text text-anchor="middle" x="240" y="85">Head 2</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="295" y="63"></rect><text text-anchor="middle" x="340" y="85">…</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="395" y="63"></rect><text text-anchor="middle" x="440" y="85">Head 12</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="95" y="153"></rect><text text-anchor="middle" x="140" y="175">Head 1</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="195" y="153"></rect><text text-anchor="middle" x="240" y="175">Head 2</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="295" y="153"></rect><text text-anchor="middle" x="340" y="175">…</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="395" y="153"></rect><text text-anchor="middle" x="440" y="175">Head 12</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="95" y="243"></rect><text text-anchor="middle" x="140" y="265">Head 1</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="195" y="243"></rect><text text-anchor="middle" x="240" y="265">Head 2</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="295" y="243"></rect><text text-anchor="middle" x="340" y="265">…</text>
+<rect class="s-acc" height="34" rx="6" width="90" x="395" y="243"></rect><text text-anchor="middle" x="440" y="265">Head 12</text>
+</g>
+<line class="s-line" marker-end="url(#ah)" x1="290" x2="290" y1="228" y2="203"></line>
+<line class="s-line" marker-end="url(#ah)" x1="290" x2="290" y1="138" y2="113"></line>
+<line class="s-line" marker-end="url(#ah)" x1="290" x2="290" y1="48" y2="26"></line>
+<text class="mut small" x="300" y="22">Output → Next Token Prediction</text>
+<line class="s-line" marker-end="url(#ah)" x1="290" x2="290" y1="318" y2="293"></line>
+<text class="mut small" x="300" y="318">Input (Embedding + Position)</text>
+<line class="s-warmline" marker-end="url(#ah-warm)" style="stroke-width:2.5" x1="535" x2="535" y1="290" y2="52"></line>
+<text class="bold" style="fill:var(--warm)" x="548" y="150">Sequential</text>
+<text style="fill:var(--warm)" x="548" y="170">Repeat N times</text>
+<text class="mut small" x="548" y="188">(for loop)</text>
+</svg>
+<figcaption><b>Figure 6 (Q4).</b> <b>Heads</b> run simultaneously <b>side-by-side</b> within a layer (without seeing each other's results). <b>"Repeat N times"</b> refers to <b>stacking layers vertically</b> with different weights, where the output of a lower layer becomes the input of the upper layer.</figcaption>
+</figure>
+</section>
+<section>
+<h2 id="s5"><span class="num">05</span>Positional Encoding</h2>
+<p>Since attention looks at all words at once, it <b>doesn't know the order.</b> "Dog bites man" and "Man bites dog" look like the same bag of words. So we inject order information separately.</p>
+<div class="callout"><b>Final Input = Token Embedding + Positional Encoding</b> (Both are size 768, so they can be added directly)</div>
+<p>If we input 1, 2, 3 as-is, the values become large and overwrite word meanings. The original paper uses <b>sin/cos waves with different frequencies</b>. Like the second, minute, and hour hands of a clock, looking at multiple wave values together uniquely determines the position. Values are always between -1 and 1.</p>
+<figure>
+<svg aria-label="Four sine waves with different frequencies and their values at selected positions" id="peSvg" role="img" viewBox="0 0 640 270"></svg>
+<div class="control">
+<label for="peSlider">Position</label>
+<input id="peSlider" max="63" min="0" type="range" value="10">
+<output id="peOut">10</output>
+</div>
+<div class="readout" id="peReadout"></div>
+<figcaption><b>Figure 7.</b> Try changing the position with the slider. Fast waves (second hand) distinguish adjacent positions, while slow waves (hour hand) distinguish distant positions. In practice, such waves span across 768 dimensions.</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<tbody><tr><th>Method</th><th>Description</th><th>Used in Models</th></tr>
+<tr><td>sin/cos (Fixed)</td><td>Calculated by formula, not learned</td><td>Original paper</td></tr>
+<tr><td>Learned Positional Embeddings</td><td>Learns vectors for each position via a lookup table</td><td>BERT, GPT-2</td></tr>
+<tr><td>RoPE</td><td>Rotates Q and K by the position instead of adding</td><td>LLaMA and other modern LLMs</td></tr>
+</tbody></table></div>
+</section>
+<section>
+<h2 id="s6"><span class="num">06</span>Transformer Block</h2>
+<p>The assembly of the components discussed so far is the <b>Transformer block</b>, and stacking N of these constitutes the "repeat N times" in Q4.</p>
+<figure>
+<svg aria-label="Transformer block: input x passes through multi-head attention, is added to the original x and normalized, then passes through FFN, is added again and normalized" role="img" style="max-width:470px;margin:0 auto" viewBox="0 0 470 560">
+<rect class="s-box" height="36" rx="8" width="200" x="160" y="10"></rect>
+<text class="bold" text-anchor="middle" x="260" y="33">Input x</text>
+<rect class="s-acc" height="46" rx="8" width="200" x="160" y="90"></rect>
+<text class="bold" text-anchor="middle" x="260" y="118">Multi-Head Attention</text>
+<text class="small" style="fill:var(--acc)" x="370" y="110">Attention(x)</text>
+<text class="small mut" x="370" y="126">= residual</text>
+<circle class="s-warm" cx="260" cy="180" r="16"></circle>
+<text class="bold" text-anchor="middle" x="260" y="185">+</text>
+<text class="small mut mono" x="286" y="184">x + Attention(x)</text>
+<rect class="s-box" height="36" rx="8" width="200" x="160" y="220"></rect>
+<text text-anchor="middle" x="260" y="243">LayerNorm</text>
+<rect class="s-green" height="46" rx="8" width="200" x="160" y="300"></rect>
+<text class="bold" text-anchor="middle" x="260" y="320">FFN</text>
+<text class="small mut mono" text-anchor="middle" x="260" y="337">768 → 3072 → 768</text>
+<circle class="s-warm" cx="260" cy="390" r="16"></circle>
+<text class="bold" text-anchor="middle" x="260" y="395">+</text>
+<text class="small mut mono" x="286" y="394">x + FFN(x)</text>
+<rect class="s-box" height="36" rx="8" width="200" x="160" y="430"></rect>
+<text text-anchor="middle" x="260" y="453">LayerNorm</text>
+<rect class="s-box" height="36" rx="8" width="200" x="160" y="508"></rect>
+<text class="bold" text-anchor="middle" x="260" y="531">Output → Next Block</text>
+<line class="s-line" marker-end="url(#ah)" x1="260" x2="260" y1="46" y2="87"></line>
+<line class="s-line" marker-end="url(#ah)" x1="260" x2="260" y1="136" y2="161"></line>
+<line class="s-line" marker-end="url(#ah)" x1="260" x2="260" y1="196" y2="217"></line>
+<line class="s-line" marker-end="url(#ah)" x1="260" x2="260" y1="256" y2="297"></line>
+<line class="s-line" marker-end="url(#ah)" x1="260" x2="260" y1="346" y2="371"></line>
+<line class="s-line" marker-end="url(#ah)" x1="260" x2="260" y1="406" y2="427"></line>
+<line class="s-line" marker-end="url(#ah)" x1="260" x2="260" y1="466" y2="505"></line>
+<path class="s-warmline" d="M260 66 L100 66 L100 180 L241 180" marker-end="url(#ah-warm)"></path>
+<circle class="s-dot-warm" cx="260" cy="66" r="3.5"></circle>
+<text class="small bold" style="fill:var(--warm)" text-anchor="end" x="92" y="118">x (original)</text>
+<text class="small mut" text-anchor="end" x="92" y="134">Skip connection</text>
+<path class="s-warmline" d="M260 276 L100 276 L100 390 L241 390" marker-end="url(#ah-warm)"></path>
+<circle class="s-dot-warm" cx="260" cy="276" r="3.5"></circle>
+<text class="small bold" style="fill:var(--warm)" text-anchor="end" x="92" y="328">x (original)</text>
+<text class="small mut" text-anchor="end" x="92" y="344">Skip connection</text>
+</svg>
+<figcaption><b>Figure 8 (Q6).</b> The orange skip connections are <b>residual connections</b>. What bypasses through the skip connection is the <b>original input x</b>, and the result produced by Attention/FFN is the <b>residual (change amount)</b>. The original paper normalizes after adding (Post-LN, as shown in the figure), while modern LLMs normalize before feeding in (Pre-LN).</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<tbody><tr><th>Component</th><th>Function</th><th>Analogy</th></tr>
+<tr><td>Multi-Head Attention</td><td>Information exchange <b>between</b> words</td><td>Meeting</td></tr>
+<tr><td>FFN</td><td>Each word processes its own information. Expands to 4x then shrinks, introducing non-linearity via activation functions. Approximately 2/3 of parameters</td><td>Organizing at one's own seat</td></tr>
+<tr><td>Residual Connection</td><td>Adds the original input x to the result. Layers learn only the "change amount". Information and learning signals are well transmitted even as depth increases</td><td>Attaching correction notes to the original</td></tr>
+<tr><td>LayerNorm</td><td>Adjusts vector values to near mean 0, magnitude 1</td><td>Score standardization</td></tr>
+</tbody></table></div>
+<div class="table-wrap"><table>
+<tbody><tr><th>Model</th><th>Number of Blocks (N)</th></tr>
+<tr><td>Original Transformer paper</td><td>Encoder 6 + Decoder 6</td></tr>
+<tr><td>BERT-base, GPT-2 small</td><td>12</td></tr>
+<tr><td>LLaMA-7B</td><td>32</td></tr>
+<tr><td>GPT-3</td><td>96</td></tr>
+</tbody></table></div>
+</section>
+<section>
+<h2 id="s7"><span class="num">07</span>Encoder · Decoder · Masking</h2>
+<p>The original paper was a translator. It consists of an <b>encoder that reads and understands the source text</b> and a <b>decoder that writes the translation one word at a time</b>.</p>
+<figure>
+<svg aria-label="The encoder processes the source text with self-attention and FFN, and its output enters the decoder&#x27;s cross-attention as K and V" role="img" viewBox="0 0 640 270">
+<text class="bold" text-anchor="middle" x="150" y="28">Encoder × N</text>
+<rect class="s-frame" height="150" rx="12" width="220" x="40" y="40"></rect>
+<rect class="s-green" height="44" rx="8" width="180" x="60" y="62"></rect>
+<text text-anchor="middle" x="150" y="89">FFN</text>
+<rect class="s-acc" height="44" rx="8" width="180" x="60" y="130"></rect>
+<text text-anchor="middle" x="150" y="150">Self-Attention</text>
+<text class="small mut" text-anchor="middle" x="150" y="166">Sees both past and future</text>
+<line class="s-line" marker-end="url(#ah)" x1="150" x2="150" y1="128" y2="109"></line>
+<line class="s-line" marker-end="url(#ah)" x1="150" x2="150" y1="222" y2="177"></line>
+<text class="mono" text-anchor="middle" x="150" y="240">"I love cats"</text>
+<text class="bold" text-anchor="middle" x="490" y="28">Decoder × N</text>
+<rect class="s-frame" height="150" rx="12" width="220" x="380" y="40"></rect>
+<rect class="s-green" height="36" rx="8" width="180" x="400" y="50"></rect>
+<text text-anchor="middle" x="490" y="73">FFN</text>
+<rect class="s-warm" height="36" rx="8" width="180" x="400" y="98"></rect>
+<text text-anchor="middle" x="490" y="121">Cross-Attention</text>
+<rect class="s-acc" height="36" rx="8" width="180" x="400" y="146"></rect>
+<text text-anchor="middle" x="490" y="169">Masked Self-Attention</text>
+<line class="s-line" x1="490" x2="490" y1="144" y2="137"></line>
+<line class="s-line" x1="490" x2="490" y1="96" y2="89"></line>
+<line class="s-line" marker-end="url(#ah)" x1="490" x2="490" y1="222" y2="185"></line>
+<text class="mono" text-anchor="middle" x="490" y="240">"&#x3C;start> I love cats"</text>
+<text class="small mut" text-anchor="middle" x="490" y="262">→ Next word: "love"</text>
+<path class="s-warmline" d="M240 84 L320 84 L320 116 L397 116" marker-end="url(#ah-warm)"></path>
+<text class="small" style="fill:var(--warm)" text-anchor="middle" x="320" y="72">Source → K, V</text>
+<text class="small mut" text-anchor="middle" x="320" y="140">Q is from the decoder</text>
+</svg>
+<figcaption><b>Figure 9.</b> The decoder differs in two ways. ① It uses a <b>mask</b> to prevent seeing future words, and ② it references the source text via <b>cross-attention</b> (Q is from the decoder, K·V are from the encoder).</figcaption>
+</figure>
+<h3 id="sec-2">Masking: No Peeking into the Future</h3>
+<p>During training, the entire correct sentence is fed in. If it could look ahead, it would simply copy the answer. Therefore, each word is allowed to see <b>only itself and previous words</b>. Replacing future positions in the attention scores with <b>−∞</b> results in 0 after softmax.</p>
+<figure>
+<svg aria-label="4×4 causal mask: the lower triangle is visible, while the upper triangle is blocked by negative infinity" role="img" style="max-width:440px;margin:0 auto" viewBox="0 0 440 300">
+<text class="mut small" text-anchor="middle" x="270" y="22">Visible words (Key) →</text>
+<g class="small" text-anchor="middle">
+<text x="165" y="50">&#x3C;start></text><text x="235" y="50">I</text><text x="305" y="50">love</text><text x="375" y="50">cats</text>
+</g>
+<g text-anchor="end">
+<text x="122" y="91">&#x3C;start></text><text x="122" y="141">I</text><text x="122" y="191">love</text><text x="122" y="241">cats</text>
+</g>
+<g id="maskGrid"></g>
+<text class="mut small" x="20" y="290">↑ Current prediction position (Query)</text>
+</svg>
+<figcaption><b>Figure 10.</b> It is called a <b>causal mask</b> due to its triangular shape. Thanks to this mask, during training, the "next word" for all positions can be predicted <b>simultaneously</b> with a single sentence (8 steps).</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<tbody><tr><th>Type</th><th>Strengths</th><th>Representative Models</th></tr>
+<tr><td>Encoder-only</td><td>Understanding · Classification</td><td>BERT</td></tr>
+<tr><td><b>Decoder-only</b></td><td>Generation</td><td><b>GPT, LLaMA, Claude</b> and most other LLMs</td></tr>
+<tr><td>Encoder + Decoder</td><td>Transformation (translation, summarization)</td><td>T5, BART</td></tr>
+</tbody></table></div>
+</section>
+<section>
+<h2 id="s8"><span class="num">08</span>Learning and Generation</h2>
+<h3 id="sec-3">From Vectors to the Next Token</h3>
+<p>The vector at the final position (768) → output matrix (768 → vocabulary size) → scores per token (logits) → softmax → probabilities → pick one. This is the reverse of embedding.</p>
+<h3 id="sec-4">Selection Methods and Temperature</h3>
+<p><b>Greedy</b> always picks the top candidate, while <b>sampling</b> draws according to the probabilities. <b>Temperature</b> is a knob that adjusts the probability distribution.</p>
+<figure>
+<div class="bars" id="tempBars"></div>
+<div class="control">
+<label for="tempSlider">temperature</label>
+<input id="tempSlider" max="2" min="0.1" step="0.1" type="range" value="1">
+<output id="tempOut">1.0</output>
+</div>
+<figcaption><b>Figure 11.</b> Next-token probabilities after "I love the cat." Lowering the temperature concentrates probability on the top choice (accurate but rigid), while raising it spreads it out evenly (creative but erratic).</figcaption>
+</figure>
+<h3 id="sec-5">Generation: Sampling One Token at a Time and Feeding It Back</h3>
+<figure>
+<div class="gen">
+<div class="gen-row"><span class="step">Step 1</span><span class="chip">I</span><span class="arrow">→ Model →</span><span class="chip new">love</span></div>
+<div class="gen-row"><span class="step">Step 2</span><span class="chip">I</span><span class="chip">love</span><span class="arrow">→ Model →</span><span class="chip new">the</span></div>
+<div class="gen-row"><span class="step">Step 3</span><span class="chip">I</span><span class="chip">love</span><span class="chip">the</span><span class="arrow">→ Model →</span><span class="chip new">cat</span></div>
+<div class="gen-row"><span class="step">Step 4</span><span class="chip">I</span><span class="chip">love</span><span class="chip">the</span><span class="chip">cat</span><span class="arrow">→ Model →</span><span class="chip end">&#x3C;end></span></div>
+</div>
+<figcaption><b>Figure 12.</b> <b>Autoregressive generation</b>. The model predicts only one token at a time, then appends the sampled token and feeds it back in. This is why chatbot responses stream out word by word.</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<tbody><tr><th>"Repetition"</th><th>Where</th><th>Content</th></tr>
+<tr><td>N layers (Q4)</td><td>Inside the model</td><td>Block 1 → Block 2 → … (per prediction step)</td></tr>
+<tr><td>Generation loop</td><td>Outside the model</td><td>Sample token → append → run again</td></tr>
+<tr><td>Training step (Q5)</td><td>During training</td><td>Predict → compute error → update weights</td></tr>
+</tbody></table></div>
+<h3 id="sec-6">Learning: Predicting the Next Token (Q2, Q5)</h3>
+<ol>
+<li>All weights (embeddings, W_Q·W_K·W_V·W_O for every layer, FFN, output matrix) start <b>randomly</b>.</li>
+<li>The massive amount of text written by humans serves as both the <b>problem and the answer</b>. No separate labels are needed.</li>
+<li>Thanks to masking, a single sentence allows prediction for <b>all positions simultaneously</b>.</li>
+<li>The lower the probability assigned to the correct token, the larger the error (cross-entropy).</li>
+<li><b>Backpropagation</b> sends the error backward from the output layer → Block N → … → embeddings, slightly adjusting <b>all weights simultaneously</b>.</li>
+<li>After repeating this hundreds of thousands to millions of times, embedding meanings, attention relationships, head roles, and per-layer functions emerge <b>naturally</b>.</li>
+<li>Subsequently, fine-tuning (SFT), RLHF, etc., refine it into a conversational assistant. The structure remains the same; only the weights change.</li>
+</ol>
+<figure>
+<svg aria-label="Forward pass goes from embeddings to the output layer, while backpropagation sends errors backward to update all layer weights simultaneously" role="img" viewBox="0 0 680 200">
+<g text-anchor="middle">
+<rect class="s-box" height="50" rx="8" width="100" x="10" y="60"></rect><text x="60" y="90">Embedding</text>
+<rect class="s-acc" height="50" rx="8" width="100" x="140" y="60"></rect><text x="190" y="90">Block 1</text>
+<rect class="s-acc" height="50" rx="8" width="100" x="270" y="60"></rect><text x="320" y="90">…</text>
+<rect class="s-acc" height="50" rx="8" width="100" x="400" y="60"></rect><text x="450" y="90">Block N</text>
+<rect class="s-warm" height="50" rx="8" width="140" x="530" y="60"></rect><text x="600" y="82">Prediction vs Target</text><text class="small mut" x="600" y="100">Error (loss)</text>
+</g>
+<line class="s-line" marker-end="url(#ah)" x1="111" x2="137" y1="75" y2="75"></line>
+<line class="s-line" marker-end="url(#ah)" x1="241" x2="267" y1="75" y2="75"></line>
+<line class="s-line" marker-end="url(#ah)" x1="371" x2="397" y1="75" y2="75"></line>
+<line class="s-line" marker-end="url(#ah)" x1="501" x2="527" y1="75" y2="75"></line>
+<text class="mut" text-anchor="middle" x="320" y="40">① Forward pass: compute forward →</text>
+<path class="s-warmline" d="M600 112 L600 150 L60 150 L60 114" marker-end="url(#ah-warm)"></path>
+<line class="s-warmline" marker-end="url(#ah-warm)" x1="190" x2="190" y1="150" y2="114"></line>
+<line class="s-warmline" marker-end="url(#ah-warm)" x1="320" x2="320" y1="150" y2="114"></line>
+<line class="s-warmline" marker-end="url(#ah-warm)" x1="450" x2="450" y1="150" y2="114"></line>
+<text style="fill:var(--warm)" text-anchor="middle" x="330" y="180">② Backpropagation: ← send error backward to update all weights simultaneously</text>
+</svg>
+<figcaption><b>Figure 13 (Q2, Q5).</b> One training step. Weights are not provided by another model; instead, <b>all layers of the model itself learn together</b> through this iterative process. The result is a weight file (e.g., <code>model.safetensors</code>).</figcaption>
+</figure>
+</section>
+<section>
+<h2 id="s9"><span class="num">09</span>The Entire Flow on One Page</h2>
+<figure>
+<div class="pipeline">
+<div class="pipe-step"><div class="badge">1</div><div><div class="what">Tokenization<span class="ref">02</span></div><div class="ex">"I love the cat" → [312, 8821, 67]</div></div></div>
+<div class="pipe-step"><div class="badge">2</div><div><div class="what">Embedding + Positional Encoding<span class="ref">02 · 05</span></div><div class="ex">768-dimensional vector per token</div></div></div>
+<div class="pipe-step"><div class="badge">3</div><div><div class="what">Transformer Block × N<span class="ref">03 · 04 · 06 · 07</span></div><div class="ex">Masked Multi-Head Attention → Residual+Norm → FFN → Residual+Norm</div></div></div>
+<div class="pipe-step"><div class="badge">4</div><div><div class="what">Output Matrix + Softmax<span class="ref">08</span></div><div class="ex">Next token probability → "love"</div></div></div>
+<div class="pipe-step"><div class="badge">5</div><div><div class="what">Append and return to Step 1<span class="ref">08</span></div><div class="ex">Repeat until &#x3C;end> is generated</div></div></div>
+</div>
+</figure>
+</section>
+<section>
+<h2 id="qa"><span class="num">Q&#x26;A</span>Questions &#x26; Answers</h2>
+<div class="qa-tools">
+<p class="hint">Questions I asked myself while studying. Try to recall the answer first, then expand.</p>
+<button id="toggleAll" type="button">Expand All</button>
+</div>
+<details class="qa">
+<summary><span class="qn">Q1</span><span class="qt">Is there a special reason for the embedding dimension of 768?<span class="stage">Stage 2 · Tokens and Embeddings</span></span></summary>
+<div class="ans"><ul>
+<li>There is no mathematical significance. It is a <b>hyperparameter (d_model)</b> chosen by humans.</li>
+<li>It became famous because BERT-base and GPT-2 small use it.</li>
+<li>Larger dimensions improve expressiveness, but there is a trade-off with increased computation and memory usage.</li>
+<li>Practical reason: It must be divisible by the number of heads (<b>12 heads × 64 = 768</b>). Multiples of 64 or 128 are efficient for GPU operations.</li>
+<li>Other models: BERT-large 1024, LLaMA-7B 4096, GPT-3 12288.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q2</span><span class="qt">Are matrices like W_Q, W_K, and W_V pre-trained by a larger model? Using human-written text?<span class="stage">Stage 3 · Self-Attention</span></span></summary>
+<div class="ans"><ul>
+<li>They are not created by another model. These matrices are <b>the Transformer's own parameters</b>.</li>
+<li>Initially, they are random. They are refined via backpropagation by repeatedly performing "next token prediction" on large amounts of human-written text → <b>pre-training</b>.</li>
+<li>The embedding table, W_Q/W_K/W_V, and subsequent layers are all learned <b>together</b> (end-to-end).</li>
+<li>Once training is complete, the values are fixed. When using the model (inference), only computation is performed. → <a href="#s8">Figure 13</a></li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q3</span><span class="qt">Is the Q·K value called attention?<span class="stage">Stage 3 · Self-Attention</span></span></summary>
+<div class="ans">
+<p>Only partially correct. The name differs at each stage.</p>
+<div class="table-wrap"><table>
+<tbody><tr><th>Stage</th><th>Name</th><th>Meaning</th></tr>
+<tr><td><code>Q·Kᵀ / √d_k</code></td><td>Attention <b>scores</b></td><td>Raw relevance scores</td></tr>
+<tr><td>After softmax</td><td>Attention <b>weights</b></td><td>Ratios that sum to 1. The "attention map" usually refers to this</td></tr>
+<tr><td>Weights × V</td><td><b>Attention</b> (entire operation)</td><td>Result: Context-aware vector</td></tr>
+</tbody></table></div>
+</div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q4</span><span class="qt">Does "repeating attention N times (for loop)" mean heads process in parallel, i.e., the same attention repeats to find positions?<span class="stage">Stage 4 · Multi-Head Attention</span></span></summary>
+<div class="ans"><ul>
+<li>No. Two concepts are mixed up here. → <a href="#s4">Figure 6</a></li>
+<li><b>Heads</b>: Run <b>side-by-side (in parallel)</b> within the same layer. They are independent of each other.</li>
+<li><b>N repetitions</b>: This refers to <b>stacking N layers (blocks) vertically</b>. It is a <b>sequential</b> structure where the output of one layer becomes the input of the next, hence written as a for loop.</li>
+<li>Each layer has <b>different weights</b>. It does not run until convergence but passes through a fixed number of times.</li>
+<li>The intuition that it "gradually finds positions" is correct regarding layers. Lower layers tend to capture syntax and adjacency, while upper layers capture semantics and reference relationships.</li>
+</ul>
+<pre><code>x = embed(tokens)
+for layer in layers:   # ← "N repetitions" (layers)
+    x = layer(x)       #   Heads inside are computed simultaneously</code></pre>
+</div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q5</span><span class="qt">If each layer has its own W_Q etc., where were those values learned?<span class="stage">Stage 5+ · Q2 Re-question</span></span></summary>
+<div class="ans"><ul>
+<li>All layers are learned <b>simultaneously in one go</b> during pre-training. They are not trained separately per layer.</li>
+<li>One training step: Forward pass (Layer 1 → … → Layer N → Prediction) → Error calculation → Backpropagation (Layer N → … → Layer 1) → <b>Simultaneously update weights for all layers</b>. → <a href="#s8">Figure 13</a></li>
+<li>Why values differ per layer: Initial random values are different, and the inputs received and positions vary, leading to different roles.</li>
+<li>Who does it: The company or research team building the model trains for weeks to months using thousands of GPUs. The result is a weight file.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q6</span><span class="qt">Is residual connection adding the residual, i.e., adding back the original attention?<span class="stage">Stage 6 · Transformer Block</span></span></summary>
+<div class="ans"><ul>
+<li>The big picture is correct, but <b>the original and residual are reversed</b>. → <a href="#s6">Figure 8</a></li>
+<li><code>Output = x + Attention(x)</code></li>
+<li><b>x</b> = The <b>original input</b> entering the block. It is the original that comes via the skip connection and is added.</li>
+<li><b>Attention(x)</b> = The <b>change amount calculated by the layer = residual</b>.</li>
+<li>Residual = The difference of "Output − Input". The layer learns <b>how much to change</b>, not the entire result.</li>
+<li>The same applies after FFN: <code>x + FFN(x)</code>. Also known as skip connection or shortcut, it became famous from ResNet (2015).</li>
+</ul></div>
+</details>
+</section>
+<section>
+<h2 id="check"><span class="num">✓</span>Confusing Concepts</h2>
+<ul class="checklist">
+<li><b>Embedding Dimension (d_model)</b>: It is a hyperparameter and a GPU-friendly size divisible by the number of heads. <span class="ref">Q1</span></li>
+<li><b>Source of Weights</b>: The model itself learns them all at once via pre-training, not a separate model. <span class="ref">Q2 · Q5</span></li>
+<li><b>Attention Terminology</b>: Distinguished as scores / weights / attention output. <span class="ref">Q3</span></li>
+<li><b>Heads vs Layers</b>: Heads are parallel and independent, while "N repetitions" means stacking layers with different weights sequentially. <span class="ref">Q4</span></li>
+<li><b>Residual Connection</b>: Original = Input x, residual = Change amount created by the layer. <span class="ref">Q6</span></li>
+</ul>
+</section>
+
+</div>
+<div class="notes-editor" hidden data-path="content/study/understanding-transformers-from-start-to-finish/index.ko.md" data-notes data-pagefind-ignore data-astro-cid-krmc5xkp><button type="button" class="ne-open" data-astro-cid-krmc5xkp>내 생각 쓰기</button><form class="ne-form" hidden data-astro-cid-krmc5xkp><textarea rows="8" aria-label="내 생각 (markdown)" placeholder="markdown 으로 쓰기" data-astro-cid-krmc5xkp></textarea><div class="ne-actions" data-astro-cid-krmc5xkp><button type="submit" data-astro-cid-krmc5xkp>저장</button><button type="button" class="ne-delete" data-astro-cid-krmc5xkp>지우기</button><button type="button" class="ne-cancel" data-astro-cid-krmc5xkp>취소</button><span class="ne-status" role="status" data-astro-cid-krmc5xkp></span></div></form></div><div class="post-admin" hidden data-dir="content/study/understanding-transformers-from-start-to-finish" data-lang="en" data-incoming="[]" data-pagefind-ignore data-astro-cid-krmc5xkp></div></div><nav class="toc" aria-labelledby="toc-h" data-pagefind-ignore data-astro-cid-krmc5xkp><h2 id="toc-h" data-astro-cid-krmc5xkp>Contents</h2><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#s1" data-astro-cid-krmc5xkp>01 Why Transformers Were Introduced</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s2" data-astro-cid-krmc5xkp>02 Tokens and Embeddings</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s3" data-astro-cid-krmc5xkp>03 Self-Attention (Q, K, V)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-1" data-astro-cid-krmc5xkp>Try It: Where Does This Word Look?</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s4" data-astro-cid-krmc5xkp>04 Multi-Head Attention</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s5" data-astro-cid-krmc5xkp>05 Positional Encoding</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s6" data-astro-cid-krmc5xkp>06 Transformer Block</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s7" data-astro-cid-krmc5xkp>07 Encoder · Decoder · Masking</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-2" data-astro-cid-krmc5xkp>Masking: No Peeking into the Future</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s8" data-astro-cid-krmc5xkp>08 Learning and Generation</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-3" data-astro-cid-krmc5xkp>From Vectors to the Next Token</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-4" data-astro-cid-krmc5xkp>Selection Methods and Temperature</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-5" data-astro-cid-krmc5xkp>Generation: Sampling One Token at a Time and Feeding It Back</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-6" data-astro-cid-krmc5xkp>Learning: Predicting the Next Token (Q2, Q5)</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s9" data-astro-cid-krmc5xkp>09 The Entire Flow on One Page</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#qa" data-astro-cid-krmc5xkp>Q&amp;#x26;A Questions &amp;#x26; Answers</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#check" data-astro-cid-krmc5xkp>✓ Confusing Concepts</a></li></ol></nav></div></article></main><footer class="wrap" data-astro-cid-hkbrpulz><p class="site-footer" data-astro-cid-hkbrpulz>Tech Blog</p></footer><dialog class="search" aria-label="Search posts" data-unavailable="The search index is built with the site. Run npm run build, then npm run preview." data-astro-cid-ac66eqjo><div class="search-head" data-astro-cid-ac66eqjo><h2 data-astro-cid-ac66eqjo>Search posts</h2><button type="button" class="close" data-search-close data-astro-cid-ac66eqjo>Close</button></div><div id="pagefind" class="search-body" data-astro-cid-ac66eqjo></div></dialog><script type="module">var e=document.querySelector(`dialog.search`),t=e.querySelector(`#pagefind`),n=!1;async function r(){if(!n){n=!0;try{let e=document.createElement(`link`);e.rel=`stylesheet`,e.href=`/pagefind/pagefind-ui.css`,document.head.append(e),await new Promise((e,t)=>{let n=document.createElement(`script`);n.src=`/pagefind/pagefind-ui.js`,n.onload=()=>e(),n.onerror=()=>t(Error(`pagefind missing`)),document.head.append(n)}),new PagefindUI({element:t,showSubResults:!0,showImages:!1,autofocus:!0})}catch{t.textContent=e.dataset.unavailable??``}}}function i(){e.showModal(),r(),t.querySelector(`input`)?.focus()}document.querySelectorAll(`[data-search-open]`).forEach(e=>e.addEventListener(`click`,i)),e.querySelector(`[data-search-close]`).addEventListener(`click`,()=>e.close()),e.addEventListener(`click`,t=>{t.target===e&&e.close()}),document.addEventListener(`keydown`,t=>{let n=t.target.tagName;e.open||n===`INPUT`||n===`TEXTAREA`||(t.key===`/`||(t.metaKey||t.ctrlKey)&&t.key.toLowerCase()===`k`)&&(t.preventDefault(),i())});</script></body></html><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_0_lang.CMBxuFBs.js"></script><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_1_lang.DQvCU8Du.js"></script>
