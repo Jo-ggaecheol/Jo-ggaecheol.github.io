@@ -1,0 +1,1182 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-hkbrpulz><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>01. RL Problem Setup &amp; Multi-armed Bandit | Tech Blog</title><meta name="description" content="Defines the RL interaction loop and contrasts it with supervised learning, then covers exploration/exploitation in multi-armed bandits via value estimation, regret, UCB, and Thompson sampling."><meta property="og:title" content="01. RL Problem Setup &amp; Multi-armed Bandit"><meta property="og:description" content="Defines the RL interaction loop and contrasts it with supervised learning, then covers exploration/exploitation in multi-armed bandits via value estimation, regret, UCB, and Thompson sampling."><meta name="theme-color" content="#f4f6f9" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#0e131b" media="(prefers-color-scheme: dark)"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate" hreflang="ko" href="/ko/study/01-rl-problem-setup-multi-armed/"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap"><script>
+      // 깜빡임 방지: 렌더 전에 테마 결정 (저장값 > 시스템 설정)
+      (() => {
+        let saved = null;
+        try {
+          saved = localStorage.getItem('theme');
+        } catch {}
+        const dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      })();
+    </script><link rel="stylesheet" href="/_astro/Base.BJamWqg3.css"><style>.tagpath[data-astro-cid-jjfiepte]{font-size:var(--step--1);color:var(--ink-3);flex-wrap:wrap;align-items:baseline;gap:0 .3em;line-height:1.6;text-decoration:none;display:inline-flex}.leaf[data-astro-cid-jjfiepte]{color:var(--ink-2);font-weight:500}.sep[data-astro-cid-jjfiepte]{opacity:.55}.tagpath[data-astro-cid-jjfiepte]:hover .leaf[data-astro-cid-jjfiepte]{color:var(--ink);text-underline-offset:.2em;text-decoration:underline}.row[data-astro-cid-gc2g3jd6]{border-top:1px solid var(--rule);grid-template-columns:8.5rem 1fr;gap:.25rem 1.5rem;padding-block:1.6rem;display:grid}.meta[data-astro-cid-gc2g3jd6]{font-size:var(--step--1);color:var(--ink-3);font-variant-numeric:tabular-nums;flex-direction:column;gap:.15rem;padding-top:.3rem;display:flex}.type[data-astro-cid-gc2g3jd6]{color:var(--type);align-items:center;gap:.45rem;font-weight:600;display:inline-flex}.type[data-astro-cid-gc2g3jd6]:before{content:"";background:var(--type);border-radius:2px;width:.5rem;height:.5rem}.pending[data-astro-cid-gc2g3jd6]{color:var(--ink-3);align-self:flex-start;font-size:.75rem}.draft[data-astro-cid-gc2g3jd6]{border:1px dashed var(--rule-strong);border-radius:4px;align-self:flex-start;margin-top:.3rem;padding:0 .4rem;font-size:.75rem}.title[data-astro-cid-gc2g3jd6]{font-size:var(--step-2);margin:0;font-weight:600;line-height:1.35}.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]{background-image:linear-gradient(var(--type), var(--type));background-position:0 100%;background-repeat:no-repeat;background-size:0 2px;text-decoration:none;transition:background-size .2s}.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]:hover,.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]:focus-visible{background-size:100% 2px}.summary[data-astro-cid-gc2g3jd6]{max-width:62ch;color:var(--ink-2);margin:.45rem 0 0}.tags[data-astro-cid-gc2g3jd6]{flex-wrap:wrap;gap:.1rem 1.1rem;margin:.6rem 0 0;padding:0;list-style:none;display:flex}@media (width<=640px){.row[data-astro-cid-gc2g3jd6]{grid-template-columns:1fr;padding-block:1.25rem}.meta[data-astro-cid-gc2g3jd6]{flex-flow:wrap;gap:.75rem;padding-top:0}.draft[data-astro-cid-gc2g3jd6]{margin-top:0}.title[data-astro-cid-gc2g3jd6]{font-size:var(--step-1)}}
+</style><link rel="stylesheet" href="/_astro/_slug_.y0bcMRw3.css"></head><body data-astro-cid-hkbrpulz><a class="skip" href="#main" data-astro-cid-hkbrpulz>Skip to content</a><header class="site-header wrap" data-astro-cid-nen7h5rs><a class="wordmark" href="/en/" translate="no" data-astro-cid-nen7h5rs>Tech Blog</a><nav class="nav" aria-label="Main" data-astro-cid-nen7h5rs><ul data-astro-cid-nen7h5rs><li data-type="paper" data-astro-cid-nen7h5rs><a href="/en/papers/" data-astro-cid-nen7h5rs>Papers</a></li><li data-type="study" data-astro-cid-nen7h5rs><a href="/en/study/" aria-current="page" data-astro-cid-nen7h5rs>Study</a></li><li data-type="dev" data-astro-cid-nen7h5rs><a href="/en/dev/" data-astro-cid-nen7h5rs>Dev</a></li><li data-type="clip" data-astro-cid-nen7h5rs><a href="/en/clips/" data-astro-cid-nen7h5rs>Clips</a></li><li data-astro-cid-nen7h5rs><a href="/en/graph/" data-astro-cid-nen7h5rs>Graph</a></li><li data-astro-cid-nen7h5rs><a href="/en/tags/" data-astro-cid-nen7h5rs>Tags</a></li></ul></nav><div class="tools" data-astro-cid-nen7h5rs><button class="icon-btn" type="button" data-search-open aria-label="Search" aria-keyshortcuts="/" data-astro-cid-nen7h5rs><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8" data-astro-cid-nen7h5rs></circle><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-astro-cid-nen7h5rs></path></svg></button><a class="lang" href="/ko/study/01-rl-problem-setup-multi-armed/" hreflang="ko" aria-label="Read in Korean" data-astro-cid-nen7h5rs>한국어</a><button class="icon-btn" type="button" data-theme-toggle data-label-light="Switch to light mode" data-label-dark="Switch to dark mode" aria-label="Switch to dark mode" data-astro-cid-nen7h5rs><svg class="sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8" data-astro-cid-nen7h5rs></circle><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-astro-cid-nen7h5rs></path></svg><svg class="moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><path d="M19.5 14.6A7.8 7.8 0 0 1 9.4 4.5a7.8 7.8 0 1 0 10.1 10.1Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" data-astro-cid-nen7h5rs></path></svg></button></div></header><script type="module">var e=document.querySelector(`[data-theme-toggle]`),t=document.documentElement,n=()=>{let n=t.dataset.theme===`dark`;document.querySelectorAll(`meta[name="theme-color"]`).forEach(e=>{e.setAttribute(`content`,n?`#0e131b`:`#f4f6f9`),e.removeAttribute(`media`)}),e.setAttribute(`aria-label`,(n?e.dataset.labelLight:e.dataset.labelDark)??``),e.setAttribute(`aria-pressed`,String(n))};n(),e.addEventListener(`click`,()=>{t.dataset.theme=t.dataset.theme===`dark`?`light`:`dark`;try{localStorage.setItem(`theme`,t.dataset.theme)}catch{}n()});</script><main id="main" data-astro-cid-hkbrpulz><article class="post wrap" data-type="study" data-pagefind-body data-astro-cid-krmc5xkp><header class="head" data-astro-cid-krmc5xkp><div class="meta" data-astro-cid-krmc5xkp><a class="type" href="/en/study/" data-pagefind-ignore data-astro-cid-krmc5xkp>Study</a><time datetime="2026-10-30" data-astro-cid-krmc5xkp>Oct 30, 2026</time></div><h1 data-astro-cid-krmc5xkp>01. RL Problem Setup &amp; Multi-armed Bandit</h1><p class="summary" data-astro-cid-krmc5xkp>Defines the RL interaction loop and contrasts it with supervised learning, then covers exploration/exploitation in multi-armed bandits via value estimation, regret, UCB, and Thompson sampling.</p><dl class="source" data-astro-cid-krmc5xkp><dt data-astro-cid-krmc5xkp>Files</dt><dd data-astro-cid-krmc5xkp><a href="/files/study/01-rl-problem-setup-multi-armed/rl_01.md" rel="noopener" data-astro-cid-krmc5xkp>Markdown source</a></dd></dl><ul class="tags" data-pagefind-ignore data-astro-cid-krmc5xkp><li data-astro-cid-krmc5xkp><a class="tagpath" href="/en/tags/method/reinforcement-learning/" title="method/reinforcement-learning" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Method</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Reinforcement Learning</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/en/tags/domain/machine-learning/" title="domain/machine-learning" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Field</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Machine Learning</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/en/tags/task/benchmarking/" title="task/benchmarking" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Task</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Benchmarking</span></a></li></ul><div class="tags-editor" hidden data-dir="content/study/01-rl-problem-setup-multi-armed" data-pagefind-ignore data-astro-cid-krmc5xkp></div></header><div class="columns" data-astro-cid-krmc5xkp><div class="prose" data-astro-cid-krmc5xkp><p class="note" data-astro-cid-krmc5xkp>Machine-translated from the Korean original.</p><details class="toc-inline" data-pagefind-ignore data-astro-cid-krmc5xkp><summary data-astro-cid-krmc5xkp>Contents</summary><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#s1" data-astro-cid-krmc5xkp>01 RL Problem Formulation: The Interaction Loop</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s2" data-astro-cid-krmc5xkp>02 How is it different from supervised learning: Three axes</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s3" data-astro-cid-krmc5xkp>03 🤖 From a Robot&#39;s Perspective</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s4" data-astro-cid-krmc5xkp>04 What is a Multi-armed Bandit</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-1" data-astro-cid-krmc5xkp>The decisive difference between bandits and MDPs</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s5" data-astro-cid-krmc5xkp>05 Value Estimation and Incremental Updates</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-2" data-astro-cid-krmc5xkp>ML Perspective</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-3" data-astro-cid-krmc5xkp>Fixed Step Size and Convergence Conditions</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-4" data-astro-cid-krmc5xkp>What Changes Going Forward is Only the Target</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s6" data-astro-cid-krmc5xkp>06 Performance Metric: Regret</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-5" data-astro-cid-krmc5xkp>Why multiply by gap: The loss per mistake varies</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-6" data-astro-cid-krmc5xkp>Regret is a report card</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s7" data-astro-cid-krmc5xkp>07 Simple Strategies: Greedy, ε-greedy, Optimistic init</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s8" data-astro-cid-krmc5xkp>08 UCB: If You Don&#39;t Know, Assume It&#39;s Good</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-7" data-astro-cid-krmc5xkp>Derivation: From Hoeffding&#39;s Inequality to c = √2</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-8" data-astro-cid-krmc5xkp>Connection between gap and logarithmic regret</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-9" data-astro-cid-krmc5xkp>Connections to Later Topics</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s9" data-astro-cid-krmc5xkp>09 Thompson Sampling: Sampling from Beliefs</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-10" data-astro-cid-krmc5xkp>Beta Distribution (When Rewards are 0/1)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-11" data-astro-cid-krmc5xkp>Comparison with UCB</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-12" data-astro-cid-krmc5xkp>Connection to Later Topics</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s10" data-astro-cid-krmc5xkp>10 Overall Summary &amp;#x26; Comparison Experiment</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#quiz" data-astro-cid-krmc5xkp>? Review Questions</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#qa" data-astro-cid-krmc5xkp>Q&amp;#x26;A Questions &amp;#x26; Answers</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#check" data-astro-cid-krmc5xkp>✓ Concepts That Were Confusing</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#refs" data-astro-cid-krmc5xkp>📚 Further Reading</a></li></ol></details><style>
+.rawhtml { --fg: var(--ink); --text: var(--ink); --muted: var(--ink-3); --line: var(--rule); --border: var(--rule) }
+.rawhtml :is(h2, h3) > span:first-child:not(:only-child) { margin-right: 0.5em }
+.rawhtml { --acc: #2f6bd8; --acc-soft: #e2ebfb; --warm: #c9701c; --warm-soft: #fbecd9; --green: #23875a; --green-soft: #dcf1e6; --red: #c24141; --red-soft: #f9e0e0; --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100 }
+@media (prefers-color-scheme: dark) {
+:root:not([data-theme="light"]) .rawhtml { --acc: #6d9cf0; --acc-soft: #1f2d48; --warm: #e7a15a; --warm-soft: #3a2b1a; --green: #5cc493; --green-soft: #183527; --red: #e57777; --red-soft: #3d1f22; --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500 }
+}
+.rawhtml h2 .num { font-family: var(--font-mono); font-size: .95rem; color: var(--acc); background: var(--acc-soft); border-radius: 6px; padding: 2px 8px }
+.rawhtml .lead { color: var(--muted); margin: 0 }
+.rawhtml .meta { color: var(--muted); font-size: .9rem; margin-top: 12px }
+.rawhtml nav.toc { margin: 32px 0 0; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px }
+.rawhtml nav.toc ol { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 4px 16px }
+.rawhtml nav.toc a { text-decoration: none; color: var(--fg); font-size: .95rem }
+.rawhtml nav.toc a:hover { color: var(--acc) }
+.rawhtml nav.toc .n { font-family: var(--font-mono); color: var(--muted); margin-right: 8px; font-size: .85rem }
+.rawhtml figure { position: relative; margin: 24px 0; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px }
+.rawhtml figure svg { display: block; width: 100%; height: auto }
+.rawhtml figcaption { color: var(--muted); font-size: .88rem; margin-top: 12px }
+.rawhtml figcaption b { color: var(--fg) }
+.rawhtml .table-wrap { overflow-x: auto }
+.rawhtml .callout { border-left: 4px solid var(--acc); background: var(--acc-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0 }
+.rawhtml .callout.warm { border-color: var(--warm); background: var(--warm-soft) }
+.rawhtml .callout.green { border-color: var(--green); background: var(--green-soft) }
+.rawhtml .robot { border: 1px dashed var(--line); border-radius: 10px; padding: 12px 16px; margin: 16px 0; background: var(--surface) }
+.rawhtml .robot > b:first-child { color: var(--green) }
+.rawhtml .formula { font-family: var(--font-mono); font-size: 1.02rem; text-align: center; padding: 16px 8px; margin: 16px 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; white-space: nowrap; line-height: 1.9 }
+.rawhtml .formula .lbl { display: block; font-family: var(--font-sans); font-size: .82rem; color: var(--muted) }
+.rawhtml .hl-a { color: var(--acc); font-weight: 600 }
+.rawhtml .hl-w { color: var(--warm); font-weight: 600 }
+.rawhtml svg text { font-family: var(--font-sans); font-size: 13px; fill: var(--fg) }
+.rawhtml svg .mut { fill: var(--muted); font-size: 12px }
+.rawhtml svg .small { font-size: 11px }
+.rawhtml svg .bold { font-weight: 700 }
+.rawhtml svg .mono { font-family: var(--font-mono) }
+.rawhtml .s-box { fill: var(--surface); stroke: var(--line); stroke-width: 1.5 }
+.rawhtml .s-acc { fill: var(--acc-soft); stroke: var(--acc); stroke-width: 1.5 }
+.rawhtml .s-warm { fill: var(--warm-soft); stroke: var(--warm); stroke-width: 1.5 }
+.rawhtml .s-green { fill: var(--green-soft); stroke: var(--green); stroke-width: 1.5 }
+.rawhtml .s-red { fill: var(--red-soft); stroke: var(--red); stroke-width: 1.5 }
+.rawhtml .s-frame { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 5 4 }
+.rawhtml .s-line { fill: none; stroke: var(--muted); stroke-width: 1.5 }
+.rawhtml .s-accline { fill: none; stroke: var(--acc); stroke-width: 2 }
+.rawhtml .s-warmline { fill: none; stroke: var(--warm); stroke-width: 2 }
+.rawhtml .s-ahead { fill: var(--muted) }
+.rawhtml .s-ahead-acc { fill: var(--acc) }
+.rawhtml .s-ahead-warm { fill: var(--warm) }
+.rawhtml .grid { stroke: var(--line); stroke-width: 1 }
+.rawhtml .axis { stroke: var(--muted); stroke-width: 1 }
+.rawhtml .control { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; font-size: .92rem }
+.rawhtml .control input[type="range"] { flex: 1; min-width: 140px; accent-color: var(--acc) }
+.rawhtml .control output { font-family: var(--font-mono); min-width: 3em }
+.rawhtml .control label { display: inline-flex; align-items: center; gap: 6px }
+.rawhtml .btn { font: inherit; font-size: .86rem; padding: 5px 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--fg) }
+.rawhtml .btn:hover { border-color: var(--acc) }
+.rawhtml .readout { font-family: var(--font-mono); font-size: .82rem; color: var(--muted); margin-top: 8px; overflow-x: auto; white-space: nowrap }
+.rawhtml .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .86rem; margin: 0 0 8px }
+.rawhtml .legend span { display: inline-flex; align-items: center; gap: 6px }
+.rawhtml .legend i { width: 18px; height: 3px; border-radius: 2px; display: inline-block }
+.rawhtml .legend i.dash { background: repeating-linear-gradient(90deg, var(--muted) 0 4px, transparent 4px 7px) !important }
+.rawhtml .tip { position: absolute; pointer-events: none; display: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: .8rem; line-height: 1.5; box-shadow: 0 4px 14px rgba(0,0,0,.12); white-space: nowrap; z-index: 2 }
+.rawhtml .tip .k { display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle }
+.rawhtml .tip b { font-family: var(--font-mono); font-weight: 600 }
+.rawhtml .areas { display: grid; grid-template-columns: 1fr 1fr; gap: 16px }
+.rawhtml .qa-tools { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap }
+.rawhtml .qa-tools button { font: inherit; font-size: .88rem; padding: 6px 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--fg) }
+.rawhtml details.qa, .rawhtml details.quiz { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; margin: 12px 0; padding: 0 }
+.rawhtml details.qa summary, .rawhtml details.quiz summary { cursor: pointer; padding: 16px 20px; list-style: none; display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: baseline }
+.rawhtml details.qa summary::-webkit-details-marker, .rawhtml details.quiz summary::-webkit-details-marker { display: none }
+.rawhtml details .qn { font-family: var(--font-mono); font-weight: 600; color: var(--warm); background: var(--warm-soft); border-radius: 6px; padding: 1px 8px; font-size: .9rem }
+.rawhtml details.quiz .qn { color: var(--acc); background: var(--acc-soft) }
+.rawhtml details .qt { font-weight: 500 }
+.rawhtml details .stage { display: block; color: var(--muted); font-size: .8rem; font-weight: 400 }
+.rawhtml details .ans { padding: 0 20px 16px 20px; border-top: 1px solid var(--line) }
+.rawhtml details .ans ul { padding-left: 20px }
+.rawhtml .hint { font-size: .85rem; color: var(--muted) }
+.rawhtml .checklist { list-style: none; padding: 0 }
+.rawhtml .checklist li { padding: 10px 14px 10px 40px; position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; margin: 8px 0 }
+.rawhtml .checklist li::before { content: "✓"; position: absolute; left: 14px; top: 10px; color: var(--green); font-weight: 700 }
+.rawhtml .checklist .ref { color: var(--muted); font-size: .85rem }
+.rawhtml .refs li { margin: 4px 0 }
+@media (max-width: 560px) {
+.rawhtml figure { padding: 12px }
+.rawhtml .areas { grid-template-columns: 1fr }
+}
+</style>
+<div class="rawhtml">
+<svg aria-hidden="true" height="0" style="position:absolute" width="0">
+<defs>
+<marker id="ah" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="9" refY="5" viewBox="0 0 10 10"><path class="s-ahead" d="M0,0 L10,5 L0,10 z"></path></marker>
+<marker id="ah-acc" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="9" refY="5" viewBox="0 0 10 10"><path class="s-ahead-acc" d="M0,0 L10,5 L0,10 z"></path></marker>
+<marker id="ah-warm" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="9" refY="5" viewBox="0 0 10 10"><path class="s-ahead-warm" d="M0,0 L10,5 L0,10 z"></path></marker>
+</defs>
+</svg>
+<section>
+<h2 id="s1"><span class="num">01</span>RL Problem Formulation: The Interaction Loop</h2>
+<p>At each time step t, the agent and environment exchange states, actions, and rewards.</p>
+<figure>
+<svg aria-label="The loop where the agent observes a state and sends an action, and the environment returns a reward and the next state" role="img" viewBox="0 0 720 250">
+<rect class="s-acc" height="90" rx="12" width="210" x="40" y="70"></rect>
+<text class="bold" text-anchor="middle" x="145" y="105">Agent</text>
+<text class="mono" text-anchor="middle" x="145" y="130">π(a | s)</text>
+<text class="mut small" text-anchor="middle" x="145" y="149">Policy: State → Action</text>
+<rect class="s-warm" height="90" rx="12" width="210" x="470" y="70"></rect>
+<text class="bold" text-anchor="middle" x="575" y="105">Environment</text>
+<text class="mono" text-anchor="middle" x="575" y="130">p(s', r | s, a)</text>
+<text class="mut small" text-anchor="middle" x="575" y="149">Dynamics: Assumed unknown</text>
+<path class="s-accline" d="M145 68 C145 20 575 20 575 66" marker-end="url(#ah-acc)"></path>
+<text class="bold" style="fill:var(--acc)" text-anchor="middle" x="360" y="18">Action A<tspan baseline-shift="sub" font-size="10">t</tspan></text>
+<path class="s-warmline" d="M575 162 C575 215 145 215 145 164" marker-end="url(#ah-warm)"></path>
+<text class="bold" style="fill:var(--warm)" text-anchor="middle" x="360" y="238">Reward R<tspan baseline-shift="sub" font-size="10">t+1</tspan>, Next State S<tspan baseline-shift="sub" font-size="10">t+1</tspan></text>
+<text class="mut" text-anchor="middle" x="360" y="120">Repeat t → t+1</text>
+</svg>
+<figcaption><b>Figure 1.</b> Agent-environment interaction loop. The agent does not know the environment's dynamics p and learns only from experience (action → reward, next state).</figcaption>
+</figure>
+<p>The goal is to find a policy that maximizes the expected value of the cumulative reward (return).</p>
+<div class="formula">max<sub>π</sub> E<sub>π</sub>[ G<sub>t</sub> ],    G<sub>t</sub> = R<sub>t+1</sub> + γR<sub>t+2</sub> + γ²R<sub>t+3</sub> + ⋯</div>
+<div class="callout">The environment's dynamics p are <b>assumed to be unknown</b>. This is the point where it diverges from classical control theory, which starts with knowledge of p.</div>
+</section>
+<section>
+<h2 id="s2"><span class="num">02</span>How is it different from supervised learning: Three axes</h2>
+<div class="table-wrap"><table>
+<tbody><tr><th>Axis</th><th>Supervised Learning</th><th>RL</th></tr>
+<tr><td><b>① Type of feedback</b></td><td>instructive: provides the correct label y</td><td><b>evaluative</b>: only provides the score for the chosen action. It is unknown what would have happened with other actions</td></tr>
+<tr><td><b>② Data distribution</b></td><td>i.i.d., fixed</td><td><b>The policy changes the data distribution</b>. Where you go determines what you learn</td></tr>
+<tr><td><b>③ Temporal structure</b></td><td>Samples are independent</td><td><b>Reward arrives late</b>. An action 100 steps prior may be the cause → credit assignment</td></tr>
+</tbody></table></div>
+<figure>
+<svg aria-label="A bandit has one state where actions only yield rewards. A contextual bandit has states given randomly. An MDP has actions that change the next state" role="img" viewBox="0 0 720 250">
+<text class="bold" text-anchor="middle" x="110" y="24">Multi-armed bandit</text>
+<circle class="s-acc" cx="110" cy="115" r="26"></circle>
+<text class="mono" text-anchor="middle" x="110" y="120">s</text>
+<path class="s-line" d="M90 97 C55 50 165 50 130 97" marker-end="url(#ah)"></path>
+<path class="s-line" d="M84 125 C30 150 50 190 98 139" marker-end="url(#ah)"></path>
+<path class="s-line" d="M136 125 C190 150 170 190 122 139" marker-end="url(#ah)"></path>
+<text class="small mono" text-anchor="middle" x="110" y="52">a₂ → r</text>
+<text class="small mono" x="38" y="175">a₁ → r</text>
+<text class="small mono" x="150" y="175">a₃ → r</text>
+<text class="mut small" text-anchor="middle" x="110" y="215">One state, actions only yield rewards</text>
+<text class="bold" style="fill:var(--acc)" text-anchor="middle" x="110" y="238">①</text>
+<line stroke="var(--line)" stroke-dasharray="4 4" x1="235" x2="235" y1="15" y2="240"></line>
+<text class="bold" text-anchor="middle" x="360" y="24">Contextual bandit</text>
+<text class="mut small" text-anchor="middle" x="360" y="50">The world provides situations randomly</text>
+<circle class="s-acc" cx="300" cy="115" r="22"></circle><text class="mono" text-anchor="middle" x="300" y="120">s₁</text>
+<circle class="s-acc" cx="360" cy="115" r="22"></circle><text class="mono" text-anchor="middle" x="360" y="120">s₂</text>
+<circle class="s-acc" cx="420" cy="115" r="22"></circle><text class="mono" text-anchor="middle" x="420" y="120">s₃</text>
+<line class="s-line" marker-end="url(#ah)" x1="300" x2="300" y1="139" y2="168"></line>
+<line class="s-line" marker-end="url(#ah)" x1="360" x2="360" y1="139" y2="168"></line>
+<line class="s-line" marker-end="url(#ah)" x1="420" x2="420" y1="139" y2="168"></line>
+<text class="small mono" text-anchor="middle" x="300" y="185">a → r</text>
+<text class="small mono" text-anchor="middle" x="360" y="185">a → r</text>
+<text class="small mono" text-anchor="middle" x="420" y="185">a → r</text>
+<text class="mut small" text-anchor="middle" x="360" y="215">States exist but are independent of my actions</text>
+<text class="bold" style="fill:var(--acc)" text-anchor="middle" x="360" y="238">① + state</text>
+<line stroke="var(--line)" stroke-dasharray="4 4" x1="485" x2="485" y1="15" y2="240"></line>
+<text class="bold" text-anchor="middle" x="605" y="24">MDP (full RL)</text>
+<circle class="s-acc" cx="530" cy="90" r="22"></circle><text class="mono" text-anchor="middle" x="530" y="95">s₁</text>
+<circle class="s-acc" cx="650" cy="80" r="22"></circle><text class="mono" text-anchor="middle" x="650" y="85">s₂</text>
+<circle class="s-warm" cx="600" cy="165" r="22"></circle><text class="mono" text-anchor="middle" x="600" y="170">s₃</text>
+<path class="s-warmline" d="M553 86 L626 81" marker-end="url(#ah-warm)"></path>
+<path class="s-warmline" d="M640 101 L612 145" marker-end="url(#ah-warm)"></path>
+<path class="s-warmline" d="M580 155 L545 108" marker-end="url(#ah-warm)"></path>
+<text class="small mono" text-anchor="middle" x="590" y="74">a, r</text>
+<text class="small mono" x="643" y="132">a, r</text>
+<text class="small mono" x="530" y="140">a, r</text>
+<text class="mut small" text-anchor="middle" x="605" y="215">Actions change the next state</text>
+<text class="bold" style="fill:var(--warm)" text-anchor="middle" x="605" y="238">① + ② + ③</text>
+</svg>
+<figcaption><b>Figure 2.</b> The hierarchy of problems viewed through three axes. A bandit is the simplest RL problem, retaining only ① (evaluative feedback), allowing us to examine <b>the exploration problem in isolation</b>.</figcaption>
+</figure>
+</section>
+<section>
+<h2 id="s3"><span class="num">03</span>🤖 From a Robot's Perspective</h2>
+<figure>
+<svg aria-label="Illustrating state, action, and reward in the problem of a two-joint robotic arm grasping an object" role="img" viewBox="0 0 720 270">
+<line class="s-line" x1="20" x2="330" y1="240" y2="240"></line>
+<rect class="s-box" height="18" rx="3" width="60" x="60" y="222"></rect>
+<line stroke="var(--acc)" stroke-linecap="round" stroke-width="10" x1="90" x2="160" y1="222" y2="120"></line>
+<line stroke="var(--acc)" stroke-linecap="round" stroke-width="8" x1="160" x2="262" y1="120" y2="150"></line>
+<circle class="s-box" cx="90" cy="222" r="8"></circle>
+<circle class="s-box" cx="160" cy="120" r="8"></circle>
+<path d="M262 150 L280 140 M262 150 L282 162" stroke="var(--fg)" stroke-linecap="round" stroke-width="3"></path>
+<rect class="s-warm" height="42" rx="4" width="34" x="290" y="198"></rect>
+<text class="small mut" text-anchor="middle" x="307" y="258">Object</text>
+<path class="s-warmline" d="M118 222 A28 28 0 0 0 106 199"></path>
+<text class="small mono" style="fill:var(--warm)" x="122" y="207">q₁</text>
+<path class="s-warmline" d="M188 128 A28 28 0 0 0 176 97"></path>
+<text class="small mono" style="fill:var(--warm)" x="190" y="105">q₂</text>
+<line stroke="var(--green)" stroke-dasharray="4 3" stroke-width="1.5" x1="282" x2="300" y1="158" y2="198"></line>
+<text class="small" style="fill:var(--green)" text-anchor="end" x="284" y="192">‖x_ee − x_obj‖</text>
+<rect class="s-acc" height="66" rx="10" width="340" x="360" y="16"></rect>
+<text class="bold" x="374" y="40">State / Observation</text>
+<text class="small" x="374" y="62">Joint angles q, angular velocities q̇, gripper, object pose (camera)</text>
+<rect class="s-warm" height="66" rx="10" width="340" x="360" y="96"></rect>
+<text class="bold" x="374" y="120">Action</text>
+<text class="small" x="374" y="142">Joint torque τ / joint target position / end-effector delta</text>
+<rect class="s-green" height="80" rx="10" width="340" x="360" y="176"></rect>
+<text class="bold" x="374" y="200">Reward</text>
+<text class="small mono" x="374" y="222">dense: −‖x_ee − x_obj‖ − c‖a‖² + bonus</text>
+<text class="small mono" x="374" y="242">sparse: 1 for success, 0 for failure</text>
+</svg>
+<figcaption><b>Figure 3.</b> Translating robotic arm object grasping into an RL problem. The choice of action space (torque vs. position targets) significantly influences learning difficulty.</figcaption>
+</figure>
+<ul>
+<li><b>Observation vs state</b>: What is seen via cameras and sensors is only part of the state, making it strictly a POMDP (covered in 02).</li>
+<li><b>Step = control cycle</b>: At 50Hz, a 10-second episode consists of 500 steps, making ③ credit assignment severe.</li>
+<li><b>Sparse reward vs shaping</b>: Sparse rewards provide almost no learning signal, while shaping can lead to <b>reward hacking</b> (e.g., receiving distance reward just by vibrating near the object).</li>
+<li><b>Exploration cost</b>: Simulation is free, but real robots break → sim-to-real.</li>
+<li><b>Consequence of ②</b>: When the policy changes, the distribution of visited states changes. The compounding error in imitation learning is also due to this (10).</li>
+</ul>
+</section>
+<section>
+<h2 id="s4"><span class="num">04</span>What is a Multi-armed Bandit</h2>
+<p>The nickname for a casino slot machine is <b>"one-armed bandit"</b>. It has one lever (arm) and it takes your money, so it's a bandit. If there are multiple such machines, it's a <b>multi-armed bandit</b>.</p>
+<ul>
+<li>k machines. Pulling machine a yields reward R ~ ν<sub>a</sub>. The true mean <b>q*(a) = E[R | A=a]</b> is unknown.</li>
+<li>In each round, you choose one to pull, aiming to maximize cumulative reward over T rounds.</li>
+<li><b>You only see the result of the machine you chose.</b> This creates a dilemma: keep using what looks good (<b>exploitation</b>) or learn about less-tried options (<b>exploration</b>).</li>
+</ul>
+<p>Real-world examples: A/B testing, clinical trial assignment, ad/recommendation selection, 🤖 grasp candidate selection, controller hyperparameter selection.</p>
+<h3 id="sec-1">The decisive difference between bandits and MDPs</h3>
+<figure>
+<svg aria-label="In a bandit, pulling any machine keeps you in the same room; in an MDP, the pulled machine determines which different room you move to, and rooms can be revisited" role="img" viewBox="0 0 720 320">
+<text class="bold" x="20" y="26">Bandit</text>
+<rect class="s-box" height="96" rx="12" width="230" x="100" y="12"></rect>
+<text class="mut small" text-anchor="middle" x="215" y="34">1 room</text>
+<rect class="s-acc" height="46" rx="6" width="50" x="125" y="46"></rect><text class="mono small" text-anchor="middle" x="150" y="74">0.3?</text>
+<rect class="s-acc" height="46" rx="6" width="50" x="190" y="46"></rect><text class="mono small" text-anchor="middle" x="215" y="74">0.5?</text>
+<rect class="s-acc" height="46" rx="6" width="50" x="255" y="46"></rect><text class="mono small" text-anchor="middle" x="280" y="74">0.7?</text>
+<path class="s-line" d="M332 52 C400 30 400 100 334 86" marker-end="url(#ah)"></path>
+<text class="small" x="402" y="62">Same room, same probabilities no matter what you pull</text>
+<text class="small mut" x="402" y="82">Action → determines reward only</text>
+<line stroke="var(--line)" stroke-dasharray="4 4" x1="20" x2="700" y1="128" y2="128"></line>
+<text class="bold" x="20" y="156">MDP</text>
+<rect class="s-acc" height="80" rx="12" width="150" x="80" y="170"></rect>
+<text class="bold" text-anchor="middle" x="155" y="198">Room A</text>
+<text class="small mut" text-anchor="middle" x="155" y="222">Machines a₁ a₂ a₃</text>
+<rect class="s-acc" height="70" rx="12" width="150" x="330" y="146"></rect>
+<text class="bold" text-anchor="middle" x="405" y="174">Room B</text>
+<text class="small mut" text-anchor="middle" x="405" y="196">Different probabilities</text>
+<rect class="s-acc" height="66" rx="12" width="150" x="330" y="226"></rect>
+<text class="bold" text-anchor="middle" x="405" y="254">Room C</text>
+<text class="small mut" text-anchor="middle" x="405" y="274">Yet another set of probabilities</text>
+<rect class="s-green" height="60" rx="12" width="120" x="570" y="190"></rect>
+<text class="bold" text-anchor="middle" x="630" y="225">Goal (+1)</text>
+<path class="s-warmline" d="M232 192 L328 181" marker-end="url(#ah-warm)"></path>
+<text class="small mono" style="fill:var(--warm)" x="270" y="176">a₁</text>
+<path class="s-warmline" d="M232 230 L328 254" marker-end="url(#ah-warm)"></path>
+<text class="small mono" style="fill:var(--warm)" x="270" y="262">a₂</text>
+<path class="s-warmline" d="M482 182 L568 210" marker-end="url(#ah-warm)"></path>
+<text class="small mono" style="fill:var(--warm)" x="515" y="186">a₃</text>
+<path class="s-line" d="M330 280 C250 300 160 290 150 252" marker-end="url(#ah)" stroke-dasharray="5 4"></path>
+<text class="small mut" text-anchor="middle" x="240" y="314">Back to A (revisit)</text>
+</svg>
+<figcaption><b>Figure 4.</b> In a bandit, there is only one room, so the action determines only the reward. In an MDP, <b>(current room, action)</b> determines the next room, and machine probabilities differ by room. Since rooms are revisited repeatedly, learned information can be reused.</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<tbody><tr><th></th><th>State Transition</th><th>Reward</th><th>Action</th></tr>
+<tr><td>Markov chain</td><td>✅</td><td>❌</td><td>❌</td></tr>
+<tr><td>MRP</td><td>✅</td><td>✅</td><td>❌</td></tr>
+<tr><td>MDP</td><td>✅</td><td>✅</td><td>✅</td></tr>
+<tr><td><b>Bandit</b></td><td>❌ (1 state)</td><td>✅</td><td>✅</td></tr>
+</tbody></table></div>
+<div class="callout"><b>bandit = an MDP with only one state, where all actions return to the same state.</b> It is the <b>action</b>, not the reward, that changes the next state.</div>
+</section>
+<section>
+<h2 id="s5"><span class="num">05</span>Value Estimation and Incremental Updates</h2>
+<div class="table-wrap"><table>
+<tbody><tr><th></th><th>What</th><th>Nature</th></tr>
+<tr><td><b>True Goal</b></td><td>q*(a): The machine's true mean</td><td>Unknown and cannot be directly observed</td></tr>
+<tr><td><b>target</b></td><td>The reward R<sub>n</sub> observed this time</td><td>A noisy sample of q*. A target that wobbles every time, with an expected value of q*</td></tr>
+</tbody></table></div>
+<p>If we organize things without recalculating the sample mean each time, we get the following equation.</p>
+<div class="formula">
+Q<sub>n+1</sub> = (R<sub>1</sub> + ⋯ + R<sub>n</sub>) / n = Q<sub>n</sub> + <span class="hl-a">(1/n)</span> · ( <span class="hl-w">R<sub>n</sub></span> − Q<sub>n</sub> )
+<span class="lbl">New estimate = Old estimate + <span class="hl-a">step size</span> × (<span class="hl-w">target</span> − Old estimate)</span>
+</div>
+<div class="table-wrap"><table>
+<tbody><tr><th>n</th><th>R<sub>n</sub> (target)</th><th>Step size 1/n</th><th>Update</th><th>Q</th></tr>
+<tr><td>1</td><td>1</td><td>1</td><td>0 + 1·(1−0)</td><td>1.0</td></tr>
+<tr><td>2</td><td>0</td><td>1/2</td><td>1 + ½·(0−1)</td><td>0.5</td></tr>
+<tr><td>3</td><td>1</td><td>1/3</td><td>0.5 + ⅓·(1−0.5)</td><td>0.667</td></tr>
+<tr><td>4</td><td>1</td><td>1/4</td><td>0.667 + ¼·(1−0.667)</td><td>0.75 = (1+0+1+1)/4</td></tr>
+</tbody></table></div>
+<figure>
+<div class="legend">
+<span><i style="background:var(--s1)"></i>Sample mean (step size 1/n)</span>
+<span><i style="background:var(--s2)"></i>Fixed step size α</span>
+<span><i class="dash"></i>True goal q*</span>
+</div>
+<svg aria-label="The process of estimating Q converging to 0.7 by pulling a machine with a winning probability of 0.7 for 300 times. Compares sample mean and fixed step size" id="incSvg" role="img" viewBox="0 0 720 290"></svg>
+<div class="tip" id="incTip"></div>
+<div class="control">
+<label for="alphaSlider">Fixed step size α</label>
+<input id="alphaSlider" max="0.5" min="0.01" step="0.01" type="range" value="0.05">
+<output id="alphaOut">0.05</output>
+</div>
+<div class="control">
+<label><input id="nonstat" type="checkbox"> nonstationary: q* changes from 0.7 → 0.2 starting from the 150th step</label>
+<button class="btn" id="incNew" type="button">New reward sequence</button>
+</div>
+<figcaption><b>Figure 5.</b> The dots above and below are the rewards (1 or 0) received each time, i.e., the wobbly target. Q is gradually pulled toward that target and goes to q*. <b>Try turning on nonstationary</b>: The sample mean is tied to the past and reacts slowly, while fixed α follows changes. Increasing α makes it follow faster but also makes it more volatile.</figcaption>
+</figure>
+<h3 id="sec-2">ML Perspective</h3>
+<p>If you take one SGD step on L(Q) = ½(R − Q)², you get Q ← Q + α(R − Q). In other words, it is equivalent to <b>performing MSE regression with the target as the label using SGD</b>. The point where the expected update becomes 0 is Q = E[R] = q*.</p>
+<h3 id="sec-3">Fixed Step Size and Convergence Conditions</h3>
+<div class="formula">Q<sub>n+1</sub> = (1−α)<sup>n</sup> Q<sub>1</sub> + Σ<sub>i</sub> α(1−α)<sup>n−i</sup> R<sub>i</sub><span class="lbl">The older the reward, the more exponentially its weight decreases (exponential recency-weighted average)</span></div>
+<ul>
+<li><b>Robbins–Monro conditions</b>: Σα<sub>n</sub> = ∞ (moves enough to go anywhere from the initial value), Σα<sub>n</sub>² &#x3C; ∞ (step size decreases and noise disappears).</li>
+<li>1/n satisfies both. Fixed α violates the second one, so it does not fully converge, but thanks to that, it follows changes. 🤖 A robot whose dynamics change due to wear.</li>
+</ul>
+<h3 id="sec-4">What Changes Going Forward is Only the Target</h3>
+<div class="table-wrap"><table>
+<tbody><tr><th>Algorithm</th><th>target</th></tr>
+<tr><td>Bandit</td><td><code>R</code> (the reward just received)</td></tr>
+<tr><td>Monte Carlo (04)</td><td><code>G_t</code> (the sum of rewards actually received until the end of the episode)</td></tr>
+<tr><td>TD (05)</td><td><code>R + γ·V(s')</code> (one step of reward + <b>estimate</b> of the next state)</td></tr>
+<tr><td>Q-learning / DQN (05, 07)</td><td><code>R + γ·max Q(s', ·)</code></td></tr>
+</tbody></table></div>
+<div class="callout warm">From TD onwards, my estimate is included in the target, so <b>if I move, the target moves with me</b>. This is why DQN needs a target network.</div>
+</section>
+<section>
+<h2 id="s6"><span class="num">06</span>Performance Metric: Regret</h2>
+<div class="formula">
+Regret(T) = Tμ* − E[ Σ<sub>t</sub> R<sub>t</sub> ] = Σ<sub>a</sub> <span class="hl-w">Δ<sub>a</sub></span> · <span class="hl-a">E[N<sub>T</sub>(a)]</span>
+<span class="lbl">μ* = average of the optimal machine · <span class="hl-w">gap Δ<sub>a</sub> = μ* − q*(a)</span> (loss when choosing incorrectly once) · <span class="hl-a">N<sub>T</sub>(a)</span> = number of times machine a was chosen</span>
+</div>
+<p>The value obtained by subtracting the "expected reward actually received" from the "expected reward that would have been received if the optimal machine had been known from the start," literally <b>regret</b>. Using ΣN(a) = T, it becomes Tμ* − ΣN(a)q*(a) = ΣN(a)(μ* − q*(a)).</p>
+<h3 id="sec-5">Why multiply by gap: The loss per mistake varies</h3>
+<figure>
+<svg aria-label="Loss is the area of a rectangle where width is count and height is gap. The loss from choosing B 100 times (1.0) is 6 times smaller than the loss from choosing C 10 times (6.0)" role="img" viewBox="0 0 720 210">
+<text class="bold" x="20" y="26">Loss = Area = Count (width) × gap (height)</text>
+<line class="axis" x1="40" x2="680" y1="170" y2="170"></line>
+<rect fill="var(--s1)" height="2" rx="1" width="500" x="40" y="168"></rect>
+<text class="small" text-anchor="middle" x="290" y="158">B (0.69, gap 0.01) chosen 100 times → Loss <tspan class="bold">1.0</tspan></text>
+<rect fill="var(--s2)" height="120" rx="4" width="50" x="560" y="50"></rect>
+<text class="small" text-anchor="middle" x="585" y="42">C (0.10, gap 0.6)</text>
+<text class="small" x="625" y="110">10 times →</text>
+<text class="small" x="625" y="128">Loss <tspan class="bold">6.0</tspan></text>
+<text class="mut small" x="40" y="192">Count →</text>
+<text class="mut small" x="40" y="206">(width 5px = 1 time, height 200px = gap 1.0)</text>
+</svg>
+<figcaption><b>Figure 6.</b> When the optimal value is 0.70. Counting only frequencies makes B (100 times) look worse, but the actual loss (area) for C is 6 times larger.</figcaption>
+</figure>
+<h3 id="sec-6">Regret is a report card</h3>
+<ul>
+<li><b>It can only be calculated if the correct answer μ* is known.</b> Therefore, the agent itself cannot calculate it, whether during execution or after completion. It is not a learning signal. It occupies the position of <b>test loss</b> in ML.</li>
+<li>Uses: ① <b>Before execution</b> Theoretical guarantees (e.g., UCB has regret ≤ C·log T) ② <b>During/After execution</b> An experimenter who knows the correct answer evaluates via curves in simulation ③ <b>In actual deployment</b> Cannot be calculated → use proxy metrics like cumulative reward.</li>
+</ul>
+<figure>
+<svg aria-label="Left: Step-by-step reward curve rises below the optimal line, and the area between them is cumulative regret. Right: The curve of that accumulated area, where UCB flattens out and fixed epsilon greedy is a straight line" role="img" viewBox="0 0 720 240">
+<text class="bold" x="40" y="22">Expected reward per step</text>
+<line class="axis" x1="40" x2="330" y1="200" y2="200"></line>
+<line class="axis" x1="40" x2="40" y1="40" y2="200"></line>
+<line stroke="var(--muted)" stroke-dasharray="5 4" x1="40" x2="330" y1="60" y2="60"></line>
+<text class="small mut" x="334" y="64">μ*</text>
+<path d="M40 60 L40 170 C80 150 110 95 160 75 C210 64 260 61 330 61 L330 60 Z" fill="var(--acc)" fill-opacity="0.18"></path>
+<path d="M40 170 C80 150 110 95 160 75 C210 64 260 61 330 61" fill="none" stroke="var(--s1)" stroke-width="2"></path>
+<text class="small" style="fill:var(--acc)" x="46" y="78">Area = Cumulative regret</text>
+<path d="M40 170 C90 140 120 110 330 108" fill="none" stroke="var(--s2)" stroke-width="2"></path>
+<text class="small" x="334" y="112">ε-greedy</text>
+<text class="small" x="300" y="52">UCB</text>
+<text class="mut small" text-anchor="middle" x="185" y="222">t →</text>
+<text class="bold" x="400" y="22">Cumulative regret</text>
+<line class="axis" x1="400" x2="690" y1="200" y2="200"></line>
+<line class="axis" x1="400" x2="400" y1="40" y2="200"></line>
+<path d="M400 200 C440 160 480 140 560 130 C620 124 660 121 690 120" fill="none" stroke="var(--s1)" stroke-width="2"></path>
+<path d="M400 200 L690 50" fill="none" stroke="var(--s2)" stroke-width="2"></path>
+<text class="small" x="620" y="112">UCB: Flattens logarithmically</text>
+<text class="small" text-anchor="end" x="560" y="96">ε-greedy: Straight line</text>
+<text class="mut small" text-anchor="middle" x="545" y="222">t →</text>
+</svg>
+<figcaption><b>Figure 7.</b> Step-by-step regret = <b>height</b> between the optimal line and the reward curve, cumulative regret = that <b>area</b>. As the reward curve approaches μ*, cumulative regret flattens out. Fixed ε-greedy converges below μ*, so the area keeps increasing, becoming a straight line (conceptual diagram).</figcaption>
+</figure>
+<ul>
+<li>The reward curve is <b>"how well it is doing now"</b>, while cumulative regret is <b>"how much loss was incurred until it became good (learning cost)"</b>. Even if final performance is the same, reaching it later results in higher regret.</li>
+<li><b>Lai–Robbins lower bound</b>: No reasonable algorithm can be smaller than Ω(log T). → <b>O(log T) is optimal in terms of order</b>.</li>
+</ul>
+<div class="robot"><b>🤖 Robotics Connection</b> · In simulation learning, final performance is primarily important. For real robots, where mistakes during learning incur actual costs (damage, time), the regret perspective becomes important. Sample efficiency in Deep RL follows the same logic.</div>
+</section>
+<section>
+<h2 id="s7"><span class="num">07</span>Simple Strategies: Greedy, ε-greedy, Optimistic init</h2>
+<div class="table-wrap"><table>
+<tbody><tr><th>Strategy</th><th>Method</th><th>Problem</th></tr>
+<tr><td><b>Greedy</b></td><td>Always argmax Q</td><td>If the optimal arm happens to have a low value early on, it is never chosen again → <b>Linear regret</b></td></tr>
+<tr><td><b>ε-greedy</b></td><td>Random with probability ε, greedy otherwise</td><td>Even after identifying the optimal arm, bad arms are still chosen at a rate of ε/k → <b>Linear regret</b> (Logarithmic is possible with an ε decay schedule, but tuning matched to the gap is required)</td></tr>
+<tr><td><b>Optimistic init</b></td><td>Set Q<sub>0</sub> high</td><td>All arms are tried once in the beginning, but exploration only occurs early on</td></tr>
+</tbody></table></div>
+<div class="callout warm">Fundamental limitation of ε-greedy: It explores randomly without distinguishing between <b>"unknown"</b> and <b>"bad"</b>. Good exploration should be done <b>based on uncertainty</b> → UCB, Thompson sampling.</div>
+</section>
+<section>
+<h2 id="s8"><span class="num">08</span>UCB: If You Don't Know, Assume It's Good</h2>
+<p>Principle: <b>optimism in the face of uncertainty</b>. Calculate each machine's "maximum potential" (how good it could possibly be) and select the one with the highest value.</p>
+<div class="formula">
+UCB<sub>t</sub>(a) = <span class="hl-a">Q(a)</span> + <span class="hl-w">c · √( ln t / N(a) )</span>
+<span class="lbl"><span class="hl-a">Current estimate (Exploitation)</span> + <span class="hl-w">Uncertainty bonus (Exploration)</span></span>
+</div>
+<ul>
+<li><b>N(a)↑ → Bonus↓</b>: If you've pulled it many times, "you know enough now."</li>
+<li><b>ln t↑ → Bonus slowly↑</b>: Machines not selected for a long time will see their potential rise even without being pulled, eventually getting re-evaluated.</li>
+<li>If <b>N(a) = 0</b>, the formula is undefined, so pull every arm once first (UCB = ∞).</li>
+<li><b>High UCB means one of two things</b>: It's actually good (high Q), or we don't know yet (large bonus). Low UCB = seen enough but still low = confirmed bad.</li>
+</ul>
+<figure>
+<svg aria-label="Displays estimated values Q and uncertainty bonuses for three machines as bars, selecting the machine with the highest upper bound next" id="ucbSvg" role="img" viewBox="0 0 720 250"></svg>
+<div class="control">
+<button class="btn" data-ucb="1" type="button">Pull once</button>
+<button class="btn" data-ucb="10" type="button">10 times</button>
+<button class="btn" data-ucb="100" type="button">100 times</button>
+<button class="btn" id="ucbPreset" type="button">Main text example (t=100)</button>
+<button class="btn" id="ucbReset" type="button">Start over</button>
+<label><input id="ucbTruth" type="checkbox"> Show true q*</label>
+</div>
+<div class="control">
+<label for="cSlider">Exploration strength c</label>
+<input id="cSlider" max="3" min="0" step="0.01" type="range" value="1.41">
+<output id="cOut">1.41</output>
+</div>
+<div class="readout" id="ucbReadout"></div>
+<figcaption><b>Figure 8.</b> Dark bar = Q (estimate), light extension = bonus, end line = UCB (potential). The machine with the thick border is pulled next. The initial screen shows the <b>main text example</b> scenario from the table below. B is selected despite having the lowest average. You can see B's bonus decrease after a few pulls. Setting c to 0 makes it greedy. Pressing <b>Start over</b> begins from a state of no knowledge (all ∞).</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<tbody><tr><th>Machine</th><th>Q</th><th>N</th><th>Bonus √(2·ln100 / N)</th><th>UCB</th></tr>
+<tr><td>A</td><td>0.60</td><td>80</td><td>0.34</td><td>0.94</td></tr>
+<tr><td>B</td><td>0.40</td><td>5</td><td>1.36</td><td><b>1.76 ← Selected</b></td></tr>
+<tr><td>C</td><td>0.55</td><td>15</td><td>0.78</td><td>1.33</td></tr>
+</tbody></table></div>
+<h3 id="sec-7">Derivation: From Hoeffding's Inequality to c = √2</h3>
+<div class="formula">
+P( q* > Q + u ) ≤ exp(−2Nu²) = δ  ⟹  u = √( ln(1/δ) / 2N )
+<span class="lbl">When reward ∈ [0,1]. "q* is below Q + u with probability 1−δ" = Upper Confidence Bound</span>
+</div>
+<div class="formula">
+δ = t⁻⁴  ⟹  u = √( 4 ln t / 2N ) = √( 2 ln t / N )  ⟹  <b>c = √2</b> (UCB1)
+</div>
+<ul>
+<li><b>Why t⁻⁴</b>: Not because it's optimal, but for the proof. The probability of the confidence interval being wrong must sum to a finite constant over all (t, N) (union bound) for the regret proof to hold.</li>
+<li>If the <b>reward range is [a, b]</b>, scale the bonus by (b−a). In practice, c is tuned, and using values smaller than √2 generally works well.</li>
+<li><b>If it were √(t/N)</b>: The bonus would grow too fast, leading to over-exploration → regret grows polynomially. The slow growth of ln t creates "only log-scale verification."</li>
+</ul>
+<h3 id="sec-8">Connection between gap and logarithmic regret</h3>
+<div class="formula">
+q*(a) + bonus &#x3C; μ*  ⟹  bonus &#x3C; Δ<sub>a</sub>  ⟹  N(a) > 2 ln t / Δ<sub>a</sub>²
+<span class="lbl">To discard machine a, you must pull until the bonus (uncertainty width) becomes smaller than the gap</span>
+</div>
+<figure>
+<svg aria-label="If the gap is large, it can be distinguished even with wide confidence intervals; if the gap is small, very narrow confidence intervals are needed" role="img" viewBox="0 0 720 210">
+<text class="bold" x="20" y="26">Large gap: 0.70 vs 0.10</text>
+<line class="axis" x1="40" x2="680" y1="70" y2="70"></line>
+<text class="small mut" x="40" y="92">0</text><text class="small mut" text-anchor="end" x="680" y="92">1</text>
+<circle cx="488" cy="70" fill="var(--s1)" r="6"></circle><text class="small" text-anchor="middle" x="488" y="54">Optimal 0.70</text>
+<rect fill="var(--s2)" fill-opacity="0.25" height="16" rx="4" width="200" x="40" y="62"></rect>
+<circle cx="104" cy="70" fill="var(--s2)" r="6"></circle><text class="small" text-anchor="middle" x="104" y="54">0.10 ± 0.2</text>
+<text class="small" style="fill:var(--green)" x="250" y="100">Distinguishable even with wide intervals → ends after a few pulls</text>
+<text class="bold" x="20" y="130">Small gap: 0.70 vs 0.69</text>
+<line class="axis" x1="40" x2="680" y1="170" y2="170"></line>
+<circle cx="488" cy="170" fill="var(--s1)" r="6"></circle>
+<rect fill="var(--s2)" fill-opacity="0.25" height="16" rx="4" width="40" x="461" y="162"></rect>
+<circle cx="482" cy="170" fill="var(--s2)" r="5"></circle>
+<text class="small" text-anchor="middle" x="482" y="150">0.69 ± ? → Must be narrower than ±0.01</text>
+<text class="small" style="fill:var(--warm)" x="40" y="196">Requires very narrow confidence intervals to distinguish → many pulls (∝ 1/Δ²)</text>
+</svg>
+<figcaption><b>Figure 9.</b> The number of pulls required for distinction is proportional to 1/Δ². However, if the gap is small, the loss per pull is also small, so the loss for a single machine becomes Δ × (ln T/Δ²) = ln T/Δ.</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<tbody><tr><th>gap Δ</th><th>Pulls ∝ 1/Δ²</th><th>Loss = Δ × Count ∝ 1/Δ</th></tr>
+<tr><td>0.6</td><td>2.8 × ln T</td><td>1.7 × ln T</td></tr>
+<tr><td>0.2</td><td>25 × ln T</td><td>5 × ln T</td></tr>
+<tr><td>0.01</td><td>10000 × ln T</td><td>100 × ln T</td></tr>
+</tbody></table></div>
+<div class="formula">Regret(T) ≲ Σ<sub>a</sub> Δ<sub>a</sub> · 8 ln T / Δ<sub>a</sub>² = Σ<sub>a</sub> 8 ln T / Δ<sub>a</sub> = O(log T)<span class="lbl">(The constant in the proof is 8)</span></div>
+<div class="table-wrap"><table>
+<tbody><tr><th>Total pulls T</th><th>ln T</th><th>Fixed ε-greedy mistake count (∝ T)</th></tr>
+<tr><td>1,000</td><td>6.9</td><td>~100</td></tr>
+<tr><td>1,000,000</td><td>13.8</td><td>~100,000</td></tr>
+</tbody></table></div>
+<p>Even if T increases by 1000 times, UCB's mistakes only double. The loss per step approaches zero.</p>
+<h3 id="sec-9">Connections to Later Topics</h3>
+<ul>
+<li>MDP: Bonus based on visit count N(s, a) → <b>count-based exploration</b>, in continuous states <b>curiosity / RND</b></li>
+<li>AlphaGo/AlphaZero's tree search <b>PUCT</b> = A variant of UCB</li>
+</ul>
+<div class="robot"><b>🤖 Robotics Connection</b> · Optimism is "let's try it since untried actions might be good." In real robots, this is <b>risky</b> (untried large torques). Safe RL and <b>offline RL(10)</b> conversely use <b>pessimism</b> (assuming the unknown is bad).</div>
+</section>
+<section>
+<h2 id="s9"><span class="num">09</span>Thompson Sampling: Sampling from Beliefs</h2>
+<p>If UCB carries a single number (an upper bound) for each machine, Thompson sampling carries the <b>entire distribution of "what the true probability likely is."</b></p>
+<ol>
+<li><b>Randomly sample</b> one value from each machine's belief distribution.</li>
+<li>Pull the machine with the highest sampled value.</li>
+<li>Update that machine's belief distribution based on the outcome.</li>
+</ol>
+<h3 id="sec-10">Beta Distribution (When Rewards are 0/1)</h3>
+<ul>
+<li>Beta(α, β): Roughly α − 1 = number of wins, β − 1 = number of losses. Mean is α/(α+β).</li>
+<li>Starts at Beta(1, 1) = uniform distribution ("knowing nothing").</li>
+<li>Update: Win → α += 1, Loss → β += 1. Since it's a Beta–Bernoulli conjugate pair, it ends with just counting.</li>
+<li>As observations accumulate, the distribution becomes sharper (uncertainty decreases).</li>
+</ul>
+<figure>
+<div class="legend">
+<span><i style="background:var(--s1)"></i>A: 8 wins, 2 losses → Beta(9, 3)</span>
+<span><i style="background:var(--s2)"></i>B: 1 win, 1 loss → Beta(2, 2)</span>
+</div>
+<svg aria-label="A&#x27;s belief distribution Beta(9,3) is sharp near 0.75, while B&#x27;s Beta(2,2) is widely spread" id="tsExSvg" role="img" viewBox="0 0 720 230"></svg>
+<div class="control">
+<button class="btn" id="tsExOne" type="button">Sample Once</button>
+<button class="btn" id="tsExMany" type="button">Sample 1000 Times</button>
+</div>
+<div class="readout" id="tsExReadout">Press the buttons to sample from both distributions.</div>
+<figcaption><b>Figure 10.</b> Most of A's samples are large, but B has a wide distribution, so <b>B wins with about an 18% probability</b>. That is when we explore B. As a result, each machine is selected in proportion to its "probability of being optimal" (<b>probability matching</b>).</figcaption>
+</figure>
+<figure>
+<div class="legend">
+<span><i style="background:var(--s1)"></i>Machine A</span>
+<span><i style="background:var(--s2)"></i>Machine B</span>
+<span><i style="background:var(--s3)"></i>Machine C</span>
+</div>
+<svg aria-label="Thompson sampling simulation where the belief distributions of three machines become sharper as they are pulled" id="tsSvg" role="img" viewBox="0 0 720 260"></svg>
+<div class="control">
+<button class="btn" data-ts="1" type="button">Pull Once</button>
+<button class="btn" data-ts="10" type="button">10 Pulls</button>
+<button class="btn" data-ts="100" type="button">100 Pulls</button>
+<button class="btn" id="tsReset" type="button">Reset</button>
+<label><input id="tsTruth" type="checkbox"> Show true q*</label>
+</div>
+<div class="readout" id="tsReadout"></div>
+<figcaption><b>Figure 11.</b> Thompson sampling simulation (same 3 machines as in the UCB figure). The dots below represent values sampled from each distribution at this step; the dot with a border is the machine that won and was pulled. Initially, all are flat (unknown), but good machines get pulled frequently and become sharp, while bad machines remain wide and are only sampled occasionally.</figcaption>
+</figure>
+<h3 id="sec-11">Comparison with UCB</h3>
+<div class="table-wrap"><table>
+<tbody><tr><th></th><th>UCB</th><th>Thompson sampling</th></tr>
+<tr><td>Uncertainty representation</td><td>Confidence interval (Frequentist)</td><td>Posterior distribution (Bayesian)</td></tr>
+<tr><td>Selection method</td><td>Deterministic argmax by calculating the upper bound</td><td>Probabilistic argmax by sampling from the distribution</td></tr>
+<tr><td>Exploration principle</td><td>If unknown, the upper bound is high</td><td>If unknown, the distribution is wide, so it occasionally samples high values</td></tr>
+<tr><td>Tuning</td><td>c</td><td>Prior distribution (usually Beta(1,1))</td></tr>
+<tr><td>Theory</td><td>O(log T)</td><td>O(log T), matches the Lai–Robbins lower bound even in constants</td></tr>
+<tr><td>Practice</td><td>Good</td><td>Usually better or similar to UCB (Chapelle &#x26; Li, 2011)</td></tr>
+</tbody></table></div>
+<p>Commonality: <b>The more uncertain, the more it explores.</b> UCB implements this with a bonus term, while Thompson does so with the width of the distribution.</p>
+<ul>
+<li><b>Pros</b>: No c to tune / Easy to extend to continuous rewards (Gaussian) and context (Bayesian linear regression) / Robust to delayed/batch feedback due to randomness.</li>
+<li><b>Cons</b>: Must be able to compute the posterior distribution. Approximation is needed for neural networks.</li>
+</ul>
+<h3 id="sec-12">Connection to Later Topics</h3>
+<ul>
+<li>Deep RL exploration: Pick one from a network <b>ensemble</b> to act (Bootstrapped DQN, 07)</li>
+</ul>
+<div class="robot"><b>🤖 Robotics Connection</b> · Tuning controller gains/gait parameters is a <b>bandit with continuous arms</b>. GP posterior + UCB/Thompson = <b>Bayesian optimization</b>, which is actually used to find parameters on real robots with few trials. PETS in Model-based robot learning (10) also samples from a dynamics model ensemble to plan.</div>
+</section>
+<section>
+<h2 id="s10"><span class="num">10</span>Overall Summary &#x26; Comparison Experiment</h2>
+<div class="table-wrap"><table>
+<tbody><tr><th>Strategy</th><th>Exploration method</th><th>regret</th><th>In one line</th></tr>
+<tr><td>Greedy</td><td>None</td><td>Linear</td><td>Trapped by early luck</td></tr>
+<tr><td>ε-greedy</td><td>Random (no direction)</td><td>Linear (fixed ε)</td><td>Simple, but keeps choosing bad options even when known</td></tr>
+<tr><td>UCB</td><td>Uncertainty bonus (optimism)</td><td>O(log T)</td><td>The one with the highest potential upper bound</td></tr>
+<tr><td>Thompson</td><td>Posterior distribution sampling</td><td>O(log T)</td><td>Select in proportion to probability of being optimal</td></tr>
+</tbody></table></div>
+<figure>
+<div class="legend">
+<span><i style="background:var(--s1)"></i>Greedy</span>
+<span><i style="background:var(--s2)"></i>ε-greedy (ε=0.1)</span>
+<span><i style="background:var(--s3)"></i>UCB (c is slider)</span>
+<span><i style="background:var(--s4)"></i>Thompson</span>
+</div>
+<svg aria-label="Comparison of average cumulative regret curves for four algorithms in a 10-arm bandit" id="regSvg" role="img" viewBox="0 0 720 320"></svg>
+<div class="tip" id="regTip"></div>
+<div class="control">
+<label for="regC">UCB's c</label>
+<input id="regC" max="2" min="0.1" step="0.01" type="range" value="0.5">
+<output id="regCOut">0.50</output>
+<button class="btn" id="regCTheory" type="button">c = √2 (Theoretical value)</button>
+</div>
+<div class="control">
+<button class="btn" id="regRun" type="button">Rerun (New seed)</button>
+<span class="hint" id="regStatus"></span>
+</div>
+<figcaption><b>Figure 12.</b> 10 machines (win probability random between 0.05~0.95 per run), T = 5000, average of 100 repetitions. This is a result calculated directly on this page. Greedy and ε-greedy continue to rise linearly, while UCB(c = 0.5) and Thompson flatten out logarithmically. <b>Let's change c to the theoretical value √2</b>: The slope continues to decrease (logarithmic), but due to early over-exploration, the total regret at T = 5000 is larger than greedy and ε-greedy (approx. 280). The theoretical value is set generously as a "guarantee that holds for any bandit," and the content of Q9 about tuning in practice refers to this. Try the Python implementation directly in <code>lab/</code>.</figcaption>
+</figure>
+<div class="callout green">
+<b>Three Key Takeaways</b>
+<ol>
+<li>The incremental update <code>Q ← Q + α(target − Q)</code> is the backbone that repeats until the end. Only the target changes.</li>
+<li>Good exploration = Exploration based on uncertainty. This keeps coming back as the same problem in MDPs, Deep RL, and robot learning.</li>
+<li>Bandits have no state transitions. The moment an action changes the next state, it becomes an MDP → <b>02 MDP &#x26; Bellman Equation</b></li>
+</ol>
+</div>
+</section>
+<section>
+<h2 id="quiz"><span class="num">?</span>Review Questions</h2>
+<p class="hint">Try to recall the answer first, then expand.</p>
+<details class="quiz">
+<summary><span class="qn">Question 1</span><span class="qt">When ε = 0.1 and k = 10, what is the average per-step regret that remains even after perfectly identifying the optimal arm?</span></summary>
+<div class="ans"><p>Selecting randomly among k arms with probability ε → Per-step regret = ε · (1/k)Σ<sub>a</sub>Δ<sub>a</sub> = 0.1 · Δ̄ (where Δ̄ is the average gap of the k arms, including the optimal arm). Since it is constant, it accumulates linearly over T steps.</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">Question 2</span><span class="qt">In a fixed α update, what is the weight of the i-th reward? Why are the Robbins–Monro conditions necessary?</span></summary>
+<div class="ans"><p>The weight is α(1−α)<sup>n−i</sup>, decreasing exponentially as it gets older. Σα = ∞ ensures that the influence of initial values is erased and allows convergence to any point, while Σα² &#x3C; ∞ ensures that the step size decreases so noise vanishes. A fixed α violates the second condition and does not converge, but it tracks nonstationary environments (Figure 5).</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">Question 3</span><span class="qt">In UCB, what do you do if N(a) = 0? What happens if you change the bonus to √(t/N)?</span></summary>
+<div class="ans"><p>Pull every arm once first. With √(t/N), the bonus grows too quickly, leading to over-exploration → regret grows polynomially instead of logarithmically.</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">Question 4</span><span class="qt">How do you use UCB1 for a robot problem where the reward range is [−100, 0]?</span></summary>
+<div class="ans"><p>Due to Hoeffding's range term, either scale the bonus by the range width (100) or normalize the rewards to [0, 1].</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">Question 5</span><span class="qt">Model one robot problem as a bandit and explain where the "no state" assumption breaks down.</span></summary>
+<div class="ans"><p>Example: Choosing from 5 grasp candidates. If the object's position and orientation change every time, context arises, making it a contextual bandit; if a previous grasp failure pushes the object and changes the next situation, it becomes an MDP.</p></div>
+</details>
+</section>
+<section>
+<h2 id="qa"><span class="num">Q&#x26;A</span>Questions &#x26; Answers</h2>
+<div class="qa-tools">
+<p class="hint">Questions I asked myself while studying. Try to recall the answer first, then expand.</p>
+<button id="toggleAll" type="button">Expand All</button>
+</div>
+<details class="qa">
+<summary><span class="qn">Q1</span><span class="qt">I don't really understand what a bandit is.<span class="stage">04 · What is a Bandit</span></span></summary>
+<div class="ans"><ul>
+<li>The name comes from the nickname for slot machines, "one-armed bandit." If there are multiple arms, it's a multi-armed bandit.</li>
+<li>Setup: k slot machines with unknown reward distributions. Each round, you pick one to pull and receive a reward. Maximize cumulative reward over T rounds.</li>
+<li>Core challenge: <b>You only see the result of the machine you chose</b> → Do you keep using what looks good (exploitation), or try less-explored options to learn (exploration)?</li>
+<li>Real-world examples: A/B testing, clinical trial assignment, advertising/recommendations, robot grasp candidate selection, controller hyperparameter selection.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q2</span><span class="qt">Do I have to study Markov chains?<span class="stage">04 · What is a Bandit</span></span></summary>
+<div class="ans"><ul>
+<li>Yes. In section 02, we build up in the order: Markov chain → MRP → MDP.</li>
+<li>A bandit is a special case of an MDP with only one state, so there are no state transitions and no need to worry about the Markov property. That's why we treat the exploration problem separately first.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q3</span><span class="qt">Please explain incremental updates more. What is the target? Is it the goal point we're trying to reach?<span class="stage">05 · Incremental Updates</span></span></summary>
+<div class="ans"><ul>
+<li>The <b>true goal point</b> is q*(a) = E[R|a]. It is unknown.</li>
+<li>The <b>target</b> is the R<sub>n</sub> observed in this step. It's a noisy sample of q* and a "shaky target" with an expected value of q*. In this update, we pull Q slightly toward it. → <a href="#s5">Figure 5</a></li>
+<li>Rearranging the sample mean formula yields exactly this: Q<sub>n+1</sub> = Q<sub>n</sub> + (1/n)(R<sub>n</sub> − Q<sub>n</sub>).</li>
+<li>SGD perspective: Gradient descent on L = ½(R − Q)². The point where the expected update is zero is Q = q*.</li>
+<li>In later sections, only the target changes: MC uses G<sub>t</sub>, TD uses R + γV(s'), and Q-learning uses R + γ max Q(s',·).</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q4</span><span class="qt">Is regret like "regret"? Why is the gap multiplied by the number of bad choices?<span class="stage">06 · Regret</span></span></summary>
+<div class="ans"><ul>
+<li>Yes. It's "Expected reward if we had known the optimal arm from the start − Expected reward actually received."</li>
+<li>The cost of each mistake varies. Since the loss per wrong choice is Δ<sub>a</sub>, <b>count × gap = total loss</b>. → <a href="#s6">Figure 6</a></li>
+<li>Example: If optimal is 0.70, choosing B(0.69) 100 times → loss 1.0; choosing C(0.10) 10 times → loss 6.0. Just counting occurrences leads to wrong conclusions.</li>
+<li>Why calculate with expected value q*: To not credit luck as skill.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q5</span><span class="qt">Does pulling an arm determine the next state in a Markov chain?<span class="stage">04 · bandit vs MDP</span></span></summary>
+<div class="ans"><ul>
+<li>No. In a bandit, pulling an arm only determines the <b>reward</b>. The next round is the same machine with the same distribution.</li>
+<li>In an MDP, an action changes both the reward and the next state p(s'|s,a). → <a href="#s4">Figure 4</a></li>
+<li>Hierarchy: Markov chain (state transitions only) → MRP (+reward) → MDP (+action). A bandit is an MDP with one state where all actions return to the same state.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q6</span><span class="qt">So averaging gives us probabilities, and each algorithm has a different target and update formula? Regret helps us discard bad machines quickly? And in an MDP, actions and rewards change the next state, so the slot machine's probabilities change?<span class="stage">Comprehension Check</span></span></summary>
+<div class="ans"><ul>
+<li>The first part is correct. However, bandit algorithms are divided into <b>① estimation</b> (Q update, target) and <b>② selection rule</b>. In bandits, ① is mostly the same (target = R), but ② differs. The target changes starting from MDPs.</li>
+<li>Regret is not a tool used by the algorithm, but a <b>scorecard for evaluation</b>. Since μ* is unknown, the algorithm cannot calculate it. "Discarding bad machines quickly and filtering out luck" is what UCB/TS does by quantifying uncertainty, and algorithms that do this have lower regret.</li>
+<li>MDP: What changes the next state is not the reward, but <b>(current state, action)</b>. It's more accurate to say <b>"my action moves me to a different room, and each room has different machines and probabilities"</b> than "probabilities change."</li>
+</ul>
+<div class="table-wrap"><table>
+<tbody><tr><th>Situation</th><th>Name</th></tr>
+<tr><td>Probabilities change over time independently of my actions (wear)</td><td>nonstationary bandit</td></tr>
+<tr><td>The room changes, but not because of my action (different situation for each customer)</td><td>contextual bandit</td></tr>
+<tr><td>The room changes because of my action</td><td><b>MDP</b></td></tr>
+</tbody></table></div></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q7</span><span class="qt">Is regret like a post-hoc evaluation after reinforcement learning is finished? Doesn't it require knowing the correct answer (result)?<span class="stage">06 · Regret</span></span></summary>
+<div class="ans"><ul>
+<li>Yes. Since you need to know the correct μ*, <b>the agent itself can never calculate it.</b></li>
+<li>However, it's not "only after finishing." An experimenter who knows the answer records cumulative regret at every step during simulation and plots a curve. The shape of the curve (linear vs log) reveals the algorithm's properties. → <a href="#s10">Figure 12</a></li>
+<li>Uses: ① Theoretical guarantees before execution ② Evaluation in simulation experiments ③ Cannot be calculated in real deployment → proxy metric.</li>
+<li>Deep RL experiments usually report return curves, and regret is mainly used in theoretical papers.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q8</span><span class="qt">So an MDP feels like: act from a state to get a reward, accumulate it, move to the next room (a new choice), and act again?<span class="stage">04 · bandit vs MDP</span></span></summary>
+<div class="ans"><ul>
+<li>The flow is correct: State → Action → (Reward, Next State) → Repeat. The discounted sum of rewards G is what gets maximized.</li>
+<li>Correction ①: Rooms are <b>revisited</b>. You return to the same cell in the same pose, and episodes repeat. That's why you can use what you learned in room s when you come back, making learning possible.</li>
+<li>Correction ②: The levers (action set) are usually the same in any room, but the outcomes (reward, next room) differ by room.</li>
+<li>Correction ③: Cumulative reward just accumulates on the scoreboard; it doesn't change the next room. The next room is determined only by (s, a).</li>
+<li>🤖 In a robot's continuous state space, you rarely see exactly the same state again → generalization ("similar rooms are similar," function approximation, 06) is needed.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q9</span><span class="qt">Is there a theoretical reason why the exploration strength c is √2?<span class="stage">08 · UCB</span></span></summary>
+<div class="ans"><ul>
+<li>In the Hoeffding confidence interval u = √(ln(1/δ)/2N), if we set δ = t⁻⁴, then u = √(2 ln t / N) → c = √2.</li>
+<li>t⁻⁴ is not optimal; it's for <b>proof purposes</b>. The probability that the confidence interval is wrong must sum to a finite constant over all (t, N) (union bound) for the regret proof to hold.</li>
+<li>This assumes reward range [0,1]. For [a,b], multiply by (b−a). In practice, c is tuned, and using values smaller than √2 generally works well.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q10</span><span class="qt">So UCB is a cumulative metric for judging if something is really good or bad? High ones have potential so we check them, and low ones mean no potential?<span class="stage">08 · UCB</span></span></summary>
+<div class="ans"><ul>
+<li>Almost correct. UCB = "How good it could be if we take the maximum," i.e., an optimistic upper bound, or <b>potential</b>.</li>
+<li>Note: The reason UCB is high is either <b>it's really good, or we don't know yet</b>. Being low means we've seen enough and it's still low, i.e., confirmed to be bad.</li>
+<li>Q and N accumulate, but ln t grows every step. Machines not chosen for a long time will have their UCB slowly rise even if left alone. It's a score recalculated every step. → <a href="#s8">Figure 8</a></li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q11</span><span class="qt">Following up on regret, what was the gap again? I can't connect the size of the gap with UCB and log regret well.<span class="stage">08 · UCB · Regret</span></span></summary>
+<div class="ans"><ul>
+<li>Gap Δ<sub>a</sub> = μ* − q*(a): The loss incurred each time machine a is chosen. Since it's defined by true values, the algorithm doesn't know it.</li>
+<li>Connection: For UCB to discard machine a, a's upper bound must drop below μ* → bonus &#x3C; Δ<sub>a</sub> → N > 2 ln t / Δ<sub>a</sub>². The smaller the gap, the narrower the confidence interval needs to be, so we pull more. → <a href="#s8">Figure 9</a></li>
+<li>Regret contribution = Δ × N ≈ ln T / Δ → Total regret = Σ ln T / Δ<sub>a</sub> = O(log T).</li>
+<li>Meaning: Even if T increases 1000-fold, ln T only doubles. Loss per step goes to 0. Fixed ε-greedy has mistakes proportional to T.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q12</span><span class="qt">So regret is an evaluation metric after running the entire RL process? Like looking at the reward sum curve and saying "it converges here"?<span class="stage">06 · Regret</span></span></summary>
+<div class="ans"><ul>
+<li>Yes. It's a metric where the experimenter plots the entire learning process as a curve to evaluate.</li>
+<li>It's just looking at the same information as the reward curve differently. Per-step regret = height between the optimal line and the reward curve; cumulative regret = that area. → <a href="#s6">Figure 7</a></li>
+<li>The reward curve shows "how well it's doing now," while cumulative regret shows "how much loss was incurred until it got good (learning cost)." Even if final performance is the same, an algorithm that arrives late has higher regret.</li>
+<li>🤖 For real robots where mistakes during learning have actual costs, the regret perspective is important.</li>
+</ul></div>
+</details>
+</section>
+<section>
+<h2 id="check"><span class="num">✓</span>Concepts That Were Confusing</h2>
+<ul class="checklist">
+<li><b>bandit</b>: Choosing among multiple slot machines with unknown reward distributions. Only the outcome of the chosen one is observed. <span class="ref">Q1</span></li>
+<li><b>target vs 목표 (goal)</b>: The goal is the true average q*, while the target is that noisy sample, a wobbling bullseye. <span class="ref">Q3</span></li>
+<li><b>Two components of an algorithm</b>: Estimation (target) + selection rule. In bandits, the selection rule is what makes the difference. <span class="ref">Q6</span></li>
+<li><b>regret = report card</b>: Only an outside observer who knows the correct answer can calculate it. It is not a learning signal. Cumulative regret = the area between the optimal line and the reward curve. <span class="ref">Q6 · Q7 · Q12</span></li>
+<li><b>gap</b>: The loss incurred when making one wrong choice. regret = Σ count × gap. <span class="ref">Q4 · Q11</span></li>
+<li><b>bandit vs MDP</b>: What changes the next state is not the reward but the action. Rooms are revisited. <span class="ref">Q5 · Q6 · Q8</span></li>
+<li><b>UCB = potential</b>: The reason for high values is "good or unknown." Pull until the bonus &#x3C; gap → logarithmic regret. <span class="ref">Q10 · Q11</span></li>
+<li><b>c = √2</b>: A value derived from Hoeffding + δ = t⁻⁴ for proof purposes. In practice, it is tuned. <span class="ref">Q9</span></li>
+</ul>
+</section>
+<section>
+<h2 id="refs"><span class="num">📚</span>Further Reading</h2>
+<ul class="refs">
+<li>Sutton &#x26; Barto, <i>Reinforcement Learning: An Introduction</i> (2nd ed.), Ch. 1–2</li>
+<li>Lattimore &#x26; Szepesvári, <i>Bandit Algorithms</i> (2020): The standard textbook on bandit theory</li>
+<li>Auer, Cesa-Bianchi, Fischer, "Finite-time Analysis of the Multiarmed Bandit Problem" (2002): UCB1</li>
+<li>Lai &#x26; Robbins, "Asymptotically Efficient Adaptive Allocation Rules" (1985): Lower bound</li>
+<li>Russo et al., "A Tutorial on Thompson Sampling" (2018)</li>
+<li>Chapelle &#x26; Li, "An Empirical Evaluation of Thompson Sampling" (NeurIPS 2011)</li>
+<li>Agrawal &#x26; Goyal, "Analysis of Thompson Sampling for the Multi-armed Bandit Problem" (COLT 2012)</li>
+</ul>
+</section>
+<script>
+(function () {
+  const NS = 'http://www.w3.org/2000/svg';
+  function el(parent, tag, attrs, text) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text !== undefined) e.textContent = text;
+    parent.appendChild(e);
+    return e;
+  }
+  function clear(svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); }
+
+  // ---------- RNG & distributions ----------
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function normal(r) {
+    let u = 0; while (u === 0) u = r();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r());
+  }
+  function gamma(k, r) { // Marsaglia–Tsang, k >= 1
+    const d = k - 1 / 3, c = 1 / Math.sqrt(9 * d);
+    for (;;) {
+      const x = normal(r); let v = 1 + c * x;
+      if (v <= 0) continue;
+      v = v * v * v;
+      const u = r();
+      if (u < 1 - 0.0331 * x * x * x * x) return d * v;
+      if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+    }
+  }
+  function betaSample(a, b, r) { const x = gamma(a, r), y = gamma(b, r); return x / (x + y); }
+  function lgamma(z) { // Lanczos
+    const g = 7, c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313,
+      -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+    if (z < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * z)) - lgamma(1 - z);
+    z -= 1; let x = c[0];
+    for (let i = 1; i < g + 2; i++) x += c[i] / (z + i);
+    const t = z + g + 0.5;
+    return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+  }
+  function betaPdf(x, a, b) {
+    return Math.exp((a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x) + lgamma(a + b) - lgamma(a) - lgamma(b));
+  }
+  const pathOf = pts => pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+
+  // ---------- generic crosshair tooltip for line charts ----------
+  function attachCrosshair(svg, tip, x0, x1, y0, y1, nMax, xToN, render) {
+    const cross = el(svg, 'line', { y1: y0, y2: y1, stroke: 'var(--muted)', 'stroke-dasharray': '3 3', visibility: 'hidden' });
+    const hit = el(svg, 'rect', { x: x0, y: y0, width: x1 - x0, height: y1 - y0, fill: 'transparent' });
+    function move(evt) {
+      const pt = svg.createSVGPoint(); pt.x = evt.clientX; pt.y = evt.clientY;
+      const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+      const n = Math.max(1, Math.min(nMax, xToN(p.x)));
+      const cx = render.xOf(n);
+      cross.setAttribute('x1', cx); cross.setAttribute('x2', cx); cross.setAttribute('visibility', 'visible');
+      tip.innerHTML = render.html(n);
+      tip.style.display = 'block';
+      const fig = svg.parentNode.getBoundingClientRect();
+      const sr = svg.getBoundingClientRect();
+      const px = sr.left - fig.left + (cx / 720) * sr.width;
+      const left = px + 12 + tip.offsetWidth > fig.width ? px - tip.offsetWidth - 12 : px + 12;
+      tip.style.left = left + 'px';
+      tip.style.top = (sr.top - fig.top + 16) + 'px';
+    }
+    function leave() { cross.setAttribute('visibility', 'hidden'); tip.style.display = 'none'; }
+    hit.addEventListener('pointermove', move);
+    hit.addEventListener('pointerleave', leave);
+  }
+  function key(color) { return '<span class="k" style="background:' + color + '"></span>'; }
+
+  // ---------- Figure 5: incremental update ----------
+  const incSvg = document.getElementById('incSvg');
+  const incTip = document.getElementById('incTip');
+  const alphaSlider = document.getElementById('alphaSlider');
+  const alphaOut = document.getElementById('alphaOut');
+  const nonstat = document.getElementById('nonstat');
+  let incSeed = 7;
+  const NI = 300, IX0 = 50, IX1 = 640, IY0 = 20, IY1 = 250;
+  const ixOf = n => IX0 + (IX1 - IX0) * n / NI;
+  const iyOf = v => IY1 - (IY1 - IY0) * v;
+  function drawInc() {
+    const alpha = +alphaSlider.value;
+    alphaOut.textContent = alpha.toFixed(2);
+    const r = mulberry32(incSeed);
+    const qs = [], R = [], avg = [], fix = [];
+    let qa = 0, qf = 0;
+    for (let n = 1; n <= NI; n++) {
+      const q = nonstat.checked && n > 150 ? 0.2 : 0.7;
+      const x = r() < q ? 1 : 0;
+      qa += (x - qa) / n; qf += alpha * (x - qf);
+      qs.push(q); R.push(x); avg.push(qa); fix.push(qf);
+    }
+    clear(incSvg);
+    [0, 0.25, 0.5, 0.75, 1].forEach(v => {
+      el(incSvg, 'line', { x1: IX0, x2: IX1, y1: iyOf(v), y2: iyOf(v), class: 'grid' });
+      el(incSvg, 'text', { x: IX0 - 8, y: iyOf(v) + 4, 'text-anchor': 'end', class: 'mut small mono' }, v.toFixed(2));
+    });
+    [0, 50, 100, 150, 200, 250, 300].forEach(n => el(incSvg, 'text', { x: ixOf(n), y: IY1 + 18, 'text-anchor': 'middle', class: 'mut small mono' }, n));
+    el(incSvg, 'text', { x: IX1, y: IY1 + 34, 'text-anchor': 'end', class: 'mut small' }, '당긴 횟수 n →');
+    R.forEach((x, i) => el(incSvg, 'circle', { cx: ixOf(i + 1), cy: iyOf(x) + (x ? -5 : 5), r: 1.6, fill: 'var(--muted)', 'fill-opacity': .45 }));
+    el(incSvg, 'path', { d: pathOf(qs.map((q, i) => [ixOf(i + 1), iyOf(q)])), fill: 'none', stroke: 'var(--muted)', 'stroke-width': 1.5, 'stroke-dasharray': '5 4' });
+    el(incSvg, 'path', { d: pathOf(fix.map((q, i) => [ixOf(i + 1), iyOf(q)])), fill: 'none', stroke: 'var(--s2)', 'stroke-width': 2 });
+    el(incSvg, 'path', { d: pathOf(avg.map((q, i) => [ixOf(i + 1), iyOf(q)])), fill: 'none', stroke: 'var(--s1)', 'stroke-width': 2 });
+    // direct labels (avoid overlap)
+    const labs = [{ y: iyOf(avg[NI - 1]), t: '표본평균 ' + avg[NI - 1].toFixed(2) }, { y: iyOf(fix[NI - 1]), t: 'α ' + fix[NI - 1].toFixed(2) }, { y: iyOf(qs[NI - 1]), t: 'q* ' + qs[NI - 1] }];
+    labs.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < labs.length; i++) if (labs[i].y - labs[i - 1].y < 14) labs[i].y = labs[i - 1].y + 14;
+    labs.forEach(l => el(incSvg, 'text', { x: IX1 + 6, y: l.y + 4, class: 'small' }, l.t));
+    attachCrosshair(incSvg, incTip, IX0, IX1, IY0, IY1, NI, x => Math.round((x - IX0) / (IX1 - IX0) * NI), {
+      xOf: ixOf,
+      html: n => 'n = <b>' + n + '</b> · 보상 R = <b>' + R[n - 1] + '</b><br>' +
+        key('var(--s1)') + '표본평균 <b>' + avg[n - 1].toFixed(3) + '</b><br>' +
+        key('var(--s2)') + '고정 α <b>' + fix[n - 1].toFixed(3) + '</b><br>' +
+        key('var(--muted)') + 'q* <b>' + qs[n - 1] + '</b>'
+    });
+  }
+  alphaSlider.addEventListener('input', drawInc);
+  nonstat.addEventListener('change', drawInc);
+  document.getElementById('incNew').addEventListener('click', () => { incSeed = (Math.random() * 1e9) | 0; drawInc(); });
+  drawInc();
+
+  // ---------- shared 3-arm bandit for UCB / TS ----------
+  const ARMS = ['A', 'B', 'C'];
+  const TRUE = [0.62, 0.40, 0.55];
+  const BEST = Math.max(...TRUE);
+  const COLORS = ['var(--s1)', 'var(--s2)', 'var(--s3)'];
+
+  // ---------- Figure 8: UCB ----------
+  const ucbSvg = document.getElementById('ucbSvg');
+  const cSlider = document.getElementById('cSlider');
+  const cOut = document.getElementById('cOut');
+  const ucbTruth = document.getElementById('ucbTruth');
+  const ucbReadout = document.getElementById('ucbReadout');
+  const ucbR = mulberry32(42);
+  let U;
+  function ucbResetState() { U = { Q: [0, 0, 0], N: [0, 0, 0], t: 0, regret: 0, last: -1 }; }
+  function ucbScores() {
+    const c = +cSlider.value;
+    return U.N.map((n, a) => n === 0 ? Infinity : U.Q[a] + c * Math.sqrt(Math.log(Math.max(U.t, 1)) / n));
+  }
+  function ucbNext() {
+    const s = ucbScores(); let best = 0;
+    for (let a = 1; a < 3; a++) if (s[a] > s[best]) best = a;
+    return best;
+  }
+  function ucbStep(k) {
+    for (let i = 0; i < k; i++) {
+      const a = ucbNext();
+      U.t += 1;
+      const x = ucbR() < TRUE[a] ? 1 : 0;
+      U.N[a] += 1; U.Q[a] += (x - U.Q[a]) / U.N[a];
+      U.regret += BEST - TRUE[a]; U.last = a;
+    }
+    drawUcb();
+  }
+  const UX0 = 70, UX1 = 640, UMAX = 2;
+  const uxOf = v => UX0 + (UX1 - UX0) * Math.min(v, UMAX) / UMAX;
+  function drawUcb() {
+    cOut.textContent = (+cSlider.value).toFixed(2);
+    const s = ucbScores(), next = ucbNext();
+    clear(ucbSvg);
+    [0, 0.5, 1, 1.5, 2].forEach(v => {
+      el(ucbSvg, 'line', { x1: uxOf(v), x2: uxOf(v), y1: 20, y2: 215, class: 'grid' });
+      el(ucbSvg, 'text', { x: uxOf(v), y: 232, 'text-anchor': 'middle', class: 'mut small mono' }, v.toFixed(1));
+    });
+    el(ucbSvg, 'text', { x: UX1, y: 248, 'text-anchor': 'end', class: 'mut small' }, '값 (2.0 이상은 잘림)');
+    for (let a = 0; a < 3; a++) {
+      const y = 30 + a * 64;
+      el(ucbSvg, 'text', { x: 20, y: y + 24, class: 'bold' }, ARMS[a]);
+      const q = U.Q[a], top = s[a];
+      // bonus segment
+      el(ucbSvg, 'rect', { x: uxOf(q), y: y + 8, width: Math.max(0, uxOf(top) - uxOf(q)), height: 26, fill: COLORS[a], 'fill-opacity': .28, rx: 4 });
+      // Q bar
+      el(ucbSvg, 'rect', { x: UX0, y: y + 8, width: Math.max(0, uxOf(q) - UX0), height: 26, fill: COLORS[a], rx: 4 });
+      // UCB cap
+      el(ucbSvg, 'line', { x1: uxOf(top), x2: uxOf(top), y1: y + 2, y2: y + 40, stroke: 'var(--fg)', 'stroke-width': 2 });
+      if (a === next) el(ucbSvg, 'rect', { x: UX0 - 4, y: y + 2, width: uxOf(top) - UX0 + 8, height: 38, fill: 'none', stroke: 'var(--warm)', 'stroke-width': 2.5, rx: 6 });
+      if (ucbTruth.checked) {
+        el(ucbSvg, 'line', { x1: uxOf(TRUE[a]), x2: uxOf(TRUE[a]), y1: y, y2: y + 42, stroke: 'var(--green)', 'stroke-width': 2, 'stroke-dasharray': '3 2' });
+        el(ucbSvg, 'text', { x: uxOf(TRUE[a]), y: y - 2, 'text-anchor': 'middle', class: 'small', style: 'fill:var(--green)' }, 'q*=' + TRUE[a]);
+      }
+      const ucbTxt = top === Infinity ? '∞ (아직 안 당김)' : top.toFixed(2);
+      el(ucbSvg, 'text', { x: UX1 + 8, y: y + 18, class: 'small mono' }, 'N=' + U.N[a]);
+      el(ucbSvg, 'text', { x: UX1 + 8, y: y + 34, class: 'small mono' }, 'Q=' + q.toFixed(2));
+      el(ucbSvg, 'text', { x: uxOf(Math.min(top, UMAX)) - 6, y: y + 54, 'text-anchor': top >= 1.8 ? 'end' : 'start', class: 'small mut' }, 'UCB ' + ucbTxt + (a === next ? '  ← 다음 선택' : ''));
+    }
+    ucbReadout.textContent = 't = ' + U.t + ' · 마지막으로 당긴 기계: ' + (U.last < 0 ? '-' : ARMS[U.last]) + ' · 누적 regret(정답 기준) = ' + U.regret.toFixed(2);
+  }
+  document.querySelectorAll('[data-ucb]').forEach(b => b.addEventListener('click', () => ucbStep(+b.dataset.ucb)));
+  document.getElementById('ucbReset').addEventListener('click', () => { ucbResetState(); drawUcb(); });
+  document.getElementById('ucbPreset').addEventListener('click', () => {
+    U = { Q: [0.60, 0.40, 0.55], N: [80, 5, 15], t: 100, regret: 5 * (BEST - TRUE[1]) + 15 * (BEST - TRUE[2]), last: -1 };
+    cSlider.value = 1.41; drawUcb();
+  });
+  cSlider.addEventListener('input', drawUcb);
+  ucbTruth.addEventListener('change', drawUcb);
+  document.getElementById('ucbPreset').click();
+
+  // ---------- Figure 10: TS example Beta(9,3) vs Beta(2,2) ----------
+  const tsExSvg = document.getElementById('tsExSvg');
+  const tsExReadout = document.getElementById('tsExReadout');
+  const exR = mulberry32(11);
+  const EX = [[9, 3], [2, 2]];
+  const EX0 = 50, EX1 = 670, EY0 = 20, EY1 = 190;
+  const exX = v => EX0 + (EX1 - EX0) * v;
+  let exMax = 0;
+  for (let i = 1; i < 200; i++) EX.forEach(p => { exMax = Math.max(exMax, betaPdf(i / 200, p[0], p[1])); });
+  const exY = v => EY1 - (EY1 - EY0) * v / (exMax * 1.1);
+  function drawTsEx(samples) {
+    clear(tsExSvg);
+    el(tsExSvg, 'line', { x1: EX0, x2: EX1, y1: EY1, y2: EY1, class: 'axis' });
+    [0, 0.25, 0.5, 0.75, 1].forEach(v => el(tsExSvg, 'text', { x: exX(v), y: EY1 + 18, 'text-anchor': 'middle', class: 'mut small mono' }, v));
+    el(tsExSvg, 'text', { x: EX1, y: EY1 + 34, 'text-anchor': 'end', class: 'mut small' }, '진짜 당첨 확률 θ에 대한 믿음 →');
+    EX.forEach((p, k) => {
+      const pts = [];
+      for (let i = 1; i < 200; i++) pts.push([exX(i / 200), exY(betaPdf(i / 200, p[0], p[1]))]);
+      el(tsExSvg, 'path', { d: pathOf(pts), fill: 'none', stroke: COLORS[k], 'stroke-width': 2 });
+    });
+    el(tsExSvg, 'text', { x: exX(0.75), y: exY(betaPdf(0.8, 9, 3)) - 12, 'text-anchor': 'middle', class: 'small' }, 'A: 뾰족 (많이 앎)');
+    el(tsExSvg, 'text', { x: exX(0.3), y: exY(betaPdf(0.3, 2, 2)) - 8, 'text-anchor': 'middle', class: 'small' }, 'B: 넓음 (잘 모름)');
+    if (samples) {
+      samples.forEach((v, k) => {
+        el(tsExSvg, 'line', { x1: exX(v), x2: exX(v), y1: EY0, y2: EY1, stroke: COLORS[k], 'stroke-width': 1.5, 'stroke-dasharray': '4 3' });
+        el(tsExSvg, 'circle', { cx: exX(v), cy: EY1, r: 6, fill: COLORS[k], stroke: 'var(--surface)', 'stroke-width': 2 });
+      });
+    }
+  }
+  document.getElementById('tsExOne').addEventListener('click', () => {
+    const a = betaSample(9, 3, exR), b = betaSample(2, 2, exR);
+    drawTsEx([a, b]);
+    tsExReadout.textContent = 'A 샘플 ' + a.toFixed(3) + ' vs B 샘플 ' + b.toFixed(3) + ' → ' + (a > b ? 'A를 당긴다' : 'B를 당긴다 (탐험!)');
+  });
+  document.getElementById('tsExMany').addEventListener('click', () => {
+    let win = 0; const n = 1000;
+    for (let i = 0; i < n; i++) if (betaSample(2, 2, exR) > betaSample(9, 3, exR)) win++;
+    drawTsEx(null);
+    tsExReadout.textContent = '1000번 중 B가 이긴 횟수: ' + win + ' (' + (win / 10).toFixed(1) + '%) → 이 비율만큼 B를 탐험한다';
+  });
+  drawTsEx(null);
+
+  // ---------- Figure 11: TS simulation ----------
+  const tsSvg = document.getElementById('tsSvg');
+  const tsTruth = document.getElementById('tsTruth');
+  const tsReadout = document.getElementById('tsReadout');
+  const tsR = mulberry32(99);
+  let S;
+  function tsResetState() { S = { a: [1, 1, 1], b: [1, 1, 1], t: 0, regret: 0, last: -1, samples: null }; }
+  function tsStep(k) {
+    for (let i = 0; i < k; i++) {
+      const smp = [0, 1, 2].map(j => betaSample(S.a[j], S.b[j], tsR));
+      let best = 0; for (let j = 1; j < 3; j++) if (smp[j] > smp[best]) best = j;
+      const x = tsR() < TRUE[best] ? 1 : 0;
+      if (x) S.a[best] += 1; else S.b[best] += 1;
+      S.t += 1; S.regret += BEST - TRUE[best]; S.last = best; S.samples = smp;
+    }
+    drawTs();
+  }
+  const TX0 = 50, TX1 = 670, TY0 = 20, TY1 = 210;
+  const txOf = v => TX0 + (TX1 - TX0) * v;
+  function drawTs() {
+    clear(tsSvg);
+    let ymax = 0; const curves = [];
+    for (let j = 0; j < 3; j++) {
+      const pts = [];
+      for (let i = 1; i < 300; i++) { const x = i / 300, y = betaPdf(x, S.a[j], S.b[j]); pts.push([x, y]); ymax = Math.max(ymax, y); }
+      curves.push(pts);
+    }
+    ymax = Math.max(ymax, 2.5) * 1.12;
+    const tyOf = v => TY1 - (TY1 - TY0) * v / ymax;
+    el(tsSvg, 'line', { x1: TX0, x2: TX1, y1: TY1, y2: TY1, class: 'axis' });
+    [0, 0.25, 0.5, 0.75, 1].forEach(v => el(tsSvg, 'text', { x: txOf(v), y: TY1 + 18, 'text-anchor': 'middle', class: 'mut small mono' }, v));
+    el(tsSvg, 'text', { x: TX1, y: TY1 + 36, 'text-anchor': 'end', class: 'mut small' }, 'θ (당첨 확률에 대한 믿음) →');
+    const labs = [];
+    curves.forEach((pts, j) => {
+      el(tsSvg, 'path', { d: pathOf(pts.map(p => [txOf(p[0]), tyOf(p[1])])), fill: 'none', stroke: COLORS[j], 'stroke-width': 2 });
+      let pk = pts[0]; pts.forEach(p => { if (p[1] > pk[1]) pk = p; });
+      labs.push({ x: txOf(pk[0]), y: tyOf(pk[1]) - 8, t: ARMS[j] + ' Beta(' + S.a[j] + ',' + S.b[j] + ')' });
+      if (tsTruth.checked) {
+        el(tsSvg, 'line', { x1: txOf(TRUE[j]), x2: txOf(TRUE[j]), y1: TY0, y2: TY1, stroke: COLORS[j], 'stroke-width': 1, 'stroke-dasharray': '2 3' });
+      }
+    });
+    labs.sort((p, q) => q.y - p.y);
+    for (let i = 1; i < labs.length; i++) for (let j = 0; j < i; j++) if (Math.abs(labs[i].x - labs[j].x) < 120 && Math.abs(labs[i].y - labs[j].y) < 15) labs[i].y = labs[j].y - 15;
+    labs.forEach(l => el(tsSvg, 'text', { x: Math.min(Math.max(l.x, TX0 + 40), TX1 - 40), y: Math.max(l.y, 14), 'text-anchor': 'middle', class: 'small' }, l.t));
+    if (S.samples) {
+      S.samples.forEach((v, j) => {
+        el(tsSvg, 'circle', { cx: txOf(v), cy: TY1, r: j === S.last ? 8 : 5, fill: COLORS[j], stroke: j === S.last ? 'var(--fg)' : 'var(--surface)', 'stroke-width': 2 });
+      });
+    }
+    const pulls = [0, 1, 2].map(j => ARMS[j] + ' ' + (S.a[j] + S.b[j] - 2) + '번');
+    tsReadout.textContent = 't = ' + S.t + ' · 당긴 횟수: ' + pulls.join(', ') + ' · 마지막: ' + (S.last < 0 ? '-' : ARMS[S.last]) + ' · 누적 regret = ' + S.regret.toFixed(2) + (tsTruth.checked ? ' · 정답 A 0.62, B 0.40, C 0.55' : '');
+  }
+  document.querySelectorAll('[data-ts]').forEach(b => b.addEventListener('click', () => tsStep(+b.dataset.ts)));
+  document.getElementById('tsReset').addEventListener('click', () => { tsResetState(); drawTs(); });
+  tsTruth.addEventListener('change', drawTs);
+  tsResetState(); drawTs();
+
+  // ---------- Figure 12: regret comparison ----------
+  const regSvg = document.getElementById('regSvg');
+  const regTip = document.getElementById('regTip');
+  const regStatus = document.getElementById('regStatus');
+  const K = 10, T = 5000, RUNS = 100;
+  const ALGOS = [
+    { name: 'Greedy', color: 'var(--s1)' },
+    { name: 'ε-greedy', color: 'var(--s2)' },
+    { name: 'UCB', color: 'var(--s3)' },
+    { name: 'Thompson', color: 'var(--s4)' }
+  ];
+  function runAlgo(kind, mu, r, c) {
+    const best = Math.max(...mu);
+    const Q = new Float64Array(K), N = new Float64Array(K), A = new Float64Array(K).fill(1), B = new Float64Array(K).fill(1);
+    const out = new Float64Array(T); let reg = 0;
+    for (let t = 0; t < T; t++) {
+      let a = 0;
+      if (kind === 3) {
+        let bv = -1; for (let j = 0; j < K; j++) { const v = betaSample(A[j], B[j], r); if (v > bv) { bv = v; a = j; } }
+      } else if (t < K) {
+        a = t;
+      } else if (kind === 1 && r() < 0.1) {
+        a = Math.floor(r() * K);
+      } else {
+        let bv = -Infinity;
+        for (let j = 0; j < K; j++) {
+          const v = kind === 2 ? Q[j] + c * Math.sqrt(Math.log(t + 1) / N[j]) : Q[j];
+          if (v > bv) { bv = v; a = j; }
+        }
+      }
+      const x = r() < mu[a] ? 1 : 0;
+      N[a] += 1; Q[a] += (x - Q[a]) / N[a];
+      if (x) A[a] += 1; else B[a] += 1;
+      reg += best - mu[a]; out[t] = reg;
+    }
+    return out;
+  }
+  let regData = null, regSeed = 2026;
+  const regC = document.getElementById('regC');
+  const regCOut = document.getElementById('regCOut');
+  // same bandit instances (mu) for every algorithm; each algorithm has its own RNG stream
+  function computeAlgo(k, seed, c) {
+    const rm = mulberry32(seed), r = mulberry32(seed * 31 + k + 1);
+    const sum = new Float64Array(T);
+    for (let run = 0; run < RUNS; run++) {
+      const mu = Array.from({ length: K }, () => 0.05 + 0.9 * rm());
+      const o = runAlgo(k, mu, r, c);
+      for (let t = 0; t < T; t++) sum[t] += o[t] / RUNS;
+    }
+    return sum;
+  }
+  const RX0 = 60, RX1 = 590, RY0 = 20, RY1 = 280;
+  const rxOf = t => RX0 + (RX1 - RX0) * t / T;
+  function drawReg() {
+    clear(regSvg);
+    const ymaxRaw = Math.max(...regData.map(d => d[T - 1]));
+    const step = ymaxRaw > 400 ? 100 : ymaxRaw > 200 ? 50 : 25;
+    const ymax = Math.ceil(ymaxRaw / step) * step;
+    const ryOf = v => RY1 - (RY1 - RY0) * v / ymax;
+    for (let v = 0; v <= ymax; v += step) {
+      el(regSvg, 'line', { x1: RX0, x2: RX1, y1: ryOf(v), y2: ryOf(v), class: 'grid' });
+      el(regSvg, 'text', { x: RX0 - 8, y: ryOf(v) + 4, 'text-anchor': 'end', class: 'mut small mono' }, v);
+    }
+    [0, 1000, 2000, 3000, 4000, 5000].forEach(t => el(regSvg, 'text', { x: rxOf(t), y: RY1 + 18, 'text-anchor': 'middle', class: 'mut small mono' }, t));
+    el(regSvg, 'text', { x: RX1, y: RY1 + 36, 'text-anchor': 'end', class: 'mut small' }, '스텝 t →');
+    el(regSvg, 'text', { x: RX0, y: 12, class: 'mut small' }, '평균 누적 regret');
+    regData.forEach((d, k) => {
+      const pts = []; for (let t = 0; t < T; t += 10) pts.push([rxOf(t + 1), ryOf(d[t])]);
+      pts.push([rxOf(T), ryOf(d[T - 1])]);
+      el(regSvg, 'path', { d: pathOf(pts), fill: 'none', stroke: ALGOS[k].color, 'stroke-width': 2 });
+    });
+    const labs = regData.map((d, k) => ({ y: ryOf(d[T - 1]), t: (k === 2 ? 'UCB c=' + (+regC.value).toFixed(2) : ALGOS[k].name) + ' ' + d[T - 1].toFixed(0) }));
+    labs.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < labs.length; i++) if (labs[i].y - labs[i - 1].y < 15) labs[i].y = labs[i - 1].y + 15;
+    labs.forEach(l => el(regSvg, 'text', { x: RX1 + 8, y: l.y + 4, class: 'small' }, l.t));
+    attachCrosshair(regSvg, regTip, RX0, RX1, RY0, RY1, T, x => Math.round((x - RX0) / (RX1 - RX0) * T), {
+      xOf: rxOf,
+      html: t => 't = <b>' + t + '</b><br>' + ALGOS.map((a, k) => key(a.color) + a.name + ' <b>' + regData[k][t - 1].toFixed(1) + '</b>').join('<br>')
+    });
+  }
+  function timed(label, fn) {
+    regStatus.textContent = '계산 중…';
+    setTimeout(() => {
+      const t0 = performance.now();
+      fn(); drawReg();
+      regStatus.textContent = label + ' · ' + Math.round(performance.now() - t0) + 'ms';
+    }, 30);
+  }
+  function runReg(seed) {
+    regSeed = seed;
+    timed('시드 ' + seed, () => { regData = ALGOS.map((a, k) => computeAlgo(k, seed, +regC.value)); });
+  }
+  function rerunUcb() {
+    regCOut.textContent = (+regC.value).toFixed(2);
+    timed('UCB c = ' + (+regC.value).toFixed(2) + ' 재계산', () => { regData[2] = computeAlgo(2, regSeed, +regC.value); });
+  }
+  regC.addEventListener('input', () => { regCOut.textContent = (+regC.value).toFixed(2); });
+  regC.addEventListener('change', rerunUcb);
+  document.getElementById('regCTheory').addEventListener('click', () => { regC.value = Math.SQRT2; rerunUcb(); });
+  document.getElementById('regRun').addEventListener('click', () => runReg((Math.random() * 1e9) | 0));
+  runReg(2026);
+
+  // ---------- Q&A toggle ----------
+  const toggle = document.getElementById('toggleAll');
+  toggle.addEventListener('click', () => {
+    const all = document.querySelectorAll('details.qa');
+    const open = Array.from(all).some(d => !d.open);
+    all.forEach(d => { d.open = open; });
+    toggle.textContent = open ? '모두 접기' : '모두 펼치기';
+  });
+})();
+</script>
+</div>
+<div class="notes-editor" hidden data-path="content/study/01-rl-problem-setup-multi-armed/index.ko.md" data-notes data-pagefind-ignore data-astro-cid-krmc5xkp><button type="button" class="ne-open" data-astro-cid-krmc5xkp>내 생각 쓰기</button><form class="ne-form" hidden data-astro-cid-krmc5xkp><textarea rows="8" aria-label="내 생각 (markdown)" placeholder="markdown 으로 쓰기" data-astro-cid-krmc5xkp></textarea><div class="ne-actions" data-astro-cid-krmc5xkp><button type="submit" data-astro-cid-krmc5xkp>저장</button><button type="button" class="ne-delete" data-astro-cid-krmc5xkp>지우기</button><button type="button" class="ne-cancel" data-astro-cid-krmc5xkp>취소</button><span class="ne-status" role="status" data-astro-cid-krmc5xkp></span></div></form></div><div class="post-admin" hidden data-dir="content/study/01-rl-problem-setup-multi-armed" data-lang="en" data-incoming="[]" data-relations="[]" data-pagefind-ignore data-astro-cid-krmc5xkp></div></div><nav class="toc" aria-labelledby="toc-h" data-pagefind-ignore data-astro-cid-krmc5xkp><h2 id="toc-h" data-astro-cid-krmc5xkp>Contents</h2><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#s1" data-astro-cid-krmc5xkp>01 RL Problem Formulation: The Interaction Loop</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s2" data-astro-cid-krmc5xkp>02 How is it different from supervised learning: Three axes</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s3" data-astro-cid-krmc5xkp>03 🤖 From a Robot&#39;s Perspective</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s4" data-astro-cid-krmc5xkp>04 What is a Multi-armed Bandit</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-1" data-astro-cid-krmc5xkp>The decisive difference between bandits and MDPs</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s5" data-astro-cid-krmc5xkp>05 Value Estimation and Incremental Updates</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-2" data-astro-cid-krmc5xkp>ML Perspective</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-3" data-astro-cid-krmc5xkp>Fixed Step Size and Convergence Conditions</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-4" data-astro-cid-krmc5xkp>What Changes Going Forward is Only the Target</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s6" data-astro-cid-krmc5xkp>06 Performance Metric: Regret</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-5" data-astro-cid-krmc5xkp>Why multiply by gap: The loss per mistake varies</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-6" data-astro-cid-krmc5xkp>Regret is a report card</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s7" data-astro-cid-krmc5xkp>07 Simple Strategies: Greedy, ε-greedy, Optimistic init</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s8" data-astro-cid-krmc5xkp>08 UCB: If You Don&#39;t Know, Assume It&#39;s Good</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-7" data-astro-cid-krmc5xkp>Derivation: From Hoeffding&#39;s Inequality to c = √2</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-8" data-astro-cid-krmc5xkp>Connection between gap and logarithmic regret</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-9" data-astro-cid-krmc5xkp>Connections to Later Topics</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s9" data-astro-cid-krmc5xkp>09 Thompson Sampling: Sampling from Beliefs</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-10" data-astro-cid-krmc5xkp>Beta Distribution (When Rewards are 0/1)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-11" data-astro-cid-krmc5xkp>Comparison with UCB</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-12" data-astro-cid-krmc5xkp>Connection to Later Topics</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s10" data-astro-cid-krmc5xkp>10 Overall Summary &amp;#x26; Comparison Experiment</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#quiz" data-astro-cid-krmc5xkp>? Review Questions</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#qa" data-astro-cid-krmc5xkp>Q&amp;#x26;A Questions &amp;#x26; Answers</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#check" data-astro-cid-krmc5xkp>✓ Concepts That Were Confusing</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#refs" data-astro-cid-krmc5xkp>📚 Further Reading</a></li></ol></nav></div></article><aside class="after wrap" data-pagefind-ignore data-astro-cid-krmc5xkp><section aria-labelledby="related-h" data-astro-cid-krmc5xkp><h2 id="related-h" data-astro-cid-krmc5xkp>More on these tags</h2><article class="row" data-type="paper" data-astro-cid-gc2g3jd6><div class="meta" data-astro-cid-gc2g3jd6><span class="type" data-astro-cid-gc2g3jd6>Papers</span><time datetime="2026-10-30" data-astro-cid-gc2g3jd6>Oct 30, 2026</time><span class="pending" data-astro-cid-gc2g3jd6>AI-written, not reviewed</span></div><div class="body" data-astro-cid-gc2g3jd6><h3 class="title" data-astro-cid-gc2g3jd6="true"><a href="/en/papers/pushing-dexterity-and-safety-for-in/" data-astro-cid-gc2g3jd6>Pushing Dexterity and Safety for In-Hand Object Pose Reaching That Works Remarkably Well</a></h3><p class="summary" data-astro-cid-gc2g3jd6>We present a sim-to-real recipe for training in-hand object pose reaching policies on a multi-fingered hand at arbitrary wrist orientations and transferring them zero-shot to the real hand. A learned residual safety filter is added to tune performance-safety trade-offs and substantially reduce object drops, with extensive real-robot evaluation.</p><ul class="tags" data-astro-cid-gc2g3jd6><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/domain/robotics/manipulation/" title="domain/robotics/manipulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Robotics</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Manipulation</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/sim-to-real/" title="method/sim-to-real" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Sim-to-Real</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/reinforcement-learning/" title="method/reinforcement-learning" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Reinforcement Learning</span></a></li></ul></div></article><article class="row" data-type="paper" data-astro-cid-gc2g3jd6><div class="meta" data-astro-cid-gc2g3jd6><span class="type" data-astro-cid-gc2g3jd6>Papers</span><time datetime="2026-10-30" data-astro-cid-gc2g3jd6>Oct 30, 2026</time><span class="pending" data-astro-cid-gc2g3jd6>AI-written, not reviewed</span></div><div class="body" data-astro-cid-gc2g3jd6><h3 class="title" data-astro-cid-gc2g3jd6="true"><a href="/en/papers/sliceit-a-dual-simulator-framework-for/" data-astro-cid-gc2g3jd6>SliceIt! - A Dual Simulator Framework for Learning Robot Food Slicing</a></h3><p class="summary" data-astro-cid-gc2g3jd6>SliceIt! is a real2sim2real framework that calibrates a high-fidelity cutting simulator with real slicing data, learns reinforcement-learning-based compliance control policies in a dual simulation environment, and deploys them to a real robot.</p><ul class="tags" data-astro-cid-gc2g3jd6><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/sim-to-real/" title="method/sim-to-real" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Sim-to-Real</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/reinforcement-learning/" title="method/reinforcement-learning" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Reinforcement Learning</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/control/compliance-control/" title="method/control/compliance-control" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Control</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Compliance Control</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/simulation/physics-simulation/" title="method/simulation/physics-simulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Simulation</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Physics Simulation</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/simulation/differentiable-simulation/" title="method/simulation/differentiable-simulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Simulation</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Differentiable Simulation</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/domain/robotics/manipulation/" title="domain/robotics/manipulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Robotics</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Manipulation</span></a></li></ul></div></article><article class="row" data-type="paper" data-astro-cid-gc2g3jd6><div class="meta" data-astro-cid-gc2g3jd6><span class="type" data-astro-cid-gc2g3jd6>Papers</span><time datetime="2026-10-30" data-astro-cid-gc2g3jd6>Oct 30, 2026</time><span class="pending" data-astro-cid-gc2g3jd6>AI-written, not reviewed</span></div><div class="body" data-astro-cid-gc2g3jd6><h3 class="title" data-astro-cid-gc2g3jd6="true"><a href="/en/papers/vla-hwbench-where-the-time-goes/" data-astro-cid-gc2g3jd6>VLA-HWBench: Where the Time Goes When VLA Models Run on Edge Hardware</a></h3><p class="summary" data-astro-cid-gc2g3jd6>VLA-HWBench measures 18 open VLA models on NVIDIA Jetson AGX Thor and AMD Ryzen AI Max+ PRO 395 with a seven-stage call breakdown, analyzing latency effects of compilation, specialized backends, and low-precision optimization. It finds that edge VLA latency is driven more by action-generation method, runtime, and platform than by model size.</p><ul class="tags" data-astro-cid-gc2g3jd6><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/task/benchmarking/" title="task/benchmarking" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Benchmarking</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/architecture/vision-language-action/" title="method/architecture/vision-language-action" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Architecture</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Vision-Language-Action (VLA)</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/inference/" title="method/inference" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Inference</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/domain/robotics/" title="domain/robotics" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Robotics</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/domain/performance/" title="domain/performance" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Performance</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/domain/hardware-architecture/" title="domain/hardware-architecture" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Hardware Architecture</span></a></li></ul></div></article></section></aside></main><footer class="wrap" data-astro-cid-hkbrpulz><p class="site-footer" data-astro-cid-hkbrpulz>Tech Blog</p></footer><dialog class="search" aria-label="Search posts" data-unavailable="The search index is built with the site. Run npm run build, then npm run preview." data-astro-cid-ac66eqjo><div class="search-head" data-astro-cid-ac66eqjo><h2 data-astro-cid-ac66eqjo>Search posts</h2><button type="button" class="close" data-search-close data-astro-cid-ac66eqjo>Close</button></div><div id="pagefind" class="search-body" data-astro-cid-ac66eqjo></div></dialog><script type="module">var e=document.querySelector(`dialog.search`),t=e.querySelector(`#pagefind`),n=!1;async function r(){if(!n){n=!0;try{let e=document.createElement(`link`);e.rel=`stylesheet`,e.href=`/pagefind/pagefind-ui.css`,document.head.append(e),await new Promise((e,t)=>{let n=document.createElement(`script`);n.src=`/pagefind/pagefind-ui.js`,n.onload=()=>e(),n.onerror=()=>t(Error(`pagefind missing`)),document.head.append(n)}),new PagefindUI({element:t,showSubResults:!0,showImages:!1,autofocus:!0})}catch{t.textContent=e.dataset.unavailable??``}}}function i(){e.showModal(),r(),t.querySelector(`input`)?.focus()}document.querySelectorAll(`[data-search-open]`).forEach(e=>e.addEventListener(`click`,i)),e.querySelector(`[data-search-close]`).addEventListener(`click`,()=>e.close()),e.addEventListener(`click`,t=>{t.target===e&&e.close()}),document.addEventListener(`keydown`,t=>{let n=t.target.tagName;e.open||n===`INPUT`||n===`TEXTAREA`||(t.key===`/`||(t.metaKey||t.ctrlKey)&&t.key.toLowerCase()===`k`)&&(t.preventDefault(),i())});</script></body></html><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_0_lang.C9cTWiA5.js"></script><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_1_lang.BhCYdHk-.js"></script>

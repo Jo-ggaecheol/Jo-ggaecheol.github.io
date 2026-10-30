@@ -1,0 +1,1212 @@
+<!DOCTYPE html><html lang="ko" data-astro-cid-hkbrpulz><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>01. RL 문제 설정 &amp; Multi-armed Bandit | Tech Blog</title><meta name="description" content="강화학습의 상호작용 루프와 지도학습과의 차이를 정리하고, multi-armed bandit에서 탐험/활용 문제를 가치 추정, regret, UCB, Thompson sampling으로 다룬다."><meta property="og:title" content="01. RL 문제 설정 &amp; Multi-armed Bandit"><meta property="og:description" content="강화학습의 상호작용 루프와 지도학습과의 차이를 정리하고, multi-armed bandit에서 탐험/활용 문제를 가치 추정, regret, UCB, Thompson sampling으로 다룬다."><meta name="theme-color" content="#f4f6f9" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#0e131b" media="(prefers-color-scheme: dark)"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate" hreflang="en" href="/en/study/01-rl-problem-setup-multi-armed/"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap"><script>
+      // 깜빡임 방지: 렌더 전에 테마 결정 (저장값 > 시스템 설정)
+      (() => {
+        let saved = null;
+        try {
+          saved = localStorage.getItem('theme');
+        } catch {}
+        const dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      })();
+    </script><link rel="stylesheet" href="/_astro/Base.BJamWqg3.css"><style>.tagpath[data-astro-cid-jjfiepte]{font-size:var(--step--1);color:var(--ink-3);flex-wrap:wrap;align-items:baseline;gap:0 .3em;line-height:1.6;text-decoration:none;display:inline-flex}.leaf[data-astro-cid-jjfiepte]{color:var(--ink-2);font-weight:500}.sep[data-astro-cid-jjfiepte]{opacity:.55}.tagpath[data-astro-cid-jjfiepte]:hover .leaf[data-astro-cid-jjfiepte]{color:var(--ink);text-underline-offset:.2em;text-decoration:underline}.row[data-astro-cid-gc2g3jd6]{border-top:1px solid var(--rule);grid-template-columns:8.5rem 1fr;gap:.25rem 1.5rem;padding-block:1.6rem;display:grid}.meta[data-astro-cid-gc2g3jd6]{font-size:var(--step--1);color:var(--ink-3);font-variant-numeric:tabular-nums;flex-direction:column;gap:.15rem;padding-top:.3rem;display:flex}.type[data-astro-cid-gc2g3jd6]{color:var(--type);align-items:center;gap:.45rem;font-weight:600;display:inline-flex}.type[data-astro-cid-gc2g3jd6]:before{content:"";background:var(--type);border-radius:2px;width:.5rem;height:.5rem}.pending[data-astro-cid-gc2g3jd6]{color:var(--ink-3);align-self:flex-start;font-size:.75rem}.draft[data-astro-cid-gc2g3jd6]{border:1px dashed var(--rule-strong);border-radius:4px;align-self:flex-start;margin-top:.3rem;padding:0 .4rem;font-size:.75rem}.title[data-astro-cid-gc2g3jd6]{font-size:var(--step-2);margin:0;font-weight:600;line-height:1.35}.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]{background-image:linear-gradient(var(--type), var(--type));background-position:0 100%;background-repeat:no-repeat;background-size:0 2px;text-decoration:none;transition:background-size .2s}.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]:hover,.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]:focus-visible{background-size:100% 2px}.summary[data-astro-cid-gc2g3jd6]{max-width:62ch;color:var(--ink-2);margin:.45rem 0 0}.tags[data-astro-cid-gc2g3jd6]{flex-wrap:wrap;gap:.1rem 1.1rem;margin:.6rem 0 0;padding:0;list-style:none;display:flex}@media (width<=640px){.row[data-astro-cid-gc2g3jd6]{grid-template-columns:1fr;padding-block:1.25rem}.meta[data-astro-cid-gc2g3jd6]{flex-flow:wrap;gap:.75rem;padding-top:0}.draft[data-astro-cid-gc2g3jd6]{margin-top:0}.title[data-astro-cid-gc2g3jd6]{font-size:var(--step-1)}}
+</style><link rel="stylesheet" href="/_astro/_slug_.y0bcMRw3.css"></head><body data-astro-cid-hkbrpulz><a class="skip" href="#main" data-astro-cid-hkbrpulz>본문 바로가기</a><header class="site-header wrap" data-astro-cid-nen7h5rs><a class="wordmark" href="/ko/" translate="no" data-astro-cid-nen7h5rs>Tech Blog</a><nav class="nav" aria-label="주 메뉴" data-astro-cid-nen7h5rs><ul data-astro-cid-nen7h5rs><li data-type="paper" data-astro-cid-nen7h5rs><a href="/ko/papers/" data-astro-cid-nen7h5rs>논문</a></li><li data-type="study" data-astro-cid-nen7h5rs><a href="/ko/study/" aria-current="page" data-astro-cid-nen7h5rs>공부</a></li><li data-type="dev" data-astro-cid-nen7h5rs><a href="/ko/dev/" data-astro-cid-nen7h5rs>개발</a></li><li data-type="clip" data-astro-cid-nen7h5rs><a href="/ko/clips/" data-astro-cid-nen7h5rs>클립</a></li><li data-astro-cid-nen7h5rs><a href="/ko/graph/" data-astro-cid-nen7h5rs>그래프</a></li><li data-astro-cid-nen7h5rs><a href="/ko/tags/" data-astro-cid-nen7h5rs>태그</a></li></ul></nav><div class="tools" data-astro-cid-nen7h5rs><button class="icon-btn" type="button" data-search-open aria-label="검색" aria-keyshortcuts="/" data-astro-cid-nen7h5rs><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8" data-astro-cid-nen7h5rs></circle><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-astro-cid-nen7h5rs></path></svg></button><a class="lang" href="/en/study/01-rl-problem-setup-multi-armed/" hreflang="en" aria-label="영어로 보기" data-astro-cid-nen7h5rs>English</a><button class="icon-btn" type="button" data-theme-toggle data-label-light="라이트 모드로 전환" data-label-dark="다크 모드로 전환" aria-label="다크 모드로 전환" data-astro-cid-nen7h5rs><svg class="sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8" data-astro-cid-nen7h5rs></circle><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-astro-cid-nen7h5rs></path></svg><svg class="moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><path d="M19.5 14.6A7.8 7.8 0 0 1 9.4 4.5a7.8 7.8 0 1 0 10.1 10.1Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" data-astro-cid-nen7h5rs></path></svg></button></div></header><script type="module">var e=document.querySelector(`[data-theme-toggle]`),t=document.documentElement,n=()=>{let n=t.dataset.theme===`dark`;document.querySelectorAll(`meta[name="theme-color"]`).forEach(e=>{e.setAttribute(`content`,n?`#0e131b`:`#f4f6f9`),e.removeAttribute(`media`)}),e.setAttribute(`aria-label`,(n?e.dataset.labelLight:e.dataset.labelDark)??``),e.setAttribute(`aria-pressed`,String(n))};n(),e.addEventListener(`click`,()=>{t.dataset.theme=t.dataset.theme===`dark`?`light`:`dark`;try{localStorage.setItem(`theme`,t.dataset.theme)}catch{}n()});</script><main id="main" data-astro-cid-hkbrpulz><article class="post wrap" data-type="study" data-pagefind-body data-astro-cid-krmc5xkp><header class="head" data-astro-cid-krmc5xkp><div class="meta" data-astro-cid-krmc5xkp><a class="type" href="/ko/study/" data-pagefind-ignore data-astro-cid-krmc5xkp>공부</a><time datetime="2026-10-30" data-astro-cid-krmc5xkp>2026년 10월 30일</time></div><h1 data-astro-cid-krmc5xkp>01. RL 문제 설정 &amp; Multi-armed Bandit</h1><p class="summary" data-astro-cid-krmc5xkp>강화학습의 상호작용 루프와 지도학습과의 차이를 정리하고, multi-armed bandit에서 탐험/활용 문제를 가치 추정, regret, UCB, Thompson sampling으로 다룬다.</p><dl class="source" data-astro-cid-krmc5xkp><dt data-astro-cid-krmc5xkp>첨부</dt><dd data-astro-cid-krmc5xkp><a href="/files/study/01-rl-problem-setup-multi-armed/rl_01.md" rel="noopener" data-astro-cid-krmc5xkp>원본 Markdown</a></dd></dl><ul class="tags" data-pagefind-ignore data-astro-cid-krmc5xkp><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/method/reinforcement-learning/" title="method/reinforcement-learning" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>방법론</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>강화학습</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/domain/machine-learning/" title="domain/machine-learning" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>분야</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>머신러닝</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/task/benchmarking/" title="task/benchmarking" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>태스크</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>벤치마크·성능 측정</span></a></li></ul><div class="tags-editor" hidden data-dir="content/study/01-rl-problem-setup-multi-armed" data-pagefind-ignore data-astro-cid-krmc5xkp></div></header><div class="columns" data-astro-cid-krmc5xkp><div class="prose" data-astro-cid-krmc5xkp><details class="toc-inline" data-pagefind-ignore data-astro-cid-krmc5xkp><summary data-astro-cid-krmc5xkp>목차</summary><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#s1" data-astro-cid-krmc5xkp>01 RL 문제 설정: 상호작용 루프</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s2" data-astro-cid-krmc5xkp>02 지도학습과 뭐가 다른가: 세 가지 축</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s3" data-astro-cid-krmc5xkp>03 🤖 로봇에서 보면</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s4" data-astro-cid-krmc5xkp>04 Multi-armed Bandit이란</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-1" data-astro-cid-krmc5xkp>bandit과 MDP의 결정적 차이</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s5" data-astro-cid-krmc5xkp>05 가치 추정과 증분 업데이트</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-2" data-astro-cid-krmc5xkp>ML 관점</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-3" data-astro-cid-krmc5xkp>고정 보폭과 수렴 조건</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-4" data-astro-cid-krmc5xkp>앞으로 바뀌는 건 target뿐</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s6" data-astro-cid-krmc5xkp>06 성능 척도: Regret</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-5" data-astro-cid-krmc5xkp>왜 gap을 곱하나: 실수마다 손해 크기가 다르다</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-6" data-astro-cid-krmc5xkp>regret은 성적표다</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s7" data-astro-cid-krmc5xkp>07 단순한 전략: Greedy, ε-greedy, Optimistic init</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s8" data-astro-cid-krmc5xkp>08 UCB: 모르면 좋게 봐준다</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-7" data-astro-cid-krmc5xkp>유도: Hoeffding 부등식에서 c = √2까지</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-8" data-astro-cid-krmc5xkp>gap과 로그 regret의 연결</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-9" data-astro-cid-krmc5xkp>이후와의 연결</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s9" data-astro-cid-krmc5xkp>09 Thompson Sampling: 믿음에서 뽑는다</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-10" data-astro-cid-krmc5xkp>Beta 분포 (보상이 0/1일 때)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-11" data-astro-cid-krmc5xkp>UCB와 비교</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-12" data-astro-cid-krmc5xkp>이후와의 연결</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s10" data-astro-cid-krmc5xkp>10 전체 정리 &amp;#x26; 비교 실험</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#quiz" data-astro-cid-krmc5xkp>? 확인 문제</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#qa" data-astro-cid-krmc5xkp>Q&amp;#x26;A 질문 &amp;#x26; 답변</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#check" data-astro-cid-krmc5xkp>✓ 헷갈렸던 개념</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#refs" data-astro-cid-krmc5xkp>📚 더 읽을거리</a></li></ol></details><style>
+.rawhtml { --fg: var(--ink); --text: var(--ink); --muted: var(--ink-3); --line: var(--rule); --border: var(--rule) }
+.rawhtml :is(h2, h3) > span:first-child:not(:only-child) { margin-right: 0.5em }
+.rawhtml { --acc: #2f6bd8; --acc-soft: #e2ebfb; --warm: #c9701c; --warm-soft: #fbecd9; --green: #23875a; --green-soft: #dcf1e6; --red: #c24141; --red-soft: #f9e0e0; --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100 }
+@media (prefers-color-scheme: dark) {
+:root:not([data-theme="light"]) .rawhtml { --acc: #6d9cf0; --acc-soft: #1f2d48; --warm: #e7a15a; --warm-soft: #3a2b1a; --green: #5cc493; --green-soft: #183527; --red: #e57777; --red-soft: #3d1f22; --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500 }
+}
+.rawhtml h2 .num { font-family: var(--font-mono); font-size: .95rem; color: var(--acc); background: var(--acc-soft); border-radius: 6px; padding: 2px 8px }
+.rawhtml .lead { color: var(--muted); margin: 0 }
+.rawhtml .meta { color: var(--muted); font-size: .9rem; margin-top: 12px }
+.rawhtml nav.toc { margin: 32px 0 0; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px }
+.rawhtml nav.toc ol { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 4px 16px }
+.rawhtml nav.toc a { text-decoration: none; color: var(--fg); font-size: .95rem }
+.rawhtml nav.toc a:hover { color: var(--acc) }
+.rawhtml nav.toc .n { font-family: var(--font-mono); color: var(--muted); margin-right: 8px; font-size: .85rem }
+.rawhtml figure { position: relative; margin: 24px 0; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px }
+.rawhtml figure svg { display: block; width: 100%; height: auto }
+.rawhtml figcaption { color: var(--muted); font-size: .88rem; margin-top: 12px }
+.rawhtml figcaption b { color: var(--fg) }
+.rawhtml .table-wrap { overflow-x: auto }
+.rawhtml .callout { border-left: 4px solid var(--acc); background: var(--acc-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0 }
+.rawhtml .callout.warm { border-color: var(--warm); background: var(--warm-soft) }
+.rawhtml .callout.green { border-color: var(--green); background: var(--green-soft) }
+.rawhtml .robot { border: 1px dashed var(--line); border-radius: 10px; padding: 12px 16px; margin: 16px 0; background: var(--surface) }
+.rawhtml .robot > b:first-child { color: var(--green) }
+.rawhtml .formula { font-family: var(--font-mono); font-size: 1.02rem; text-align: center; padding: 16px 8px; margin: 16px 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; white-space: nowrap; line-height: 1.9 }
+.rawhtml .formula .lbl { display: block; font-family: var(--font-sans); font-size: .82rem; color: var(--muted) }
+.rawhtml .hl-a { color: var(--acc); font-weight: 600 }
+.rawhtml .hl-w { color: var(--warm); font-weight: 600 }
+.rawhtml svg text { font-family: var(--font-sans); font-size: 13px; fill: var(--fg) }
+.rawhtml svg .mut { fill: var(--muted); font-size: 12px }
+.rawhtml svg .small { font-size: 11px }
+.rawhtml svg .bold { font-weight: 700 }
+.rawhtml svg .mono { font-family: var(--font-mono) }
+.rawhtml .s-box { fill: var(--surface); stroke: var(--line); stroke-width: 1.5 }
+.rawhtml .s-acc { fill: var(--acc-soft); stroke: var(--acc); stroke-width: 1.5 }
+.rawhtml .s-warm { fill: var(--warm-soft); stroke: var(--warm); stroke-width: 1.5 }
+.rawhtml .s-green { fill: var(--green-soft); stroke: var(--green); stroke-width: 1.5 }
+.rawhtml .s-red { fill: var(--red-soft); stroke: var(--red); stroke-width: 1.5 }
+.rawhtml .s-frame { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 5 4 }
+.rawhtml .s-line { fill: none; stroke: var(--muted); stroke-width: 1.5 }
+.rawhtml .s-accline { fill: none; stroke: var(--acc); stroke-width: 2 }
+.rawhtml .s-warmline { fill: none; stroke: var(--warm); stroke-width: 2 }
+.rawhtml .s-ahead { fill: var(--muted) }
+.rawhtml .s-ahead-acc { fill: var(--acc) }
+.rawhtml .s-ahead-warm { fill: var(--warm) }
+.rawhtml .grid { stroke: var(--line); stroke-width: 1 }
+.rawhtml .axis { stroke: var(--muted); stroke-width: 1 }
+.rawhtml .control { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; font-size: .92rem }
+.rawhtml .control input[type="range"] { flex: 1; min-width: 140px; accent-color: var(--acc) }
+.rawhtml .control output { font-family: var(--font-mono); min-width: 3em }
+.rawhtml .control label { display: inline-flex; align-items: center; gap: 6px }
+.rawhtml .btn { font: inherit; font-size: .86rem; padding: 5px 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--fg) }
+.rawhtml .btn:hover { border-color: var(--acc) }
+.rawhtml .readout { font-family: var(--font-mono); font-size: .82rem; color: var(--muted); margin-top: 8px; overflow-x: auto; white-space: nowrap }
+.rawhtml .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .86rem; margin: 0 0 8px }
+.rawhtml .legend span { display: inline-flex; align-items: center; gap: 6px }
+.rawhtml .legend i { width: 18px; height: 3px; border-radius: 2px; display: inline-block }
+.rawhtml .legend i.dash { background: repeating-linear-gradient(90deg, var(--muted) 0 4px, transparent 4px 7px) !important }
+.rawhtml .tip { position: absolute; pointer-events: none; display: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: .8rem; line-height: 1.5; box-shadow: 0 4px 14px rgba(0,0,0,.12); white-space: nowrap; z-index: 2 }
+.rawhtml .tip .k { display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle }
+.rawhtml .tip b { font-family: var(--font-mono); font-weight: 600 }
+.rawhtml .areas { display: grid; grid-template-columns: 1fr 1fr; gap: 16px }
+.rawhtml .qa-tools { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap }
+.rawhtml .qa-tools button { font: inherit; font-size: .88rem; padding: 6px 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--fg) }
+.rawhtml details.qa, .rawhtml details.quiz { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; margin: 12px 0; padding: 0 }
+.rawhtml details.qa summary, .rawhtml details.quiz summary { cursor: pointer; padding: 16px 20px; list-style: none; display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: baseline }
+.rawhtml details.qa summary::-webkit-details-marker, .rawhtml details.quiz summary::-webkit-details-marker { display: none }
+.rawhtml details .qn { font-family: var(--font-mono); font-weight: 600; color: var(--warm); background: var(--warm-soft); border-radius: 6px; padding: 1px 8px; font-size: .9rem }
+.rawhtml details.quiz .qn { color: var(--acc); background: var(--acc-soft) }
+.rawhtml details .qt { font-weight: 500 }
+.rawhtml details .stage { display: block; color: var(--muted); font-size: .8rem; font-weight: 400 }
+.rawhtml details .ans { padding: 0 20px 16px 20px; border-top: 1px solid var(--line) }
+.rawhtml details .ans ul { padding-left: 20px }
+.rawhtml .hint { font-size: .85rem; color: var(--muted) }
+.rawhtml .checklist { list-style: none; padding: 0 }
+.rawhtml .checklist li { padding: 10px 14px 10px 40px; position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; margin: 8px 0 }
+.rawhtml .checklist li::before { content: "✓"; position: absolute; left: 14px; top: 10px; color: var(--green); font-weight: 700 }
+.rawhtml .checklist .ref { color: var(--muted); font-size: .85rem }
+.rawhtml .refs li { margin: 4px 0 }
+@media (max-width: 560px) {
+.rawhtml figure { padding: 12px }
+.rawhtml .areas { grid-template-columns: 1fr }
+}
+</style>
+<div class="rawhtml">
+<svg aria-hidden="true" height="0" style="position:absolute" width="0">
+<defs>
+<marker id="ah" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="9" refY="5" viewBox="0 0 10 10"><path class="s-ahead" d="M0,0 L10,5 L0,10 z"></path></marker>
+<marker id="ah-acc" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="9" refY="5" viewBox="0 0 10 10"><path class="s-ahead-acc" d="M0,0 L10,5 L0,10 z"></path></marker>
+<marker id="ah-warm" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="9" refY="5" viewBox="0 0 10 10"><path class="s-ahead-warm" d="M0,0 L10,5 L0,10 z"></path></marker>
+</defs>
+</svg>
+
+
+
+
+<section>
+<h2 id="s1"><span class="num">01</span>RL 문제 설정: 상호작용 루프</h2>
+<p>매 시점 t마다 에이전트와 환경이 상태, 행동, 보상을 주고받는다.</p>
+<figure>
+<svg aria-label="에이전트가 상태를 보고 행동을 보내면, 환경이 보상과 다음 상태를 돌려주는 루프" role="img" viewBox="0 0 720 250">
+<rect class="s-acc" height="90" rx="12" width="210" x="40" y="70"></rect>
+<text class="bold" text-anchor="middle" x="145" y="105">에이전트 (agent)</text>
+<text class="mono" text-anchor="middle" x="145" y="130">π(a | s)</text>
+<text class="mut small" text-anchor="middle" x="145" y="149">정책: 상태 → 행동</text>
+<rect class="s-warm" height="90" rx="12" width="210" x="470" y="70"></rect>
+<text class="bold" text-anchor="middle" x="575" y="105">환경 (environment)</text>
+<text class="mono" text-anchor="middle" x="575" y="130">p(s', r | s, a)</text>
+<text class="mut small" text-anchor="middle" x="575" y="149">동역학: 모른다고 가정</text>
+<path class="s-accline" d="M145 68 C145 20 575 20 575 66" marker-end="url(#ah-acc)"></path>
+<text class="bold" style="fill:var(--acc)" text-anchor="middle" x="360" y="18">행동 A<tspan baseline-shift="sub" font-size="10">t</tspan></text>
+<path class="s-warmline" d="M575 162 C575 215 145 215 145 164" marker-end="url(#ah-warm)"></path>
+<text class="bold" style="fill:var(--warm)" text-anchor="middle" x="360" y="238">보상 R<tspan baseline-shift="sub" font-size="10">t+1</tspan>, 다음 상태 S<tspan baseline-shift="sub" font-size="10">t+1</tspan></text>
+<text class="mut" text-anchor="middle" x="360" y="120">t → t+1 반복</text>
+</svg>
+<figcaption><b>그림 1.</b> 에이전트-환경 상호작용 루프. 에이전트는 환경의 동역학 p를 모르고, 경험(행동 → 보상, 다음 상태)으로만 배운다.</figcaption>
+</figure>
+<p>목표는 누적 보상(return)의 기댓값을 최대화하는 정책을 찾는 것이다.</p>
+<div class="formula">max<sub>π</sub> E<sub>π</sub>[ G<sub>t</sub> ],    G<sub>t</sub> = R<sub>t+1</sub> + γR<sub>t+2</sub> + γ²R<sub>t+3</sub> + ⋯</div>
+<div class="callout">환경의 동역학 p는 <b>모른다고 가정</b>한다. p를 알고 시작하는 고전 제어 이론과 갈라지는 지점이 바로 여기다.</div>
+</section>
+
+<section>
+<h2 id="s2"><span class="num">02</span>지도학습과 뭐가 다른가: 세 가지 축</h2>
+<div class="table-wrap"><table>
+<tbody><tr><th>축</th><th>지도학습</th><th>RL</th></tr>
+<tr><td><b>① 피드백 종류</b></td><td>instructive: 정답 라벨 y를 준다</td><td><b>evaluative</b>: 고른 행동의 점수만 준다. 다른 행동을 했으면 어땠을지는 모른다</td></tr>
+<tr><td><b>② 데이터 분포</b></td><td>i.i.d., 고정</td><td><b>정책이 데이터 분포를 바꾼다</b>. 어디를 가보느냐가 무엇을 배우느냐를 결정한다</td></tr>
+<tr><td><b>③ 시간 구조</b></td><td>샘플끼리 독립</td><td><b>보상이 늦게 온다</b>. 100스텝 전 행동이 원인일 수 있다 → credit assignment</td></tr>
+</tbody></table></div>
+<figure>
+<svg aria-label="bandit은 상태 하나에서 행동이 보상만 낸다. contextual bandit은 상태가 랜덤으로 주어진다. MDP는 행동이 다음 상태를 바꾼다" role="img" viewBox="0 0 720 250">
+
+<text class="bold" text-anchor="middle" x="110" y="24">Multi-armed bandit</text>
+<circle class="s-acc" cx="110" cy="115" r="26"></circle>
+<text class="mono" text-anchor="middle" x="110" y="120">s</text>
+<path class="s-line" d="M90 97 C55 50 165 50 130 97" marker-end="url(#ah)"></path>
+<path class="s-line" d="M84 125 C30 150 50 190 98 139" marker-end="url(#ah)"></path>
+<path class="s-line" d="M136 125 C190 150 170 190 122 139" marker-end="url(#ah)"></path>
+<text class="small mono" text-anchor="middle" x="110" y="52">a₂ → r</text>
+<text class="small mono" x="38" y="175">a₁ → r</text>
+<text class="small mono" x="150" y="175">a₃ → r</text>
+<text class="mut small" text-anchor="middle" x="110" y="215">상태 1개, 행동은 보상만 낸다</text>
+<text class="bold" style="fill:var(--acc)" text-anchor="middle" x="110" y="238">①</text>
+<line stroke="var(--line)" stroke-dasharray="4 4" x1="235" x2="235" y1="15" y2="240"></line>
+
+<text class="bold" text-anchor="middle" x="360" y="24">Contextual bandit</text>
+<text class="mut small" text-anchor="middle" x="360" y="50">세상이 상황을 랜덤으로 준다</text>
+<circle class="s-acc" cx="300" cy="115" r="22"></circle><text class="mono" text-anchor="middle" x="300" y="120">s₁</text>
+<circle class="s-acc" cx="360" cy="115" r="22"></circle><text class="mono" text-anchor="middle" x="360" y="120">s₂</text>
+<circle class="s-acc" cx="420" cy="115" r="22"></circle><text class="mono" text-anchor="middle" x="420" y="120">s₃</text>
+<line class="s-line" marker-end="url(#ah)" x1="300" x2="300" y1="139" y2="168"></line>
+<line class="s-line" marker-end="url(#ah)" x1="360" x2="360" y1="139" y2="168"></line>
+<line class="s-line" marker-end="url(#ah)" x1="420" x2="420" y1="139" y2="168"></line>
+<text class="small mono" text-anchor="middle" x="300" y="185">a → r</text>
+<text class="small mono" text-anchor="middle" x="360" y="185">a → r</text>
+<text class="small mono" text-anchor="middle" x="420" y="185">a → r</text>
+<text class="mut small" text-anchor="middle" x="360" y="215">상태는 있지만 내 행동과 무관</text>
+<text class="bold" style="fill:var(--acc)" text-anchor="middle" x="360" y="238">① + 상태</text>
+<line stroke="var(--line)" stroke-dasharray="4 4" x1="485" x2="485" y1="15" y2="240"></line>
+
+<text class="bold" text-anchor="middle" x="605" y="24">MDP (full RL)</text>
+<circle class="s-acc" cx="530" cy="90" r="22"></circle><text class="mono" text-anchor="middle" x="530" y="95">s₁</text>
+<circle class="s-acc" cx="650" cy="80" r="22"></circle><text class="mono" text-anchor="middle" x="650" y="85">s₂</text>
+<circle class="s-warm" cx="600" cy="165" r="22"></circle><text class="mono" text-anchor="middle" x="600" y="170">s₃</text>
+<path class="s-warmline" d="M553 86 L626 81" marker-end="url(#ah-warm)"></path>
+<path class="s-warmline" d="M640 101 L612 145" marker-end="url(#ah-warm)"></path>
+<path class="s-warmline" d="M580 155 L545 108" marker-end="url(#ah-warm)"></path>
+<text class="small mono" text-anchor="middle" x="590" y="74">a, r</text>
+<text class="small mono" x="643" y="132">a, r</text>
+<text class="small mono" x="530" y="140">a, r</text>
+<text class="mut small" text-anchor="middle" x="605" y="215">행동이 다음 상태를 바꾼다</text>
+<text class="bold" style="fill:var(--warm)" text-anchor="middle" x="605" y="238">① + ② + ③</text>
+</svg>
+<figcaption><b>그림 2.</b> 세 가지 축으로 본 문제의 계층. bandit은 ①(평가형 피드백)만 남긴 가장 단순한 RL 문제라서 <b>탐험 문제만 따로</b> 볼 수 있다.</figcaption>
+</figure>
+</section>
+
+<section>
+<h2 id="s3"><span class="num">03</span>🤖 로봇에서 보면</h2>
+<figure>
+<svg aria-label="2관절 로봇팔이 물체를 집는 문제에서 상태, 행동, 보상이 무엇인지 표시" role="img" viewBox="0 0 720 270">
+
+<line class="s-line" x1="20" x2="330" y1="240" y2="240"></line>
+<rect class="s-box" height="18" rx="3" width="60" x="60" y="222"></rect>
+
+<line stroke="var(--acc)" stroke-linecap="round" stroke-width="10" x1="90" x2="160" y1="222" y2="120"></line>
+<line stroke="var(--acc)" stroke-linecap="round" stroke-width="8" x1="160" x2="262" y1="120" y2="150"></line>
+<circle class="s-box" cx="90" cy="222" r="8"></circle>
+<circle class="s-box" cx="160" cy="120" r="8"></circle>
+
+<path d="M262 150 L280 140 M262 150 L282 162" stroke="var(--fg)" stroke-linecap="round" stroke-width="3"></path>
+
+<rect class="s-warm" height="42" rx="4" width="34" x="290" y="198"></rect>
+<text class="small mut" text-anchor="middle" x="307" y="258">물체</text>
+
+<path class="s-warmline" d="M118 222 A28 28 0 0 0 106 199"></path>
+<text class="small mono" style="fill:var(--warm)" x="122" y="207">q₁</text>
+<path class="s-warmline" d="M188 128 A28 28 0 0 0 176 97"></path>
+<text class="small mono" style="fill:var(--warm)" x="190" y="105">q₂</text>
+
+<line stroke="var(--green)" stroke-dasharray="4 3" stroke-width="1.5" x1="282" x2="300" y1="158" y2="198"></line>
+<text class="small" style="fill:var(--green)" text-anchor="end" x="284" y="192">‖x_ee − x_obj‖</text>
+
+<rect class="s-acc" height="66" rx="10" width="340" x="360" y="16"></rect>
+<text class="bold" x="374" y="40">State / Observation</text>
+<text class="small" x="374" y="62">관절각 q, 각속도 q̇, 그리퍼, 물체 pose (카메라)</text>
+<rect class="s-warm" height="66" rx="10" width="340" x="360" y="96"></rect>
+<text class="bold" x="374" y="120">Action</text>
+<text class="small" x="374" y="142">관절 토크 τ / 관절 목표 위치 / end-effector 델타</text>
+<rect class="s-green" height="80" rx="10" width="340" x="360" y="176"></rect>
+<text class="bold" x="374" y="200">Reward</text>
+<text class="small mono" x="374" y="222">dense: −‖x_ee − x_obj‖ − c‖a‖² + bonus</text>
+<text class="small mono" x="374" y="242">sparse: 성공 1, 실패 0</text>
+</svg>
+<figcaption><b>그림 3.</b> 로봇팔로 물체 집기를 RL 문제로 옮긴 것. action space를 무엇으로 잡느냐(토크 vs 위치 목표)가 학습 난이도를 크게 좌우한다.</figcaption>
+</figure>
+<ul>
+<li><b>Observation vs state</b>: 카메라·센서로 보는 것은 상태의 일부라서 엄밀히는 POMDP다 (02에서 다룸).</li>
+<li><b>Step = 제어 주기</b>: 50Hz면 10초 에피소드가 500스텝이라 ③ credit assignment가 심각해진다.</li>
+<li><b>Sparse reward vs shaping</b>: sparse는 학습 신호가 거의 없고, shaping을 하면 <b>reward hacking</b>이 생긴다(물체 근처에서 떨기만 해도 distance 보상을 받음).</li>
+<li><b>탐험 비용</b>: 시뮬레이션은 공짜지만 실제 로봇은 부서진다 → sim-to-real.</li>
+<li><b>②의 귀결</b>: 정책이 바뀌면 방문하는 상태 분포가 바뀐다. imitation learning의 compounding error도 이것 때문이다 (10).</li>
+</ul>
+</section>
+
+<section>
+<h2 id="s4"><span class="num">04</span>Multi-armed Bandit이란</h2>
+<p>카지노 슬롯머신의 별명이 <b>"one-armed bandit"(외팔이 강도)</b>이다. 레버가 팔 하나고, 돈을 뺏어가서 강도다. 그 기계가 여러 대면 <b>multi-armed bandit</b>이다.</p>
+<ul>
+<li>기계 k대. 기계 a를 당기면 보상 R ~ ν<sub>a</sub>. 진짜 평균 <b>q*(a) = E[R | A=a]</b>는 모른다.</li>
+<li>매 라운드 하나를 골라 당기고, T번 동안 누적 보상을 최대화한다.</li>
+<li><b>고른 기계의 결과만 보인다.</b> 그래서 좋아 보이는 걸 계속 쓸지(<b>exploitation</b>), 덜 해본 걸 알아볼지(<b>exploration</b>)의 딜레마가 생긴다.</li>
+</ul>
+<p>현실의 예: A/B 테스트, 임상시험 배정, 광고/추천 선택, 🤖 grasp 후보 선택, 제어기 하이퍼파라미터 선택.</p>
+<h3 id="sec-1">bandit과 MDP의 결정적 차이</h3>
+<figure>
+<svg aria-label="bandit은 어떤 기계를 당겨도 같은 방에 머물고, MDP는 당긴 기계에 따라 다른 방으로 이동하며 방은 다시 방문된다" role="img" viewBox="0 0 720 320">
+<text class="bold" x="20" y="26">Bandit</text>
+<rect class="s-box" height="96" rx="12" width="230" x="100" y="12"></rect>
+<text class="mut small" text-anchor="middle" x="215" y="34">방 1개</text>
+<rect class="s-acc" height="46" rx="6" width="50" x="125" y="46"></rect><text class="mono small" text-anchor="middle" x="150" y="74">0.3?</text>
+<rect class="s-acc" height="46" rx="6" width="50" x="190" y="46"></rect><text class="mono small" text-anchor="middle" x="215" y="74">0.5?</text>
+<rect class="s-acc" height="46" rx="6" width="50" x="255" y="46"></rect><text class="mono small" text-anchor="middle" x="280" y="74">0.7?</text>
+<path class="s-line" d="M332 52 C400 30 400 100 334 86" marker-end="url(#ah)"></path>
+<text class="small" x="402" y="62">뭘 당겨도 같은 방, 같은 확률</text>
+<text class="small mut" x="402" y="82">행동 → 보상만 결정</text>
+<line stroke="var(--line)" stroke-dasharray="4 4" x1="20" x2="700" y1="128" y2="128"></line>
+<text class="bold" x="20" y="156">MDP</text>
+<rect class="s-acc" height="80" rx="12" width="150" x="80" y="170"></rect>
+<text class="bold" text-anchor="middle" x="155" y="198">방 A</text>
+<text class="small mut" text-anchor="middle" x="155" y="222">기계 a₁ a₂ a₃</text>
+<rect class="s-acc" height="70" rx="12" width="150" x="330" y="146"></rect>
+<text class="bold" text-anchor="middle" x="405" y="174">방 B</text>
+<text class="small mut" text-anchor="middle" x="405" y="196">다른 확률</text>
+<rect class="s-acc" height="66" rx="12" width="150" x="330" y="226"></rect>
+<text class="bold" text-anchor="middle" x="405" y="254">방 C</text>
+<text class="small mut" text-anchor="middle" x="405" y="274">또 다른 확률</text>
+<rect class="s-green" height="60" rx="12" width="120" x="570" y="190"></rect>
+<text class="bold" text-anchor="middle" x="630" y="225">목표 (+1)</text>
+<path class="s-warmline" d="M232 192 L328 181" marker-end="url(#ah-warm)"></path>
+<text class="small mono" style="fill:var(--warm)" x="270" y="176">a₁</text>
+<path class="s-warmline" d="M232 230 L328 254" marker-end="url(#ah-warm)"></path>
+<text class="small mono" style="fill:var(--warm)" x="270" y="262">a₂</text>
+<path class="s-warmline" d="M482 182 L568 210" marker-end="url(#ah-warm)"></path>
+<text class="small mono" style="fill:var(--warm)" x="515" y="186">a₃</text>
+<path class="s-line" d="M330 280 C250 300 160 290 150 252" marker-end="url(#ah)" stroke-dasharray="5 4"></path>
+<text class="small mut" text-anchor="middle" x="240" y="314">다시 A로 (재방문)</text>
+</svg>
+<figcaption><b>그림 4.</b> bandit은 방이 하나라 행동이 보상만 정한다. MDP는 <b>(지금 방, 행동)</b>이 다음 방을 정하고, 방마다 기계의 확률이 다르다. 방은 반복해서 다시 방문되기 때문에 배운 것을 재사용할 수 있다.</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<tbody><tr><th></th><th>상태 전이</th><th>보상</th><th>행동</th></tr>
+<tr><td>Markov chain</td><td>✅</td><td>❌</td><td>❌</td></tr>
+<tr><td>MRP</td><td>✅</td><td>✅</td><td>❌</td></tr>
+<tr><td>MDP</td><td>✅</td><td>✅</td><td>✅</td></tr>
+<tr><td><b>Bandit</b></td><td>❌ (상태 1개)</td><td>✅</td><td>✅</td></tr>
+</tbody></table></div>
+<div class="callout"><b>bandit = 상태가 1개뿐이라 모든 행동이 제자리로 돌아오는 MDP.</b> 다음 상태를 바꾸는 건 보상이 아니라 <b>행동</b>이다.</div>
+</section>
+
+<section>
+<h2 id="s5"><span class="num">05</span>가치 추정과 증분 업데이트</h2>
+<div class="table-wrap"><table>
+<tbody><tr><th></th><th>무엇</th><th>성질</th></tr>
+<tr><td><b>진짜 목표</b></td><td>q*(a): 기계의 진짜 평균</td><td>알 수 없고 직접 관측할 수도 없다</td></tr>
+<tr><td><b>target</b></td><td>이번에 관측한 보상 R<sub>n</sub></td><td>q*의 noisy 샘플. 매번 흔들리는 과녁이고, 기댓값이 q*다</td></tr>
+</tbody></table></div>
+<p>표본평균을 매번 다시 계산하지 않고 정리하면 다음 식이 나온다.</p>
+<div class="formula">
+Q<sub>n+1</sub> = (R<sub>1</sub> + ⋯ + R<sub>n</sub>) / n = Q<sub>n</sub> + <span class="hl-a">(1/n)</span> · ( <span class="hl-w">R<sub>n</sub></span> − Q<sub>n</sub> )
+<span class="lbl">새 추정 = 옛 추정 + <span class="hl-a">보폭</span> × (<span class="hl-w">target</span> − 옛 추정)</span>
+</div>
+<div class="table-wrap"><table>
+<tbody><tr><th>n</th><th>R<sub>n</sub> (target)</th><th>보폭 1/n</th><th>업데이트</th><th>Q</th></tr>
+<tr><td>1</td><td>1</td><td>1</td><td>0 + 1·(1−0)</td><td>1.0</td></tr>
+<tr><td>2</td><td>0</td><td>1/2</td><td>1 + ½·(0−1)</td><td>0.5</td></tr>
+<tr><td>3</td><td>1</td><td>1/3</td><td>0.5 + ⅓·(1−0.5)</td><td>0.667</td></tr>
+<tr><td>4</td><td>1</td><td>1/4</td><td>0.667 + ¼·(1−0.667)</td><td>0.75 = (1+0+1+1)/4</td></tr>
+</tbody></table></div>
+<figure>
+<div class="legend">
+<span><i style="background:var(--s1)"></i>표본평균 (보폭 1/n)</span>
+<span><i style="background:var(--s2)"></i>고정 보폭 α</span>
+<span><i class="dash"></i>진짜 목표 q*</span>
+</div>
+<svg aria-label="당첨 확률 0.7인 기계를 300번 당기며 추정치 Q가 0.7로 수렴하는 과정. 표본평균과 고정 보폭을 비교" id="incSvg" role="img" viewBox="0 0 720 290"></svg>
+<div class="tip" id="incTip"></div>
+<div class="control">
+<label for="alphaSlider">고정 보폭 α</label>
+<input id="alphaSlider" max="0.5" min="0.01" step="0.01" type="range" value="0.05">
+<output id="alphaOut">0.05</output>
+</div>
+<div class="control">
+<label><input id="nonstat" type="checkbox"> nonstationary: 150번째부터 q*가 0.7 → 0.2로 바뀜</label>
+<button class="btn" id="incNew" type="button">새 보상 시퀀스</button>
+</div>
+<figcaption><b>그림 5.</b> 위아래 점은 매번 받은 보상(1 또는 0), 즉 흔들리는 target이다. Q는 그 과녁 쪽으로 조금씩 끌려가며 q*로 간다. <b>nonstationary를 켜 보자</b>: 표본평균은 과거에 묶여 느리게 반응하고, 고정 α는 변화를 따라간다. α를 키우면 빨리 따라가지만 더 흔들린다.</figcaption>
+</figure>
+<h3 id="sec-2">ML 관점</h3>
+<p>L(Q) = ½(R − Q)²에 SGD 한 스텝을 하면 Q ← Q + α(R − Q)다. 즉 <b>target을 라벨로 놓은 MSE regression을 SGD로 하는 것</b>과 같다. 기대 업데이트가 0이 되는 점이 Q = E[R] = q*다.</p>
+<h3 id="sec-3">고정 보폭과 수렴 조건</h3>
+<div class="formula">Q<sub>n+1</sub> = (1−α)<sup>n</sup> Q<sub>1</sub> + Σ<sub>i</sub> α(1−α)<sup>n−i</sup> R<sub>i</sub><span class="lbl">오래된 보상일수록 가중치가 지수적으로 감소 (exponential recency-weighted average)</span></div>
+<ul>
+<li><b>Robbins–Monro 조건</b>: Σα<sub>n</sub> = ∞ (초기값에서 어디로든 갈 만큼 충분히 움직임), Σα<sub>n</sub>² &#x3C; ∞ (보폭이 줄어 노이즈가 사라짐).</li>
+<li>1/n은 둘 다 만족한다. 고정 α는 두 번째를 어겨서 완전히 수렴하지 않지만, 그 덕분에 변화를 따라간다. 🤖 마모로 동역학이 변하는 로봇.</li>
+</ul>
+<h3 id="sec-4">앞으로 바뀌는 건 target뿐</h3>
+<div class="table-wrap"><table>
+<tbody><tr><th>알고리즘</th><th>target</th></tr>
+<tr><td>Bandit</td><td><code>R</code> (방금 받은 보상)</td></tr>
+<tr><td>Monte Carlo (04)</td><td><code>G_t</code> (에피소드 끝까지 실제로 받은 보상 합)</td></tr>
+<tr><td>TD (05)</td><td><code>R + γ·V(s')</code> (보상 한 스텝 + 다음 상태의 <b>추정치</b>)</td></tr>
+<tr><td>Q-learning / DQN (05, 07)</td><td><code>R + γ·max Q(s', ·)</code></td></tr>
+</tbody></table></div>
+<div class="callout warm">TD부터는 target 안에 내 추정치가 들어가서, <b>내가 움직이면 과녁도 같이 움직인다</b>. DQN에 target network가 필요한 이유다.</div>
+</section>
+
+<section>
+<h2 id="s6"><span class="num">06</span>성능 척도: Regret</h2>
+<div class="formula">
+Regret(T) = Tμ* − E[ Σ<sub>t</sub> R<sub>t</sub> ] = Σ<sub>a</sub> <span class="hl-w">Δ<sub>a</sub></span> · <span class="hl-a">E[N<sub>T</sub>(a)]</span>
+<span class="lbl">μ* = 최적 기계의 평균 · <span class="hl-w">gap Δ<sub>a</sub> = μ* − q*(a)</span> (한 번 잘못 고를 때 손해) · <span class="hl-a">N<sub>T</sub>(a)</span> = 기계 a를 고른 횟수</span>
+</div>
+<p>"처음부터 최적 기계를 알았다면 받았을 기대 보상"에서 "실제로 받은 기대 보상"을 뺀 값, 말 그대로 <b>후회</b>다. ΣN(a) = T를 쓰면 Tμ* − ΣN(a)q*(a) = ΣN(a)(μ* − q*(a))가 된다.</p>
+<h3 id="sec-5">왜 gap을 곱하나: 실수마다 손해 크기가 다르다</h3>
+<figure>
+<svg aria-label="손해는 가로 횟수 곱하기 세로 gap인 사각형 넓이. B를 100번 고른 손해 1.0보다 C를 10번 고른 손해 6.0이 6배 크다" role="img" viewBox="0 0 720 210">
+<text class="bold" x="20" y="26">손해 = 넓이 = 횟수(가로) × gap(세로)</text>
+<line class="axis" x1="40" x2="680" y1="170" y2="170"></line>
+
+<rect fill="var(--s1)" height="2" rx="1" width="500" x="40" y="168"></rect>
+<text class="small" text-anchor="middle" x="290" y="158">B (0.69, gap 0.01)를 100번 → 손해 <tspan class="bold">1.0</tspan></text>
+
+<rect fill="var(--s2)" height="120" rx="4" width="50" x="560" y="50"></rect>
+<text class="small" text-anchor="middle" x="585" y="42">C (0.10, gap 0.6)</text>
+<text class="small" x="625" y="110">10번 →</text>
+<text class="small" x="625" y="128">손해 <tspan class="bold">6.0</tspan></text>
+<text class="mut small" x="40" y="192">횟수 →</text>
+<text class="mut small" x="40" y="206">(가로 5px = 1번, 세로 200px = gap 1.0)</text>
+</svg>
+<figcaption><b>그림 6.</b> 최적이 0.70일 때. 횟수만 세면 B 쪽(100번)이 더 나빠 보이지만 실제 손해(넓이)는 C 쪽이 6배다.</figcaption>
+</figure>
+<h3 id="sec-6">regret은 성적표다</h3>
+<ul>
+<li><b>정답 μ*를 알아야 계산된다.</b> 그래서 에이전트 자신은 실행 중이든 끝난 뒤든 계산할 수 없다. 학습 신호가 아니다. ML의 <b>test loss</b> 위치다.</li>
+<li>쓰임: ① <b>실행 전</b> 이론적 보장(예: UCB는 regret ≤ C·log T) ② <b>실행 중/후</b> 정답을 아는 실험자가 시뮬레이션에서 곡선으로 평가 ③ <b>실제 배포</b>에선 계산 불가 → 누적 보상 같은 대리 지표.</li>
+</ul>
+<figure>
+<svg aria-label="왼쪽: 스텝별 보상 곡선이 최적선 아래에서 올라가며 둘 사이 넓이가 누적 regret. 오른쪽: 그 넓이를 누적한 곡선으로, UCB는 눕고 고정 epsilon greedy는 직선" role="img" viewBox="0 0 720 240">
+
+<text class="bold" x="40" y="22">스텝별 기대 보상</text>
+<line class="axis" x1="40" x2="330" y1="200" y2="200"></line>
+<line class="axis" x1="40" x2="40" y1="40" y2="200"></line>
+<line stroke="var(--muted)" stroke-dasharray="5 4" x1="40" x2="330" y1="60" y2="60"></line>
+<text class="small mut" x="334" y="64">μ*</text>
+<path d="M40 60 L40 170 C80 150 110 95 160 75 C210 64 260 61 330 61 L330 60 Z" fill="var(--acc)" fill-opacity="0.18"></path>
+<path d="M40 170 C80 150 110 95 160 75 C210 64 260 61 330 61" fill="none" stroke="var(--s1)" stroke-width="2"></path>
+<text class="small" style="fill:var(--acc)" x="46" y="78">넓이 = 누적 regret</text>
+<path d="M40 170 C90 140 120 110 330 108" fill="none" stroke="var(--s2)" stroke-width="2"></path>
+<text class="small" x="334" y="112">ε-greedy</text>
+<text class="small" x="300" y="52">UCB</text>
+<text class="mut small" text-anchor="middle" x="185" y="222">t →</text>
+
+<text class="bold" x="400" y="22">누적 regret</text>
+<line class="axis" x1="400" x2="690" y1="200" y2="200"></line>
+<line class="axis" x1="400" x2="400" y1="40" y2="200"></line>
+<path d="M400 200 C440 160 480 140 560 130 C620 124 660 121 690 120" fill="none" stroke="var(--s1)" stroke-width="2"></path>
+<path d="M400 200 L690 50" fill="none" stroke="var(--s2)" stroke-width="2"></path>
+<text class="small" x="620" y="112">UCB: 로그로 눕는다</text>
+<text class="small" text-anchor="end" x="560" y="96">ε-greedy: 직선</text>
+<text class="mut small" text-anchor="middle" x="545" y="222">t →</text>
+</svg>
+<figcaption><b>그림 7.</b> 스텝별 regret = 최적선과 보상 곡선 사이의 <b>높이</b>, 누적 regret = 그 <b>넓이</b>. 보상 곡선이 μ*에 붙으면 누적 regret이 평평해진다. 고정 ε-greedy는 μ* 아래에서 수렴하므로 넓이가 계속 늘어 직선이 된다(개념도).</figcaption>
+</figure>
+<ul>
+<li>보상 곡선은 <b>"지금 얼마나 잘하나"</b>, 누적 regret은 <b>"잘하게 될 때까지 얼마나 손해 봤나(학습 비용)"</b>. 최종 성능이 같아도 늦게 도달하면 regret이 크다.</li>
+<li><b>Lai–Robbins 하한</b>: 어떤 합리적인 알고리즘도 Ω(log T)보다 작을 수 없다. → <b>O(log T)면 차수로 최적</b>.</li>
+</ul>
+<div class="robot"><b>🤖 로보틱스 연결</b> · 시뮬레이션 학습에서는 최종 성능이 주로 중요하다. 실로봇처럼 학습 중 실수가 실제 비용(파손, 시간)이면 regret 관점이 중요해진다. 딥RL의 sample efficiency도 같은 생각이다.</div>
+</section>
+
+<section>
+<h2 id="s7"><span class="num">07</span>단순한 전략: Greedy, ε-greedy, Optimistic init</h2>
+<div class="table-wrap"><table>
+<tbody><tr><th>전략</th><th>방법</th><th>문제</th></tr>
+<tr><td><b>Greedy</b></td><td>항상 argmax Q</td><td>초반에 최적 팔이 운 나쁘게 낮게 나오면 다시 안 고름 → <b>선형 regret</b></td></tr>
+<tr><td><b>ε-greedy</b></td><td>확률 ε로 무작위, 나머지는 greedy</td><td>최적 팔을 알아낸 뒤에도 ε/k 비율로 나쁜 팔을 계속 고름 → <b>선형 regret</b> (ε 감소 스케줄이면 로그 가능하지만 gap에 맞춘 튜닝 필요)</td></tr>
+<tr><td><b>Optimistic init</b></td><td>Q<sub>0</sub>를 크게</td><td>모든 팔이 초반에 한 번씩 시도되지만 탐험이 초반에만 일어남</td></tr>
+</tbody></table></div>
+<div class="callout warm">ε-greedy의 근본 한계: <b>"모르는 것"과 "나쁜 것"을 구분하지 않고</b> 똑같이 무작위로 탐험한다. 좋은 탐험은 <b>불확실성에 따라</b> 해야 한다 → UCB, Thompson sampling.</div>
+</section>
+
+<section>
+<h2 id="s8"><span class="num">08</span>UCB: 모르면 좋게 봐준다</h2>
+<p>원칙: <b>optimism in the face of uncertainty</b>. 각 기계의 "최대로 잡으면 이 정도까지 좋을 수 있다(포텐)"를 계산해서 가장 높은 기계를 고른다.</p>
+<div class="formula">
+UCB<sub>t</sub>(a) = <span class="hl-a">Q(a)</span> + <span class="hl-w">c · √( ln t / N(a) )</span>
+<span class="lbl"><span class="hl-a">지금 추정치 (활용)</span> + <span class="hl-w">불확실성 보너스 (탐험)</span></span>
+</div>
+<ul>
+<li><b>N(a)↑ → 보너스↓</b>: 많이 당겨봤으면 "이제 충분히 안다".</li>
+<li><b>ln t↑ → 보너스 서서히↑</b>: 오래 안 고른 기계는 가만히 있어도 포텐이 올라가 언젠가 다시 확인받는다.</li>
+<li><b>N(a) = 0</b>이면 식이 정의되지 않으므로 모든 팔을 한 번씩 먼저 당긴다(UCB = ∞).</li>
+<li><b>UCB가 높은 이유는 둘 중 하나</b>: 진짜 좋거나(Q 높음), 아직 몰라서(보너스 큼). 낮다 = 충분히 봤는데도 낮다 = 나쁘다고 확인됨.</li>
+</ul>
+<figure>
+<svg aria-label="세 기계의 추정치 Q와 불확실성 보너스를 막대로 표시하고, 상한이 가장 높은 기계를 다음에 선택" id="ucbSvg" role="img" viewBox="0 0 720 250"></svg>
+<div class="control">
+<button class="btn" data-ucb="1" type="button">1번 당기기</button>
+<button class="btn" data-ucb="10" type="button">10번</button>
+<button class="btn" data-ucb="100" type="button">100번</button>
+<button class="btn" id="ucbPreset" type="button">본문 예시 (t=100)</button>
+<button class="btn" id="ucbReset" type="button">처음부터</button>
+<label><input id="ucbTruth" type="checkbox"> 정답 q* 보기</label>
+</div>
+<div class="control">
+<label for="cSlider">탐험 강도 c</label>
+<input id="cSlider" max="3" min="0" step="0.01" type="range" value="1.41">
+<output id="cOut">1.41</output>
+</div>
+<div class="readout" id="ucbReadout"></div>
+<figcaption><b>그림 8.</b> 진한 막대 = Q(추정치), 연한 연장 = 보너스, 끝선 = UCB(포텐). 테두리가 굵은 기계가 다음에 당겨진다. 처음 화면은 아래 표의 <b>본문 예시</b> 상황이다. B가 평균이 제일 낮은데도 선택된다. 몇 번 당기면 B의 보너스가 줄어드는 걸 볼 수 있다. c를 0으로 하면 greedy가 된다. <b>처음부터</b>를 누르면 아무것도 모르는 상태(모두 ∞)에서 시작한다.</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<tbody><tr><th>기계</th><th>Q</th><th>N</th><th>보너스 √(2·ln100 / N)</th><th>UCB</th></tr>
+<tr><td>A</td><td>0.60</td><td>80</td><td>0.34</td><td>0.94</td></tr>
+<tr><td>B</td><td>0.40</td><td>5</td><td>1.36</td><td><b>1.76 ← 선택</b></td></tr>
+<tr><td>C</td><td>0.55</td><td>15</td><td>0.78</td><td>1.33</td></tr>
+</tbody></table></div>
+<h3 id="sec-7">유도: Hoeffding 부등식에서 c = √2까지</h3>
+<div class="formula">
+P( q* > Q + u ) ≤ exp(−2Nu²) = δ  ⟹  u = √( ln(1/δ) / 2N )
+<span class="lbl">보상 ∈ [0,1]일 때. "q*는 확률 1−δ로 Q + u 이하" = 신뢰구간 상한 (Upper Confidence Bound)</span>
+</div>
+<div class="formula">
+δ = t⁻⁴  ⟹  u = √( 4 ln t / 2N ) = √( 2 ln t / N )  ⟹  <b>c = √2</b> (UCB1)
+</div>
+<ul>
+<li><b>왜 t⁻⁴</b>: 최적이라서가 아니라 증명용이다. 신뢰구간이 틀릴 확률을 모든 (t, N)에 대해 더해도(union bound) 유한한 상수여야 regret 증명이 된다.</li>
+<li><b>보상 범위가 [a, b]</b>면 보너스를 (b−a)배로 키운다. 실전에서는 c를 튜닝하며, √2보다 작게 써도 대체로 잘 된다.</li>
+<li><b>√(t/N)이었다면</b>: 보너스가 너무 빨리 커져 과탐험 → regret이 다항식으로 커진다. ln t의 느린 증가가 "log만큼만 확인"을 만든다.</li>
+</ul>
+<h3 id="sec-8">gap과 로그 regret의 연결</h3>
+<div class="formula">
+q*(a) + 보너스 &#x3C; μ*  ⟹  보너스 &#x3C; Δ<sub>a</sub>  ⟹  N(a) > 2 ln t / Δ<sub>a</sub>²
+<span class="lbl">기계 a를 버리려면 보너스(불확실성 폭)가 gap보다 작아질 때까지 당겨야 한다</span>
+</div>
+<figure>
+<svg aria-label="gap이 크면 넓은 신뢰구간으로도 구분되고, gap이 작으면 아주 좁은 신뢰구간이 필요하다" role="img" viewBox="0 0 720 210">
+<text class="bold" x="20" y="26">gap 큼: 0.70 vs 0.10</text>
+<line class="axis" x1="40" x2="680" y1="70" y2="70"></line>
+<text class="small mut" x="40" y="92">0</text><text class="small mut" text-anchor="end" x="680" y="92">1</text>
+<circle cx="488" cy="70" fill="var(--s1)" r="6"></circle><text class="small" text-anchor="middle" x="488" y="54">최적 0.70</text>
+<rect fill="var(--s2)" fill-opacity="0.25" height="16" rx="4" width="200" x="40" y="62"></rect>
+<circle cx="104" cy="70" fill="var(--s2)" r="6"></circle><text class="small" text-anchor="middle" x="104" y="54">0.10 ± 0.2</text>
+<text class="small" style="fill:var(--green)" x="250" y="100">넓은 구간으로도 구분 → 몇 번이면 끝</text>
+<text class="bold" x="20" y="130">gap 작음: 0.70 vs 0.69</text>
+<line class="axis" x1="40" x2="680" y1="170" y2="170"></line>
+<circle cx="488" cy="170" fill="var(--s1)" r="6"></circle>
+<rect fill="var(--s2)" fill-opacity="0.25" height="16" rx="4" width="40" x="461" y="162"></rect>
+<circle cx="482" cy="170" fill="var(--s2)" r="5"></circle>
+<text class="small" text-anchor="middle" x="482" y="150">0.69 ± ? → ±0.01보다 좁아야</text>
+<text class="small" style="fill:var(--warm)" x="40" y="196">신뢰구간이 매우 좁아야 구분 → 아주 많이 당김 (∝ 1/Δ²)</text>
+</svg>
+<figcaption><b>그림 9.</b> 구분에 필요한 당김 횟수는 1/Δ²에 비례한다. 대신 gap이 작으면 한 번당 손해도 작아서, 기계 하나의 손해는 Δ × (ln T/Δ²) = ln T/Δ가 된다.</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<tbody><tr><th>gap Δ</th><th>당김 횟수 ∝ 1/Δ²</th><th>손해 = Δ × 횟수 ∝ 1/Δ</th></tr>
+<tr><td>0.6</td><td>2.8 × ln T</td><td>1.7 × ln T</td></tr>
+<tr><td>0.2</td><td>25 × ln T</td><td>5 × ln T</td></tr>
+<tr><td>0.01</td><td>10000 × ln T</td><td>100 × ln T</td></tr>
+</tbody></table></div>
+<div class="formula">Regret(T) ≲ Σ<sub>a</sub> Δ<sub>a</sub> · 8 ln T / Δ<sub>a</sub>² = Σ<sub>a</sub> 8 ln T / Δ<sub>a</sub> = O(log T)<span class="lbl">(증명에서는 상수가 8)</span></div>
+<div class="table-wrap"><table>
+<tbody><tr><th>총 당김 T</th><th>ln T</th><th>고정 ε-greedy 실수 횟수 (∝ T)</th></tr>
+<tr><td>1,000</td><td>6.9</td><td>~100</td></tr>
+<tr><td>1,000,000</td><td>13.8</td><td>~100,000</td></tr>
+</tbody></table></div>
+<p>T가 1000배 늘어도 UCB의 실수는 2배만 는다. 스텝당 손해가 0으로 간다.</p>
+<h3 id="sec-9">이후와의 연결</h3>
+<ul>
+<li>MDP: 방문 횟수 N(s, a)에 보너스 → <b>count-based exploration</b>, 연속 상태에서는 <b>curiosity / RND</b></li>
+<li>AlphaGo/AlphaZero의 트리 탐색 <b>PUCT</b> = UCB의 변형</li>
+</ul>
+<div class="robot"><b>🤖 로보틱스 연결</b> · 낙관주의는 "안 해본 동작이 좋을 수도 있으니 해보자"다. 실로봇에서는 <b>위험</b>하다(안 해본 큰 토크). safe RL과 <b>offline RL(10)</b>은 반대로 <b>비관주의</b>(모르면 나쁘게 본다)를 쓴다.</div>
+</section>
+
+<section>
+<h2 id="s9"><span class="num">09</span>Thompson Sampling: 믿음에서 뽑는다</h2>
+<p>UCB가 기계마다 숫자 하나(상한)를 들고 다닌다면, Thompson sampling은 <b>"진짜 확률이 이쯤일 것 같다"는 분포 전체</b>를 들고 다닌다.</p>
+<ol>
+<li>각 기계의 믿음 분포에서 값을 하나씩 <b>무작위로 뽑는다</b>.</li>
+<li>뽑은 값이 가장 큰 기계를 당긴다.</li>
+<li>결과로 그 기계의 믿음 분포를 업데이트한다.</li>
+</ol>
+<h3 id="sec-10">Beta 분포 (보상이 0/1일 때)</h3>
+<ul>
+<li>Beta(α, β): 대략 α − 1 = 당첨 수, β − 1 = 꽝 수. 평균 α/(α+β).</li>
+<li>시작은 Beta(1, 1) = 균등분포 ("아무것도 모름").</li>
+<li>업데이트: 당첨 → α += 1, 꽝 → β += 1. Beta–Bernoulli 켤레라서 카운트 더하기로 끝난다.</li>
+<li>관측이 쌓일수록 분포가 뾰족해진다(불확실성 감소).</li>
+</ul>
+<figure>
+<div class="legend">
+<span><i style="background:var(--s1)"></i>A: 8승 2패 → Beta(9, 3)</span>
+<span><i style="background:var(--s2)"></i>B: 1승 1패 → Beta(2, 2)</span>
+</div>
+<svg aria-label="A의 믿음 분포 Beta(9,3)는 0.75 근처에 뾰족하고, B의 Beta(2,2)는 넓게 퍼져 있다" id="tsExSvg" role="img" viewBox="0 0 720 230"></svg>
+<div class="control">
+<button class="btn" id="tsExOne" type="button">한 번 뽑기</button>
+<button class="btn" id="tsExMany" type="button">1000번 뽑기</button>
+</div>
+<div class="readout" id="tsExReadout">버튼을 눌러 두 분포에서 샘플을 뽑아 보자.</div>
+<figcaption><b>그림 10.</b> 대부분 A의 샘플이 크지만, B는 분포가 넓어서 <b>약 18% 확률로 B가 이긴다</b>. 그때 B를 탐험한다. 결과적으로 각 기계를 "그 기계가 최적일 확률"만큼 고르게 된다(<b>probability matching</b>).</figcaption>
+</figure>
+<figure>
+<div class="legend">
+<span><i style="background:var(--s1)"></i>기계 A</span>
+<span><i style="background:var(--s2)"></i>기계 B</span>
+<span><i style="background:var(--s3)"></i>기계 C</span>
+</div>
+<svg aria-label="세 기계의 믿음 분포가 당길수록 뾰족해지는 Thompson sampling 시뮬레이션" id="tsSvg" role="img" viewBox="0 0 720 260"></svg>
+<div class="control">
+<button class="btn" data-ts="1" type="button">1번 당기기</button>
+<button class="btn" data-ts="10" type="button">10번</button>
+<button class="btn" data-ts="100" type="button">100번</button>
+<button class="btn" id="tsReset" type="button">처음부터</button>
+<label><input id="tsTruth" type="checkbox"> 정답 q* 보기</label>
+</div>
+<div class="readout" id="tsReadout"></div>
+<figcaption><b>그림 11.</b> Thompson sampling 시뮬레이션 (UCB 그림과 같은 기계 3대). 아래 점 = 이번 스텝에 각 분포에서 뽑은 값, 테두리가 있는 점이 이겨서 당겨진 기계. 처음엔 셋 다 평평(모름)하다가, 좋은 기계는 많이 당겨져서 뾰족해지고, 나쁜 기계는 넓은 채로 가끔만 뽑힌다.</figcaption>
+</figure>
+<h3 id="sec-11">UCB와 비교</h3>
+<div class="table-wrap"><table>
+<tbody><tr><th></th><th>UCB</th><th>Thompson sampling</th></tr>
+<tr><td>불확실성 표현</td><td>신뢰구간 (빈도주의)</td><td>사후 분포 (베이지안)</td></tr>
+<tr><td>고르는 방식</td><td>상한을 계산해 결정론적으로 argmax</td><td>분포에서 샘플을 뽑아 확률적으로 argmax</td></tr>
+<tr><td>탐험의 원리</td><td>모르면 상한이 높다</td><td>모르면 분포가 넓어 가끔 높게 뽑힌다</td></tr>
+<tr><td>튜닝</td><td>c</td><td>사전분포 (보통 Beta(1,1))</td></tr>
+<tr><td>이론</td><td>O(log T)</td><td>O(log T), 상수까지 Lai–Robbins 하한에 맞음</td></tr>
+<tr><td>실전</td><td>좋음</td><td>보통 UCB보다 좋거나 비슷 (Chapelle &#x26; Li, 2011)</td></tr>
+</tbody></table></div>
+<p>공통점: <b>불확실할수록 더 탐험한다.</b> UCB는 보너스 항으로, Thompson은 분포의 폭으로 구현한다.</p>
+<ul>
+<li><b>장점</b>: 튜닝할 c가 없다 / 연속 보상(Gaussian), context(Bayesian 선형회귀)로 확장이 쉽다 / 무작위성 덕분에 지연·배치 피드백에 강하다.</li>
+<li><b>단점</b>: 사후분포를 계산할 수 있어야 한다. 신경망에서는 근사가 필요하다.</li>
+</ul>
+<h3 id="sec-12">이후와의 연결</h3>
+<ul>
+<li>딥RL 탐험: 네트워크 <b>앙상블</b>에서 하나를 뽑아 행동 (Bootstrapped DQN, 07)</li>
+</ul>
+<div class="robot"><b>🤖 로보틱스 연결</b> · 제어기 게인/보행 파라미터 튜닝은 <b>팔이 연속인 bandit</b>이다. GP 사후분포 + UCB/Thompson = <b>Bayesian optimization</b>으로, 실로봇에서 적은 시도로 파라미터를 찾을 때 실제로 쓴다. Model-based 로봇 학습(10)의 PETS도 동역학 모델 앙상블에서 샘플해서 계획한다.</div>
+</section>
+
+<section>
+<h2 id="s10"><span class="num">10</span>전체 정리 &#x26; 비교 실험</h2>
+<div class="table-wrap"><table>
+<tbody><tr><th>전략</th><th>탐험 방식</th><th>regret</th><th>한 줄</th></tr>
+<tr><td>Greedy</td><td>없음</td><td>선형</td><td>초반 운에 갇힘</td></tr>
+<tr><td>ε-greedy</td><td>무작위 (방향 없음)</td><td>선형 (고정 ε)</td><td>간단하지만 나쁜 걸 알아도 계속 고름</td></tr>
+<tr><td>UCB</td><td>불확실성 보너스 (낙관)</td><td>O(log T)</td><td>포텐 상한이 제일 높은 놈</td></tr>
+<tr><td>Thompson</td><td>사후분포 샘플링</td><td>O(log T)</td><td>최적일 확률만큼 고르기</td></tr>
+</tbody></table></div>
+<figure>
+<div class="legend">
+<span><i style="background:var(--s1)"></i>Greedy</span>
+<span><i style="background:var(--s2)"></i>ε-greedy (ε=0.1)</span>
+<span><i style="background:var(--s3)"></i>UCB (c는 슬라이더)</span>
+<span><i style="background:var(--s4)"></i>Thompson</span>
+</div>
+<svg aria-label="10개 기계 bandit에서 네 알고리즘의 평균 누적 regret 곡선 비교" id="regSvg" role="img" viewBox="0 0 720 320"></svg>
+<div class="tip" id="regTip"></div>
+<div class="control">
+<label for="regC">UCB의 c</label>
+<input id="regC" max="2" min="0.1" step="0.01" type="range" value="0.5">
+<output id="regCOut">0.50</output>
+<button class="btn" id="regCTheory" type="button">c = √2 (이론값)</button>
+</div>
+<div class="control">
+<button class="btn" id="regRun" type="button">다시 실행 (새 시드)</button>
+<span class="hint" id="regStatus"></span>
+</div>
+<figcaption><b>그림 12.</b> 기계 10대(당첨 확률은 매 실행 0.05~0.95에서 랜덤), T = 5000, 100번 반복 평균. 이 페이지에서 직접 계산한 결과다. Greedy와 ε-greedy는 직선으로 계속 오르고, UCB(c = 0.5)와 Thompson은 로그로 눕는다. <b>c를 이론값 √2로 바꿔 보자</b>: 기울기는 계속 줄어들지만(로그) 초반 과탐험 때문에 T = 5000에서도 총 regret이 greedy, ε-greedy보다 크다(약 280). 이론값은 "어떤 bandit에서도 성립하는 보장"용이라 넉넉하게 잡혀 있고, 실전에서는 튜닝한다는 Q9의 내용이 이것이다. Python 구현은 <code>lab/</code>에서 직접 해본다.</figcaption>
+</figure>
+<div class="callout green">
+<b>꼭 가져갈 세 가지</b>
+<ol>
+<li>증분 업데이트 <code>Q ← Q + α(target − Q)</code>는 끝까지 반복되는 뼈대다. 바뀌는 건 target뿐이다.</li>
+<li>좋은 탐험 = 불확실성에 따른 탐험. MDP, 딥RL, 로봇 학습까지 계속 같은 문제로 돌아온다.</li>
+<li>bandit에는 상태 전이가 없다. 행동이 다음 상태를 바꾸는 순간 MDP가 된다 → <b>02 MDP &#x26; Bellman 방정식</b></li>
+</ol>
+</div>
+</section>
+
+<section>
+<h2 id="quiz"><span class="num">?</span>확인 문제</h2>
+<p class="hint">답을 먼저 떠올려 본 뒤 펼쳐보자.</p>
+<details class="quiz">
+<summary><span class="qn">문제 1</span><span class="qt">ε = 0.1, k = 10일 때, 최적 팔을 완벽히 알아낸 뒤에도 생기는 스텝당 평균 regret은?</span></summary>
+<div class="ans"><p>확률 ε로 k개 중 무작위 → 스텝당 regret = ε · (1/k)Σ<sub>a</sub>Δ<sub>a</sub> = 0.1 · Δ̄ (Δ̄: 최적 팔 포함 k개 팔의 평균 gap). 상수이므로 T번이면 선형으로 쌓인다.</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">문제 2</span><span class="qt">고정 α 업데이트에서 i번째 보상의 가중치는? Robbins–Monro 조건은 왜 필요한가?</span></summary>
+<div class="ans"><p>가중치 α(1−α)<sup>n−i</sup>로 오래될수록 지수적으로 감소한다. Σα = ∞는 초기값의 영향을 지우고 어디로든 갈 수 있게, Σα² &#x3C; ∞는 보폭이 줄어 노이즈가 사라지게 한다. 고정 α는 두 번째를 어겨 수렴하지 않지만 nonstationary를 따라간다 (그림 5).</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">문제 3</span><span class="qt">UCB에서 N(a) = 0이면 어떻게 하나? 보너스를 √(t/N)으로 바꾸면?</span></summary>
+<div class="ans"><p>모든 팔을 한 번씩 먼저 당긴다. √(t/N)은 보너스가 너무 빨리 커져 과탐험 → regret이 log가 아니라 다항식으로 커진다.</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">문제 4</span><span class="qt">보상 범위가 [−100, 0]인 로봇 문제에 UCB1을 쓰려면?</span></summary>
+<div class="ans"><p>Hoeffding의 범위 항 때문에 보너스를 범위 폭(100)배 키우거나, 보상을 [0, 1]로 정규화한다.</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">문제 5</span><span class="qt">로봇 문제 하나를 bandit으로 모델링하고, "상태가 없다"는 가정이 어디서 깨지는지 말해보라.</span></summary>
+<div class="ans"><p>예: grasp 후보 5개 중 선택. 물체 위치·자세가 매번 바뀌면 상황(context)이 생겨 contextual bandit이 되고, 이전 grasp 실패가 물체를 밀어 다음 상황을 바꾸면 MDP가 된다.</p></div>
+</details>
+</section>
+
+<section>
+<h2 id="qa"><span class="num">Q&#x26;A</span>질문 &#x26; 답변</h2>
+<div class="qa-tools">
+<p class="hint">공부하면서 직접 했던 질문들. 답을 먼저 떠올려 본 뒤 펼쳐보자.</p>
+<button id="toggleAll" type="button">모두 펼치기</button>
+</div>
+<details class="qa">
+<summary><span class="qn">Q1</span><span class="qt">bandit이 뭔지 잘 모르겠어.<span class="stage">04 · Bandit이란</span></span></summary>
+<div class="ans"><ul>
+<li>이름은 슬롯머신의 별명 "one-armed bandit(외팔이 강도)"에서 왔다. 팔이 여러 개면 multi-armed bandit.</li>
+<li>설정: 보상 분포를 모르는 슬롯머신 k대. 매 라운드 하나를 골라 당기고 보상을 받는다. T라운드 동안 누적 보상을 최대화한다.</li>
+<li>핵심 난점: <b>고른 기계의 결과만 보인다</b> → 좋아 보이는 걸 계속 쓸지(exploitation), 덜 해본 걸 알아볼지(exploration).</li>
+<li>실제 예: A/B 테스트, 임상시험 배정, 광고/추천, 로봇 grasp 후보 선택, 제어기 하이퍼파라미터 선택.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q2</span><span class="qt">마르코프 체인 같은 내용은 안 해도 돼?<span class="stage">04 · Bandit이란</span></span></summary>
+<div class="ans"><ul>
+<li>한다. 02에서 Markov chain → MRP → MDP 순서로 쌓는다.</li>
+<li>bandit은 상태가 하나뿐인 특수한 MDP라 상태 전이가 없고, Markov 성질을 따질 필요가 없다. 그래서 탐험 문제만 따로 보려고 먼저 다룬다.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q3</span><span class="qt">증분 업데이트를 더 설명해줘. target이 뭐야? 도달하려는 목표 점이야?<span class="stage">05 · 증분 업데이트</span></span></summary>
+<div class="ans"><ul>
+<li><b>진짜 목표 점</b>은 q*(a) = E[R|a]다. 알 수 없다.</li>
+<li><b>target</b>은 이번 스텝에 관측한 R<sub>n</sub>이다. q*의 noisy 샘플이자 기댓값이 q*인 "흔들리는 과녁"이다. 이번 업데이트에서 Q를 그쪽으로 조금 끌어당긴다. → <a href="#s5">그림 5</a></li>
+<li>표본평균을 정리하면 그대로 나온다: Q<sub>n+1</sub> = Q<sub>n</sub> + (1/n)(R<sub>n</sub> − Q<sub>n</sub>).</li>
+<li>SGD 관점: L = ½(R − Q)²의 경사하강. 기대 업데이트가 0인 점이 Q = q*.</li>
+<li>이후 섹션에서는 target만 바뀐다: MC는 G<sub>t</sub>, TD는 R + γV(s'), Q-learning은 R + γ max Q(s',·).</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q4</span><span class="qt">regret은 후회 같은 거야? 나쁜 선택 횟수에 gap은 왜 곱해?<span class="stage">06 · Regret</span></span></summary>
+<div class="ans"><ul>
+<li>그렇다. "처음부터 최적 팔을 알았다면 받았을 기대 보상 − 실제로 받은 기대 보상".</li>
+<li>실수마다 손해 크기가 다르다. 한 번 잘못 고를 때 손해가 Δ<sub>a</sub>이니 <b>횟수 × gap = 총 손해</b>. → <a href="#s6">그림 6</a></li>
+<li>예: 최적 0.70일 때 B(0.69)를 100번 → 손해 1.0, C(0.10)를 10번 → 손해 6.0. 횟수만 세면 잘못된 결론이 나온다.</li>
+<li>기댓값 q*로 계산하는 이유: 운을 실력으로 치지 않기 위해서.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q5</span><span class="qt">팔을 당긴다는 게 마르코프 체인에서 다음 state를 결정하는 거야?<span class="stage">04 · bandit vs MDP</span></span></summary>
+<div class="ans"><ul>
+<li>아니다. bandit에서 팔을 당기면 <b>보상만</b> 결정된다. 다음 라운드도 같은 기계, 같은 분포다.</li>
+<li>MDP에서는 행동이 보상과 다음 상태 p(s'|s,a)를 함께 바꾼다. → <a href="#s4">그림 4</a></li>
+<li>계층: Markov chain(상태 전이만) → MRP(+보상) → MDP(+행동). bandit은 상태가 1개이고 모든 행동이 제자리로 돌아오는 MDP다.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q6</span><span class="qt">평균을 내면 확률을 알게 되고, 알고리즘마다 target과 당기는 식이 다른 거지? regret은 썩은 머신을 빨리 버리게 해주는 거고? MDP는 행동과 보상이 다음 상태를 바꾸니 밴딧머신의 확률이 바뀌는 거야?<span class="stage">이해 확인</span></span></summary>
+<div class="ans"><ul>
+<li>첫 번째는 맞다. 다만 bandit 알고리즘은 <b>① 추정</b>(Q 갱신, target)과 <b>② 선택 규칙</b>으로 나뉜다. bandit에서는 ①이 거의 같고(target = R) ②가 다르다. target이 달라지는 건 MDP부터다.</li>
+<li>regret은 알고리즘이 쓰는 도구가 아니라 <b>채점하는 성적표</b>다. μ*를 모르니 알고리즘은 계산할 수 없다. "썩은 머신을 빨리 버리고 운빨을 가려내는" 건 UCB/TS가 불확실성을 정량화해서 하는 일이고, 그렇게 하는 알고리즘의 regret이 낮게 나온다.</li>
+<li>MDP: 다음 상태를 바꾸는 건 보상이 아니라 <b>(현재 상태, 행동)</b>이다. "확률이 바뀐다"보다 <b>"내 행동 때문에 다른 방으로 이동하고, 방마다 기계와 확률이 다르다"</b>가 정확하다.</li>
+</ul>
+<div class="table-wrap"><table>
+<tbody><tr><th>상황</th><th>이름</th></tr>
+<tr><td>확률이 내 행동과 무관하게 시간에 따라 변함 (마모)</td><td>nonstationary bandit</td></tr>
+<tr><td>방이 바뀌지만 내 행동 때문이 아님 (손님마다 다른 상황)</td><td>contextual bandit</td></tr>
+<tr><td>방이 내 행동 때문에 바뀜</td><td><b>MDP</b></td></tr>
+</tbody></table></div></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q7</span><span class="qt">regret은 강화학습이 다 끝난 뒤의 사후평가 같은 거야? 정답(결과)을 알아야 하는 거 아냐?<span class="stage">06 · Regret</span></span></summary>
+<div class="ans"><ul>
+<li>맞다. 정답 μ*를 알아야 하므로 <b>에이전트 자신은 절대 계산할 수 없다.</b></li>
+<li>다만 "끝난 뒤에만"은 아니다. 정답을 아는 실험자는 시뮬레이션 중 매 스텝 누적 regret을 기록해 곡선으로 그린다. 곡선 모양(직선 vs 로그)이 알고리즘의 성질을 보여준다. → <a href="#s10">그림 12</a></li>
+<li>쓰임: ① 실행 전 이론적 보장 ② 시뮬레이션 실험 평가 ③ 실제 배포에서는 계산 불가 → 대리 지표.</li>
+<li>딥RL 실험은 보통 return 곡선을 보고하고, regret은 주로 이론 논문에서 쓴다.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q8</span><span class="qt">MDP는 상태에서 행동하면 보상을 받고, 누적하면서 다음 방(처음 보는 선택지)으로 가서 또 행동하는 느낌이야?<span class="stage">04 · bandit vs MDP</span></span></summary>
+<div class="ans"><ul>
+<li>흐름은 맞다: 상태 → 행동 → (보상, 다음 상태) → 반복. 할인된 보상 합 G가 최대화 대상이다.</li>
+<li>수정 ①: 방은 <b>다시 방문</b>된다. 같은 칸, 같은 자세로 돌아오고 에피소드도 반복한다. 그래서 방 s에서 배운 걸 다시 왔을 때 쓸 수 있고, 학습이 가능하다.</li>
+<li>수정 ②: 레버(행동 집합)는 보통 어느 방이나 같고, 결과(보상, 다음 방)가 방마다 다르다.</li>
+<li>수정 ③: 누적 보상은 점수판에 쌓일 뿐 다음 방을 바꾸지 않는다. 다음 방은 (s, a)로만 정해진다.</li>
+<li>🤖 로봇의 연속 상태 공간에서는 정확히 같은 상태를 다시 볼 일이 거의 없다 → "비슷한 방은 비슷하다"는 일반화(함수 근사, 06)가 필요하다.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q9</span><span class="qt">탐험 강도 c가 이론적으로 √2인 이유가 있어?<span class="stage">08 · UCB</span></span></summary>
+<div class="ans"><ul>
+<li>Hoeffding 신뢰구간 u = √(ln(1/δ)/2N)에서 δ = t⁻⁴로 잡으면 u = √(2 ln t / N) → c = √2.</li>
+<li>t⁻⁴는 최적이라서가 아니라 <b>증명용</b>이다. 신뢰구간이 틀릴 확률을 모든 (t, N)에 대해 합해도(union bound) 유한한 상수여야 regret 증명이 된다.</li>
+<li>보상 범위 [0,1] 가정이다. [a,b]면 (b−a)배. 실전에서는 c를 튜닝하고, √2보다 작게 써도 대체로 잘 된다.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q10</span><span class="qt">UCB는 진짜 좋은지 구린지 판단하는 누적 지표네? 높은 놈은 포텐이 있으니 까보고, 낮은 놈은 포텐이 없다는 느낌?<span class="stage">08 · UCB</span></span></summary>
+<div class="ans"><ul>
+<li>거의 맞다. UCB = "최대로 잡으면 이만큼 좋을 수 있다"는 낙관적 상한, 즉 <b>포텐</b>이다.</li>
+<li>주의: UCB가 높은 이유는 <b>진짜 좋거나, 아직 몰라서</b> 둘 중 하나다. 낮다는 건 충분히 봤는데도 낮다, 즉 나쁘다고 확인됐다는 뜻이다.</li>
+<li>Q, N은 누적되지만 ln t는 매 스텝 커진다. 오래 안 고른 기계는 가만히 있어도 UCB가 서서히 올라간다. 매 스텝 다시 계산하는 점수다. → <a href="#s8">그림 8</a></li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q11</span><span class="qt">regret과 이어서 볼 때 gap이 뭐였지? gap의 크고 작음과 UCB, 로그 regret이 잘 연결이 안 돼.<span class="stage">08 · UCB · Regret</span></span></summary>
+<div class="ans"><ul>
+<li>gap Δ<sub>a</sub> = μ* − q*(a): 기계 a를 한 번 고를 때마다 생기는 손해. 진짜 값으로 정의되므로 알고리즘은 모른다.</li>
+<li>연결: UCB가 기계 a를 버리려면 a의 상한이 μ* 아래로 내려가야 한다 → 보너스 &#x3C; Δ<sub>a</sub> → N > 2 ln t / Δ<sub>a</sub>². gap이 작을수록 신뢰구간이 좁아야 하니 많이 당긴다. → <a href="#s8">그림 9</a></li>
+<li>regret 기여 = Δ × N ≈ ln T / Δ → 총 regret = Σ ln T / Δ<sub>a</sub> = O(log T).</li>
+<li>의미: T가 1000배 늘어도 ln T는 2배만 는다. 스텝당 손해가 0으로 간다. 고정 ε-greedy는 실수가 T에 비례한다.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q12</span><span class="qt">그러면 regret은 RL 전체를 돌린 후의 평가 지표야? 리워드 합 곡선 보고 "여기서 수렴하네" 하는 것처럼?<span class="stage">06 · Regret</span></span></summary>
+<div class="ans"><ul>
+<li>맞다. 실험자가 학습 과정 전체를 곡선으로 그려 평가하는 지표다.</li>
+<li>보상 곡선과 같은 정보를 다르게 본 것이다. 스텝별 regret = 최적선과 보상 곡선 사이의 높이, 누적 regret = 그 넓이. → <a href="#s6">그림 7</a></li>
+<li>보상 곡선은 "지금 얼마나 잘하나", 누적 regret은 "잘하게 될 때까지 얼마나 손해 봤나(학습 비용)". 최종 성능이 같아도 늦게 도달한 알고리즘은 regret이 크다.</li>
+<li>🤖 실로봇처럼 학습 중 실수가 실제 비용이면 regret 관점이 중요하다.</li>
+</ul></div>
+</details>
+</section>
+<section>
+<h2 id="check"><span class="num">✓</span>헷갈렸던 개념</h2>
+<ul class="checklist">
+<li><b>bandit</b>: 보상 분포를 모르는 슬롯머신 여러 대에서 고르기. 고른 것의 결과만 보인다. <span class="ref">Q1</span></li>
+<li><b>target vs 목표</b>: 목표는 진짜 평균 q*, target은 그 noisy 샘플인 흔들리는 과녁. <span class="ref">Q3</span></li>
+<li><b>알고리즘의 두 부품</b>: 추정(target) + 선택 규칙. bandit에서는 선택 규칙이 차이다. <span class="ref">Q6</span></li>
+<li><b>regret = 성적표</b>: 정답을 아는 바깥 사람만 계산한다. 학습 신호가 아니다. 누적 regret = 최적선과 보상 곡선 사이 넓이. <span class="ref">Q6 · Q7 · Q12</span></li>
+<li><b>gap</b>: 한 번 잘못 고를 때의 손해. regret = Σ 횟수 × gap. <span class="ref">Q4 · Q11</span></li>
+<li><b>bandit vs MDP</b>: 다음 상태를 바꾸는 건 보상이 아니라 행동. 방은 재방문된다. <span class="ref">Q5 · Q6 · Q8</span></li>
+<li><b>UCB = 포텐</b>: 높은 이유는 "좋거나 모르거나". 보너스 &#x3C; gap이 될 때까지 당김 → 로그 regret. <span class="ref">Q10 · Q11</span></li>
+<li><b>c = √2</b>: Hoeffding + δ = t⁻⁴에서 나온 증명용 값. 실전은 튜닝. <span class="ref">Q9</span></li>
+</ul>
+</section>
+<section>
+<h2 id="refs"><span class="num">📚</span>더 읽을거리</h2>
+<ul class="refs">
+<li>Sutton &#x26; Barto, <i>Reinforcement Learning: An Introduction</i> (2nd ed.), Ch. 1–2</li>
+<li>Lattimore &#x26; Szepesvári, <i>Bandit Algorithms</i> (2020): bandit 이론의 표준 교재</li>
+<li>Auer, Cesa-Bianchi, Fischer, "Finite-time Analysis of the Multiarmed Bandit Problem" (2002): UCB1</li>
+<li>Lai &#x26; Robbins, "Asymptotically Efficient Adaptive Allocation Rules" (1985): 하한</li>
+<li>Russo et al., "A Tutorial on Thompson Sampling" (2018)</li>
+<li>Chapelle &#x26; Li, "An Empirical Evaluation of Thompson Sampling" (NeurIPS 2011)</li>
+<li>Agrawal &#x26; Goyal, "Analysis of Thompson Sampling for the Multi-armed Bandit Problem" (COLT 2012)</li>
+</ul>
+</section>
+
+<script>
+(function () {
+  const NS = 'http://www.w3.org/2000/svg';
+  function el(parent, tag, attrs, text) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text !== undefined) e.textContent = text;
+    parent.appendChild(e);
+    return e;
+  }
+  function clear(svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); }
+
+  // ---------- RNG & distributions ----------
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function normal(r) {
+    let u = 0; while (u === 0) u = r();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r());
+  }
+  function gamma(k, r) { // Marsaglia–Tsang, k >= 1
+    const d = k - 1 / 3, c = 1 / Math.sqrt(9 * d);
+    for (;;) {
+      const x = normal(r); let v = 1 + c * x;
+      if (v <= 0) continue;
+      v = v * v * v;
+      const u = r();
+      if (u < 1 - 0.0331 * x * x * x * x) return d * v;
+      if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+    }
+  }
+  function betaSample(a, b, r) { const x = gamma(a, r), y = gamma(b, r); return x / (x + y); }
+  function lgamma(z) { // Lanczos
+    const g = 7, c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313,
+      -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+    if (z < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * z)) - lgamma(1 - z);
+    z -= 1; let x = c[0];
+    for (let i = 1; i < g + 2; i++) x += c[i] / (z + i);
+    const t = z + g + 0.5;
+    return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+  }
+  function betaPdf(x, a, b) {
+    return Math.exp((a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x) + lgamma(a + b) - lgamma(a) - lgamma(b));
+  }
+  const pathOf = pts => pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+
+  // ---------- generic crosshair tooltip for line charts ----------
+  function attachCrosshair(svg, tip, x0, x1, y0, y1, nMax, xToN, render) {
+    const cross = el(svg, 'line', { y1: y0, y2: y1, stroke: 'var(--muted)', 'stroke-dasharray': '3 3', visibility: 'hidden' });
+    const hit = el(svg, 'rect', { x: x0, y: y0, width: x1 - x0, height: y1 - y0, fill: 'transparent' });
+    function move(evt) {
+      const pt = svg.createSVGPoint(); pt.x = evt.clientX; pt.y = evt.clientY;
+      const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+      const n = Math.max(1, Math.min(nMax, xToN(p.x)));
+      const cx = render.xOf(n);
+      cross.setAttribute('x1', cx); cross.setAttribute('x2', cx); cross.setAttribute('visibility', 'visible');
+      tip.innerHTML = render.html(n);
+      tip.style.display = 'block';
+      const fig = svg.parentNode.getBoundingClientRect();
+      const sr = svg.getBoundingClientRect();
+      const px = sr.left - fig.left + (cx / 720) * sr.width;
+      const left = px + 12 + tip.offsetWidth > fig.width ? px - tip.offsetWidth - 12 : px + 12;
+      tip.style.left = left + 'px';
+      tip.style.top = (sr.top - fig.top + 16) + 'px';
+    }
+    function leave() { cross.setAttribute('visibility', 'hidden'); tip.style.display = 'none'; }
+    hit.addEventListener('pointermove', move);
+    hit.addEventListener('pointerleave', leave);
+  }
+  function key(color) { return '<span class="k" style="background:' + color + '"></span>'; }
+
+  // ---------- Figure 5: incremental update ----------
+  const incSvg = document.getElementById('incSvg');
+  const incTip = document.getElementById('incTip');
+  const alphaSlider = document.getElementById('alphaSlider');
+  const alphaOut = document.getElementById('alphaOut');
+  const nonstat = document.getElementById('nonstat');
+  let incSeed = 7;
+  const NI = 300, IX0 = 50, IX1 = 640, IY0 = 20, IY1 = 250;
+  const ixOf = n => IX0 + (IX1 - IX0) * n / NI;
+  const iyOf = v => IY1 - (IY1 - IY0) * v;
+  function drawInc() {
+    const alpha = +alphaSlider.value;
+    alphaOut.textContent = alpha.toFixed(2);
+    const r = mulberry32(incSeed);
+    const qs = [], R = [], avg = [], fix = [];
+    let qa = 0, qf = 0;
+    for (let n = 1; n <= NI; n++) {
+      const q = nonstat.checked && n > 150 ? 0.2 : 0.7;
+      const x = r() < q ? 1 : 0;
+      qa += (x - qa) / n; qf += alpha * (x - qf);
+      qs.push(q); R.push(x); avg.push(qa); fix.push(qf);
+    }
+    clear(incSvg);
+    [0, 0.25, 0.5, 0.75, 1].forEach(v => {
+      el(incSvg, 'line', { x1: IX0, x2: IX1, y1: iyOf(v), y2: iyOf(v), class: 'grid' });
+      el(incSvg, 'text', { x: IX0 - 8, y: iyOf(v) + 4, 'text-anchor': 'end', class: 'mut small mono' }, v.toFixed(2));
+    });
+    [0, 50, 100, 150, 200, 250, 300].forEach(n => el(incSvg, 'text', { x: ixOf(n), y: IY1 + 18, 'text-anchor': 'middle', class: 'mut small mono' }, n));
+    el(incSvg, 'text', { x: IX1, y: IY1 + 34, 'text-anchor': 'end', class: 'mut small' }, '당긴 횟수 n →');
+    R.forEach((x, i) => el(incSvg, 'circle', { cx: ixOf(i + 1), cy: iyOf(x) + (x ? -5 : 5), r: 1.6, fill: 'var(--muted)', 'fill-opacity': .45 }));
+    el(incSvg, 'path', { d: pathOf(qs.map((q, i) => [ixOf(i + 1), iyOf(q)])), fill: 'none', stroke: 'var(--muted)', 'stroke-width': 1.5, 'stroke-dasharray': '5 4' });
+    el(incSvg, 'path', { d: pathOf(fix.map((q, i) => [ixOf(i + 1), iyOf(q)])), fill: 'none', stroke: 'var(--s2)', 'stroke-width': 2 });
+    el(incSvg, 'path', { d: pathOf(avg.map((q, i) => [ixOf(i + 1), iyOf(q)])), fill: 'none', stroke: 'var(--s1)', 'stroke-width': 2 });
+    // direct labels (avoid overlap)
+    const labs = [{ y: iyOf(avg[NI - 1]), t: '표본평균 ' + avg[NI - 1].toFixed(2) }, { y: iyOf(fix[NI - 1]), t: 'α ' + fix[NI - 1].toFixed(2) }, { y: iyOf(qs[NI - 1]), t: 'q* ' + qs[NI - 1] }];
+    labs.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < labs.length; i++) if (labs[i].y - labs[i - 1].y < 14) labs[i].y = labs[i - 1].y + 14;
+    labs.forEach(l => el(incSvg, 'text', { x: IX1 + 6, y: l.y + 4, class: 'small' }, l.t));
+    attachCrosshair(incSvg, incTip, IX0, IX1, IY0, IY1, NI, x => Math.round((x - IX0) / (IX1 - IX0) * NI), {
+      xOf: ixOf,
+      html: n => 'n = <b>' + n + '</b> · 보상 R = <b>' + R[n - 1] + '</b><br>' +
+        key('var(--s1)') + '표본평균 <b>' + avg[n - 1].toFixed(3) + '</b><br>' +
+        key('var(--s2)') + '고정 α <b>' + fix[n - 1].toFixed(3) + '</b><br>' +
+        key('var(--muted)') + 'q* <b>' + qs[n - 1] + '</b>'
+    });
+  }
+  alphaSlider.addEventListener('input', drawInc);
+  nonstat.addEventListener('change', drawInc);
+  document.getElementById('incNew').addEventListener('click', () => { incSeed = (Math.random() * 1e9) | 0; drawInc(); });
+  drawInc();
+
+  // ---------- shared 3-arm bandit for UCB / TS ----------
+  const ARMS = ['A', 'B', 'C'];
+  const TRUE = [0.62, 0.40, 0.55];
+  const BEST = Math.max(...TRUE);
+  const COLORS = ['var(--s1)', 'var(--s2)', 'var(--s3)'];
+
+  // ---------- Figure 8: UCB ----------
+  const ucbSvg = document.getElementById('ucbSvg');
+  const cSlider = document.getElementById('cSlider');
+  const cOut = document.getElementById('cOut');
+  const ucbTruth = document.getElementById('ucbTruth');
+  const ucbReadout = document.getElementById('ucbReadout');
+  const ucbR = mulberry32(42);
+  let U;
+  function ucbResetState() { U = { Q: [0, 0, 0], N: [0, 0, 0], t: 0, regret: 0, last: -1 }; }
+  function ucbScores() {
+    const c = +cSlider.value;
+    return U.N.map((n, a) => n === 0 ? Infinity : U.Q[a] + c * Math.sqrt(Math.log(Math.max(U.t, 1)) / n));
+  }
+  function ucbNext() {
+    const s = ucbScores(); let best = 0;
+    for (let a = 1; a < 3; a++) if (s[a] > s[best]) best = a;
+    return best;
+  }
+  function ucbStep(k) {
+    for (let i = 0; i < k; i++) {
+      const a = ucbNext();
+      U.t += 1;
+      const x = ucbR() < TRUE[a] ? 1 : 0;
+      U.N[a] += 1; U.Q[a] += (x - U.Q[a]) / U.N[a];
+      U.regret += BEST - TRUE[a]; U.last = a;
+    }
+    drawUcb();
+  }
+  const UX0 = 70, UX1 = 640, UMAX = 2;
+  const uxOf = v => UX0 + (UX1 - UX0) * Math.min(v, UMAX) / UMAX;
+  function drawUcb() {
+    cOut.textContent = (+cSlider.value).toFixed(2);
+    const s = ucbScores(), next = ucbNext();
+    clear(ucbSvg);
+    [0, 0.5, 1, 1.5, 2].forEach(v => {
+      el(ucbSvg, 'line', { x1: uxOf(v), x2: uxOf(v), y1: 20, y2: 215, class: 'grid' });
+      el(ucbSvg, 'text', { x: uxOf(v), y: 232, 'text-anchor': 'middle', class: 'mut small mono' }, v.toFixed(1));
+    });
+    el(ucbSvg, 'text', { x: UX1, y: 248, 'text-anchor': 'end', class: 'mut small' }, '값 (2.0 이상은 잘림)');
+    for (let a = 0; a < 3; a++) {
+      const y = 30 + a * 64;
+      el(ucbSvg, 'text', { x: 20, y: y + 24, class: 'bold' }, ARMS[a]);
+      const q = U.Q[a], top = s[a];
+      // bonus segment
+      el(ucbSvg, 'rect', { x: uxOf(q), y: y + 8, width: Math.max(0, uxOf(top) - uxOf(q)), height: 26, fill: COLORS[a], 'fill-opacity': .28, rx: 4 });
+      // Q bar
+      el(ucbSvg, 'rect', { x: UX0, y: y + 8, width: Math.max(0, uxOf(q) - UX0), height: 26, fill: COLORS[a], rx: 4 });
+      // UCB cap
+      el(ucbSvg, 'line', { x1: uxOf(top), x2: uxOf(top), y1: y + 2, y2: y + 40, stroke: 'var(--fg)', 'stroke-width': 2 });
+      if (a === next) el(ucbSvg, 'rect', { x: UX0 - 4, y: y + 2, width: uxOf(top) - UX0 + 8, height: 38, fill: 'none', stroke: 'var(--warm)', 'stroke-width': 2.5, rx: 6 });
+      if (ucbTruth.checked) {
+        el(ucbSvg, 'line', { x1: uxOf(TRUE[a]), x2: uxOf(TRUE[a]), y1: y, y2: y + 42, stroke: 'var(--green)', 'stroke-width': 2, 'stroke-dasharray': '3 2' });
+        el(ucbSvg, 'text', { x: uxOf(TRUE[a]), y: y - 2, 'text-anchor': 'middle', class: 'small', style: 'fill:var(--green)' }, 'q*=' + TRUE[a]);
+      }
+      const ucbTxt = top === Infinity ? '∞ (아직 안 당김)' : top.toFixed(2);
+      el(ucbSvg, 'text', { x: UX1 + 8, y: y + 18, class: 'small mono' }, 'N=' + U.N[a]);
+      el(ucbSvg, 'text', { x: UX1 + 8, y: y + 34, class: 'small mono' }, 'Q=' + q.toFixed(2));
+      el(ucbSvg, 'text', { x: uxOf(Math.min(top, UMAX)) - 6, y: y + 54, 'text-anchor': top >= 1.8 ? 'end' : 'start', class: 'small mut' }, 'UCB ' + ucbTxt + (a === next ? '  ← 다음 선택' : ''));
+    }
+    ucbReadout.textContent = 't = ' + U.t + ' · 마지막으로 당긴 기계: ' + (U.last < 0 ? '-' : ARMS[U.last]) + ' · 누적 regret(정답 기준) = ' + U.regret.toFixed(2);
+  }
+  document.querySelectorAll('[data-ucb]').forEach(b => b.addEventListener('click', () => ucbStep(+b.dataset.ucb)));
+  document.getElementById('ucbReset').addEventListener('click', () => { ucbResetState(); drawUcb(); });
+  document.getElementById('ucbPreset').addEventListener('click', () => {
+    U = { Q: [0.60, 0.40, 0.55], N: [80, 5, 15], t: 100, regret: 5 * (BEST - TRUE[1]) + 15 * (BEST - TRUE[2]), last: -1 };
+    cSlider.value = 1.41; drawUcb();
+  });
+  cSlider.addEventListener('input', drawUcb);
+  ucbTruth.addEventListener('change', drawUcb);
+  document.getElementById('ucbPreset').click();
+
+  // ---------- Figure 10: TS example Beta(9,3) vs Beta(2,2) ----------
+  const tsExSvg = document.getElementById('tsExSvg');
+  const tsExReadout = document.getElementById('tsExReadout');
+  const exR = mulberry32(11);
+  const EX = [[9, 3], [2, 2]];
+  const EX0 = 50, EX1 = 670, EY0 = 20, EY1 = 190;
+  const exX = v => EX0 + (EX1 - EX0) * v;
+  let exMax = 0;
+  for (let i = 1; i < 200; i++) EX.forEach(p => { exMax = Math.max(exMax, betaPdf(i / 200, p[0], p[1])); });
+  const exY = v => EY1 - (EY1 - EY0) * v / (exMax * 1.1);
+  function drawTsEx(samples) {
+    clear(tsExSvg);
+    el(tsExSvg, 'line', { x1: EX0, x2: EX1, y1: EY1, y2: EY1, class: 'axis' });
+    [0, 0.25, 0.5, 0.75, 1].forEach(v => el(tsExSvg, 'text', { x: exX(v), y: EY1 + 18, 'text-anchor': 'middle', class: 'mut small mono' }, v));
+    el(tsExSvg, 'text', { x: EX1, y: EY1 + 34, 'text-anchor': 'end', class: 'mut small' }, '진짜 당첨 확률 θ에 대한 믿음 →');
+    EX.forEach((p, k) => {
+      const pts = [];
+      for (let i = 1; i < 200; i++) pts.push([exX(i / 200), exY(betaPdf(i / 200, p[0], p[1]))]);
+      el(tsExSvg, 'path', { d: pathOf(pts), fill: 'none', stroke: COLORS[k], 'stroke-width': 2 });
+    });
+    el(tsExSvg, 'text', { x: exX(0.75), y: exY(betaPdf(0.8, 9, 3)) - 12, 'text-anchor': 'middle', class: 'small' }, 'A: 뾰족 (많이 앎)');
+    el(tsExSvg, 'text', { x: exX(0.3), y: exY(betaPdf(0.3, 2, 2)) - 8, 'text-anchor': 'middle', class: 'small' }, 'B: 넓음 (잘 모름)');
+    if (samples) {
+      samples.forEach((v, k) => {
+        el(tsExSvg, 'line', { x1: exX(v), x2: exX(v), y1: EY0, y2: EY1, stroke: COLORS[k], 'stroke-width': 1.5, 'stroke-dasharray': '4 3' });
+        el(tsExSvg, 'circle', { cx: exX(v), cy: EY1, r: 6, fill: COLORS[k], stroke: 'var(--surface)', 'stroke-width': 2 });
+      });
+    }
+  }
+  document.getElementById('tsExOne').addEventListener('click', () => {
+    const a = betaSample(9, 3, exR), b = betaSample(2, 2, exR);
+    drawTsEx([a, b]);
+    tsExReadout.textContent = 'A 샘플 ' + a.toFixed(3) + ' vs B 샘플 ' + b.toFixed(3) + ' → ' + (a > b ? 'A를 당긴다' : 'B를 당긴다 (탐험!)');
+  });
+  document.getElementById('tsExMany').addEventListener('click', () => {
+    let win = 0; const n = 1000;
+    for (let i = 0; i < n; i++) if (betaSample(2, 2, exR) > betaSample(9, 3, exR)) win++;
+    drawTsEx(null);
+    tsExReadout.textContent = '1000번 중 B가 이긴 횟수: ' + win + ' (' + (win / 10).toFixed(1) + '%) → 이 비율만큼 B를 탐험한다';
+  });
+  drawTsEx(null);
+
+  // ---------- Figure 11: TS simulation ----------
+  const tsSvg = document.getElementById('tsSvg');
+  const tsTruth = document.getElementById('tsTruth');
+  const tsReadout = document.getElementById('tsReadout');
+  const tsR = mulberry32(99);
+  let S;
+  function tsResetState() { S = { a: [1, 1, 1], b: [1, 1, 1], t: 0, regret: 0, last: -1, samples: null }; }
+  function tsStep(k) {
+    for (let i = 0; i < k; i++) {
+      const smp = [0, 1, 2].map(j => betaSample(S.a[j], S.b[j], tsR));
+      let best = 0; for (let j = 1; j < 3; j++) if (smp[j] > smp[best]) best = j;
+      const x = tsR() < TRUE[best] ? 1 : 0;
+      if (x) S.a[best] += 1; else S.b[best] += 1;
+      S.t += 1; S.regret += BEST - TRUE[best]; S.last = best; S.samples = smp;
+    }
+    drawTs();
+  }
+  const TX0 = 50, TX1 = 670, TY0 = 20, TY1 = 210;
+  const txOf = v => TX0 + (TX1 - TX0) * v;
+  function drawTs() {
+    clear(tsSvg);
+    let ymax = 0; const curves = [];
+    for (let j = 0; j < 3; j++) {
+      const pts = [];
+      for (let i = 1; i < 300; i++) { const x = i / 300, y = betaPdf(x, S.a[j], S.b[j]); pts.push([x, y]); ymax = Math.max(ymax, y); }
+      curves.push(pts);
+    }
+    ymax = Math.max(ymax, 2.5) * 1.12;
+    const tyOf = v => TY1 - (TY1 - TY0) * v / ymax;
+    el(tsSvg, 'line', { x1: TX0, x2: TX1, y1: TY1, y2: TY1, class: 'axis' });
+    [0, 0.25, 0.5, 0.75, 1].forEach(v => el(tsSvg, 'text', { x: txOf(v), y: TY1 + 18, 'text-anchor': 'middle', class: 'mut small mono' }, v));
+    el(tsSvg, 'text', { x: TX1, y: TY1 + 36, 'text-anchor': 'end', class: 'mut small' }, 'θ (당첨 확률에 대한 믿음) →');
+    const labs = [];
+    curves.forEach((pts, j) => {
+      el(tsSvg, 'path', { d: pathOf(pts.map(p => [txOf(p[0]), tyOf(p[1])])), fill: 'none', stroke: COLORS[j], 'stroke-width': 2 });
+      let pk = pts[0]; pts.forEach(p => { if (p[1] > pk[1]) pk = p; });
+      labs.push({ x: txOf(pk[0]), y: tyOf(pk[1]) - 8, t: ARMS[j] + ' Beta(' + S.a[j] + ',' + S.b[j] + ')' });
+      if (tsTruth.checked) {
+        el(tsSvg, 'line', { x1: txOf(TRUE[j]), x2: txOf(TRUE[j]), y1: TY0, y2: TY1, stroke: COLORS[j], 'stroke-width': 1, 'stroke-dasharray': '2 3' });
+      }
+    });
+    labs.sort((p, q) => q.y - p.y);
+    for (let i = 1; i < labs.length; i++) for (let j = 0; j < i; j++) if (Math.abs(labs[i].x - labs[j].x) < 120 && Math.abs(labs[i].y - labs[j].y) < 15) labs[i].y = labs[j].y - 15;
+    labs.forEach(l => el(tsSvg, 'text', { x: Math.min(Math.max(l.x, TX0 + 40), TX1 - 40), y: Math.max(l.y, 14), 'text-anchor': 'middle', class: 'small' }, l.t));
+    if (S.samples) {
+      S.samples.forEach((v, j) => {
+        el(tsSvg, 'circle', { cx: txOf(v), cy: TY1, r: j === S.last ? 8 : 5, fill: COLORS[j], stroke: j === S.last ? 'var(--fg)' : 'var(--surface)', 'stroke-width': 2 });
+      });
+    }
+    const pulls = [0, 1, 2].map(j => ARMS[j] + ' ' + (S.a[j] + S.b[j] - 2) + '번');
+    tsReadout.textContent = 't = ' + S.t + ' · 당긴 횟수: ' + pulls.join(', ') + ' · 마지막: ' + (S.last < 0 ? '-' : ARMS[S.last]) + ' · 누적 regret = ' + S.regret.toFixed(2) + (tsTruth.checked ? ' · 정답 A 0.62, B 0.40, C 0.55' : '');
+  }
+  document.querySelectorAll('[data-ts]').forEach(b => b.addEventListener('click', () => tsStep(+b.dataset.ts)));
+  document.getElementById('tsReset').addEventListener('click', () => { tsResetState(); drawTs(); });
+  tsTruth.addEventListener('change', drawTs);
+  tsResetState(); drawTs();
+
+  // ---------- Figure 12: regret comparison ----------
+  const regSvg = document.getElementById('regSvg');
+  const regTip = document.getElementById('regTip');
+  const regStatus = document.getElementById('regStatus');
+  const K = 10, T = 5000, RUNS = 100;
+  const ALGOS = [
+    { name: 'Greedy', color: 'var(--s1)' },
+    { name: 'ε-greedy', color: 'var(--s2)' },
+    { name: 'UCB', color: 'var(--s3)' },
+    { name: 'Thompson', color: 'var(--s4)' }
+  ];
+  function runAlgo(kind, mu, r, c) {
+    const best = Math.max(...mu);
+    const Q = new Float64Array(K), N = new Float64Array(K), A = new Float64Array(K).fill(1), B = new Float64Array(K).fill(1);
+    const out = new Float64Array(T); let reg = 0;
+    for (let t = 0; t < T; t++) {
+      let a = 0;
+      if (kind === 3) {
+        let bv = -1; for (let j = 0; j < K; j++) { const v = betaSample(A[j], B[j], r); if (v > bv) { bv = v; a = j; } }
+      } else if (t < K) {
+        a = t;
+      } else if (kind === 1 && r() < 0.1) {
+        a = Math.floor(r() * K);
+      } else {
+        let bv = -Infinity;
+        for (let j = 0; j < K; j++) {
+          const v = kind === 2 ? Q[j] + c * Math.sqrt(Math.log(t + 1) / N[j]) : Q[j];
+          if (v > bv) { bv = v; a = j; }
+        }
+      }
+      const x = r() < mu[a] ? 1 : 0;
+      N[a] += 1; Q[a] += (x - Q[a]) / N[a];
+      if (x) A[a] += 1; else B[a] += 1;
+      reg += best - mu[a]; out[t] = reg;
+    }
+    return out;
+  }
+  let regData = null, regSeed = 2026;
+  const regC = document.getElementById('regC');
+  const regCOut = document.getElementById('regCOut');
+  // same bandit instances (mu) for every algorithm; each algorithm has its own RNG stream
+  function computeAlgo(k, seed, c) {
+    const rm = mulberry32(seed), r = mulberry32(seed * 31 + k + 1);
+    const sum = new Float64Array(T);
+    for (let run = 0; run < RUNS; run++) {
+      const mu = Array.from({ length: K }, () => 0.05 + 0.9 * rm());
+      const o = runAlgo(k, mu, r, c);
+      for (let t = 0; t < T; t++) sum[t] += o[t] / RUNS;
+    }
+    return sum;
+  }
+  const RX0 = 60, RX1 = 590, RY0 = 20, RY1 = 280;
+  const rxOf = t => RX0 + (RX1 - RX0) * t / T;
+  function drawReg() {
+    clear(regSvg);
+    const ymaxRaw = Math.max(...regData.map(d => d[T - 1]));
+    const step = ymaxRaw > 400 ? 100 : ymaxRaw > 200 ? 50 : 25;
+    const ymax = Math.ceil(ymaxRaw / step) * step;
+    const ryOf = v => RY1 - (RY1 - RY0) * v / ymax;
+    for (let v = 0; v <= ymax; v += step) {
+      el(regSvg, 'line', { x1: RX0, x2: RX1, y1: ryOf(v), y2: ryOf(v), class: 'grid' });
+      el(regSvg, 'text', { x: RX0 - 8, y: ryOf(v) + 4, 'text-anchor': 'end', class: 'mut small mono' }, v);
+    }
+    [0, 1000, 2000, 3000, 4000, 5000].forEach(t => el(regSvg, 'text', { x: rxOf(t), y: RY1 + 18, 'text-anchor': 'middle', class: 'mut small mono' }, t));
+    el(regSvg, 'text', { x: RX1, y: RY1 + 36, 'text-anchor': 'end', class: 'mut small' }, '스텝 t →');
+    el(regSvg, 'text', { x: RX0, y: 12, class: 'mut small' }, '평균 누적 regret');
+    regData.forEach((d, k) => {
+      const pts = []; for (let t = 0; t < T; t += 10) pts.push([rxOf(t + 1), ryOf(d[t])]);
+      pts.push([rxOf(T), ryOf(d[T - 1])]);
+      el(regSvg, 'path', { d: pathOf(pts), fill: 'none', stroke: ALGOS[k].color, 'stroke-width': 2 });
+    });
+    const labs = regData.map((d, k) => ({ y: ryOf(d[T - 1]), t: (k === 2 ? 'UCB c=' + (+regC.value).toFixed(2) : ALGOS[k].name) + ' ' + d[T - 1].toFixed(0) }));
+    labs.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < labs.length; i++) if (labs[i].y - labs[i - 1].y < 15) labs[i].y = labs[i - 1].y + 15;
+    labs.forEach(l => el(regSvg, 'text', { x: RX1 + 8, y: l.y + 4, class: 'small' }, l.t));
+    attachCrosshair(regSvg, regTip, RX0, RX1, RY0, RY1, T, x => Math.round((x - RX0) / (RX1 - RX0) * T), {
+      xOf: rxOf,
+      html: t => 't = <b>' + t + '</b><br>' + ALGOS.map((a, k) => key(a.color) + a.name + ' <b>' + regData[k][t - 1].toFixed(1) + '</b>').join('<br>')
+    });
+  }
+  function timed(label, fn) {
+    regStatus.textContent = '계산 중…';
+    setTimeout(() => {
+      const t0 = performance.now();
+      fn(); drawReg();
+      regStatus.textContent = label + ' · ' + Math.round(performance.now() - t0) + 'ms';
+    }, 30);
+  }
+  function runReg(seed) {
+    regSeed = seed;
+    timed('시드 ' + seed, () => { regData = ALGOS.map((a, k) => computeAlgo(k, seed, +regC.value)); });
+  }
+  function rerunUcb() {
+    regCOut.textContent = (+regC.value).toFixed(2);
+    timed('UCB c = ' + (+regC.value).toFixed(2) + ' 재계산', () => { regData[2] = computeAlgo(2, regSeed, +regC.value); });
+  }
+  regC.addEventListener('input', () => { regCOut.textContent = (+regC.value).toFixed(2); });
+  regC.addEventListener('change', rerunUcb);
+  document.getElementById('regCTheory').addEventListener('click', () => { regC.value = Math.SQRT2; rerunUcb(); });
+  document.getElementById('regRun').addEventListener('click', () => runReg((Math.random() * 1e9) | 0));
+  runReg(2026);
+
+  // ---------- Q&A toggle ----------
+  const toggle = document.getElementById('toggleAll');
+  toggle.addEventListener('click', () => {
+    const all = document.querySelectorAll('details.qa');
+    const open = Array.from(all).some(d => !d.open);
+    all.forEach(d => { d.open = open; });
+    toggle.textContent = open ? '모두 접기' : '모두 펼치기';
+  });
+})();
+</script>
+</div>
+<div class="notes-editor" hidden data-path="content/study/01-rl-problem-setup-multi-armed/index.ko.md" data-notes data-pagefind-ignore data-astro-cid-krmc5xkp><button type="button" class="ne-open" data-astro-cid-krmc5xkp>내 생각 쓰기</button><form class="ne-form" hidden data-astro-cid-krmc5xkp><textarea rows="8" aria-label="내 생각 (markdown)" placeholder="markdown 으로 쓰기" data-astro-cid-krmc5xkp></textarea><div class="ne-actions" data-astro-cid-krmc5xkp><button type="submit" data-astro-cid-krmc5xkp>저장</button><button type="button" class="ne-delete" data-astro-cid-krmc5xkp>지우기</button><button type="button" class="ne-cancel" data-astro-cid-krmc5xkp>취소</button><span class="ne-status" role="status" data-astro-cid-krmc5xkp></span></div></form></div><div class="post-admin" hidden data-dir="content/study/01-rl-problem-setup-multi-armed" data-lang="ko" data-incoming="[]" data-relations="[]" data-pagefind-ignore data-astro-cid-krmc5xkp></div></div><nav class="toc" aria-labelledby="toc-h" data-pagefind-ignore data-astro-cid-krmc5xkp><h2 id="toc-h" data-astro-cid-krmc5xkp>목차</h2><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#s1" data-astro-cid-krmc5xkp>01 RL 문제 설정: 상호작용 루프</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s2" data-astro-cid-krmc5xkp>02 지도학습과 뭐가 다른가: 세 가지 축</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s3" data-astro-cid-krmc5xkp>03 🤖 로봇에서 보면</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s4" data-astro-cid-krmc5xkp>04 Multi-armed Bandit이란</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-1" data-astro-cid-krmc5xkp>bandit과 MDP의 결정적 차이</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s5" data-astro-cid-krmc5xkp>05 가치 추정과 증분 업데이트</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-2" data-astro-cid-krmc5xkp>ML 관점</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-3" data-astro-cid-krmc5xkp>고정 보폭과 수렴 조건</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-4" data-astro-cid-krmc5xkp>앞으로 바뀌는 건 target뿐</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s6" data-astro-cid-krmc5xkp>06 성능 척도: Regret</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-5" data-astro-cid-krmc5xkp>왜 gap을 곱하나: 실수마다 손해 크기가 다르다</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-6" data-astro-cid-krmc5xkp>regret은 성적표다</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s7" data-astro-cid-krmc5xkp>07 단순한 전략: Greedy, ε-greedy, Optimistic init</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s8" data-astro-cid-krmc5xkp>08 UCB: 모르면 좋게 봐준다</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-7" data-astro-cid-krmc5xkp>유도: Hoeffding 부등식에서 c = √2까지</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-8" data-astro-cid-krmc5xkp>gap과 로그 regret의 연결</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-9" data-astro-cid-krmc5xkp>이후와의 연결</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s9" data-astro-cid-krmc5xkp>09 Thompson Sampling: 믿음에서 뽑는다</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-10" data-astro-cid-krmc5xkp>Beta 분포 (보상이 0/1일 때)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-11" data-astro-cid-krmc5xkp>UCB와 비교</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-12" data-astro-cid-krmc5xkp>이후와의 연결</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s10" data-astro-cid-krmc5xkp>10 전체 정리 &amp;#x26; 비교 실험</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#quiz" data-astro-cid-krmc5xkp>? 확인 문제</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#qa" data-astro-cid-krmc5xkp>Q&amp;#x26;A 질문 &amp;#x26; 답변</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#check" data-astro-cid-krmc5xkp>✓ 헷갈렸던 개념</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#refs" data-astro-cid-krmc5xkp>📚 더 읽을거리</a></li></ol></nav></div></article><aside class="after wrap" data-pagefind-ignore data-astro-cid-krmc5xkp><section aria-labelledby="related-h" data-astro-cid-krmc5xkp><h2 id="related-h" data-astro-cid-krmc5xkp>같은 태그의 글</h2><article class="row" data-type="paper" data-astro-cid-gc2g3jd6><div class="meta" data-astro-cid-gc2g3jd6><span class="type" data-astro-cid-gc2g3jd6>논문</span><time datetime="2026-10-30" data-astro-cid-gc2g3jd6>2026년 10월 30일</time><span class="pending" data-astro-cid-gc2g3jd6>AI 정리, 검수 전</span></div><div class="body" data-astro-cid-gc2g3jd6><h3 class="title" data-astro-cid-gc2g3jd6="true"><a href="/ko/papers/pushing-dexterity-and-safety-for-in/" data-astro-cid-gc2g3jd6>Pushing Dexterity and Safety for In-Hand Object Pose Reaching That Works Remarkably Well</a></h3><p class="summary" data-astro-cid-gc2g3jd6>임의의 손목 자세에서 다지 로봇 손으로 물체를 목표 6D 포즈로 옮기는 인핸드 포즈 리칭 정책을 시뮬레이션에서 학습하고 제로샷으로 실손에 전이하는 레시피를 제시한다. 잔차 안전 필터를 추가해 성능과 안전을 조절하면서 낙하를 크게 줄이는 광범위한 실로봇 평가를 보고한다.</p><ul class="tags" data-astro-cid-gc2g3jd6><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/domain/robotics/manipulation/" title="domain/robotics/manipulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>로보틱스</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>로봇 조작</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/method/sim-to-real/" title="method/sim-to-real" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>시뮬레이션-실제 전이</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/method/reinforcement-learning/" title="method/reinforcement-learning" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>강화학습</span></a></li></ul></div></article><article class="row" data-type="paper" data-astro-cid-gc2g3jd6><div class="meta" data-astro-cid-gc2g3jd6><span class="type" data-astro-cid-gc2g3jd6>논문</span><time datetime="2026-10-30" data-astro-cid-gc2g3jd6>2026년 10월 30일</time><span class="pending" data-astro-cid-gc2g3jd6>AI 정리, 검수 전</span></div><div class="body" data-astro-cid-gc2g3jd6><h3 class="title" data-astro-cid-gc2g3jd6="true"><a href="/ko/papers/sliceit-a-dual-simulator-framework-for/" data-astro-cid-gc2g3jd6>SliceIt! - A Dual Simulator Framework for Learning Robot Food Slicing</a></h3><p class="summary" data-astro-cid-gc2g3jd6>SliceIt!은 실제 절단 데이터로 고충실도 절단 시뮬레이터를 보정하고 로봇 시뮬레이터와 결합한 이중 시뮬레이션 환경에서 강화학습 기반 컴플라이언스 제어 정책을 학습해 실제 로봇에 배포하는 real2sim2real 프레임워크다.</p><ul class="tags" data-astro-cid-gc2g3jd6><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/method/sim-to-real/" title="method/sim-to-real" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>시뮬레이션-실제 전이</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/method/reinforcement-learning/" title="method/reinforcement-learning" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>강화학습</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/method/control/compliance-control/" title="method/control/compliance-control" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>제어</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>컴플라이언스 제어</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/method/simulation/physics-simulation/" title="method/simulation/physics-simulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>시뮬레이션</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>물리 시뮬레이션</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/method/simulation/differentiable-simulation/" title="method/simulation/differentiable-simulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>시뮬레이션</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>미분 가능 시뮬레이션</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/domain/robotics/manipulation/" title="domain/robotics/manipulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>로보틱스</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>로봇 조작</span></a></li></ul></div></article><article class="row" data-type="paper" data-astro-cid-gc2g3jd6><div class="meta" data-astro-cid-gc2g3jd6><span class="type" data-astro-cid-gc2g3jd6>논문</span><time datetime="2026-10-30" data-astro-cid-gc2g3jd6>2026년 10월 30일</time><span class="pending" data-astro-cid-gc2g3jd6>AI 정리, 검수 전</span></div><div class="body" data-astro-cid-gc2g3jd6><h3 class="title" data-astro-cid-gc2g3jd6="true"><a href="/ko/papers/vla-hwbench-where-the-time-goes/" data-astro-cid-gc2g3jd6>VLA-HWBench: Where the Time Goes When VLA Models Run on Edge Hardware</a></h3><p class="summary" data-astro-cid-gc2g3jd6>VLA-HWBench는 18개 오픈 VLA 모델을 NVIDIA Jetson AGX Thor와 AMD Ryzen AI Max+ PRO 395에서 7단계 호출 분해로 측정하고, 컴파일·전문 백엔드·저정밀화 최적화의 지연 효과를 분석한다. 결과적으로 엣지 VLA 지연은 모델 크기보다 액션 생성 방식과 런타임·플랫폼에 따라 달라진다.</p><ul class="tags" data-astro-cid-gc2g3jd6><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/task/benchmarking/" title="task/benchmarking" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>벤치마크·성능 측정</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/method/architecture/vision-language-action/" title="method/architecture/vision-language-action" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>아키텍처</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>비전-언어-행동 모델(VLA)</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/method/inference/" title="method/inference" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>추론 최적화</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/domain/robotics/" title="domain/robotics" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>로보틱스</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/domain/performance/" title="domain/performance" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>성능 분석</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/domain/hardware-architecture/" title="domain/hardware-architecture" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>하드웨어 아키텍처</span></a></li></ul></div></article></section></aside></main><footer class="wrap" data-astro-cid-hkbrpulz><p class="site-footer" data-astro-cid-hkbrpulz>Tech Blog</p></footer><dialog class="search" aria-label="글 검색" data-unavailable="검색 색인은 사이트를 빌드할 때 만들어집니다. npm run build 후 npm run preview 에서 확인하세요." data-astro-cid-ac66eqjo><div class="search-head" data-astro-cid-ac66eqjo><h2 data-astro-cid-ac66eqjo>글 검색</h2><button type="button" class="close" data-search-close data-astro-cid-ac66eqjo>닫기</button></div><div id="pagefind" class="search-body" data-astro-cid-ac66eqjo></div></dialog><script type="module">var e=document.querySelector(`dialog.search`),t=e.querySelector(`#pagefind`),n=!1;async function r(){if(!n){n=!0;try{let e=document.createElement(`link`);e.rel=`stylesheet`,e.href=`/pagefind/pagefind-ui.css`,document.head.append(e),await new Promise((e,t)=>{let n=document.createElement(`script`);n.src=`/pagefind/pagefind-ui.js`,n.onload=()=>e(),n.onerror=()=>t(Error(`pagefind missing`)),document.head.append(n)}),new PagefindUI({element:t,showSubResults:!0,showImages:!1,autofocus:!0})}catch{t.textContent=e.dataset.unavailable??``}}}function i(){e.showModal(),r(),t.querySelector(`input`)?.focus()}document.querySelectorAll(`[data-search-open]`).forEach(e=>e.addEventListener(`click`,i)),e.querySelector(`[data-search-close]`).addEventListener(`click`,()=>e.close()),e.addEventListener(`click`,t=>{t.target===e&&e.close()}),document.addEventListener(`keydown`,t=>{let n=t.target.tagName;e.open||n===`INPUT`||n===`TEXTAREA`||(t.key===`/`||(t.metaKey||t.ctrlKey)&&t.key.toLowerCase()===`k`)&&(t.preventDefault(),i())});</script></body></html><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_0_lang.C9cTWiA5.js"></script><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_1_lang.BhCYdHk-.js"></script>
