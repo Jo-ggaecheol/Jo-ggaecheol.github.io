@@ -628,6 +628,174 @@ for layer in layers:   # ← "N repetitions" (layers)
 <li><b>Residual Connection</b>: Original = Input x, residual = Change amount created by the layer. <span class="ref">Q6</span></li>
 </ul>
 </section>
+<script>
+(function () {
+  function softmax(arr) {
+    const m = Math.max(...arr);
+    const e = arr.map(v => Math.exp(v - m));
+    const s = e.reduce((a, b) => a + b, 0);
+    return e.map(v => v / s);
+  }
+  function renderBars(el, rows, header) {
+    let html = header ? '<span class="hdr">토큰</span><span class="hdr score">점수</span><span class="hdr">가중치</span>' : '';
+    for (const r of rows) {
+      const pct = (r.w * 100).toFixed(1);
+      html += '<span class="tok">' + r.t + '</span>' +
+        '<span class="score">' + (r.s === undefined ? '' : r.s) + '</span>' +
+        '<div class="bar"><i style="width:' + pct + '%"></i><span style="left:calc(' + Math.min(pct, 85) + '% + 6px)">' + pct + '%</span></div>';
+    }
+    el.innerHTML = html;
+  }
 
+  // Figure 4: "배" attention example
+  renderBars(document.getElementById('qkBars'), [
+    { t: '배', s: '3.1', w: .15 },
+    { t: '를', s: '0.2', w: .02 },
+    { t: '타고', s: '4.5', w: .45 },
+    { t: '바다로', s: '3.8', w: .33 },
+    { t: '갔다', s: '1.0', w: .05 }
+  ], true);
+
+  // Figure 5: interactive attention (illustrative weights)
+  const toks = ['그', '동물은', '길을', '건너지', '않았다', '왜냐하면', '그것이', '너무', '피곤했기', '때문이다'];
+  const special = {
+    '그': { '동물은': .5, '그': .25 },
+    '동물은': { '그': .35, '동물은': .3, '건너지': .1 },
+    '길을': { '건너지': .35, '길을': .3 },
+    '건너지': { '길을': .45, '않았다': .2, '건너지': .15 },
+    '않았다': { '건너지': .45, '않았다': .15, '동물은': .15 },
+    '왜냐하면': { '때문이다': .35, '않았다': .2, '왜냐하면': .15 },
+    '그것이': { '동물은': .55, '피곤했기': .12, '그것이': .1, '그': .06 },
+    '너무': { '피곤했기': .55, '너무': .2 },
+    '피곤했기': { '그것이': .3, '동물은': .25, '너무': .2, '피곤했기': .1 },
+    '때문이다': { '왜냐하면': .45, '피곤했기': .2, '때문이다': .1 }
+  };
+  function weightsFor(i) {
+    const q = toks[i], sp = special[q] || {};
+    const raw = toks.map((t, j) => sp[t] !== undefined ? sp[t] : 0.01 + 0.03 / (1 + Math.abs(i - j)));
+    const s = raw.reduce((a, b) => a + b, 0);
+    return raw.map(v => v / s);
+  }
+  const tokWrap = document.getElementById('attnTokens');
+  const attnBars = document.getElementById('attnBars');
+  const buttons = toks.map((t, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = t;
+    b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', () => select(i));
+    tokWrap.appendChild(b);
+    return b;
+  });
+  function select(i) {
+    const w = weightsFor(i);
+    buttons.forEach((b, j) => {
+      b.setAttribute('aria-pressed', j === i ? 'true' : 'false');
+      const pct = Math.min(85, Math.round(w[j] * 140));
+      b.style.background = 'color-mix(in srgb, var(--acc) ' + pct + '%, transparent)';
+    });
+    renderBars(attnBars, toks.map((t, j) => ({ t: t, w: w[j] })), false);
+  }
+  select(6);
+
+  // Figure 7: positional encoding waves
+  const NS = 'http://www.w3.org/2000/svg';
+  const pe = document.getElementById('peSvg');
+  const freqs = [1.0, 0.4, 0.15, 0.05];
+  const labels = ['빠른 파동 (초침)', '중간 파동', '느린 파동', '아주 느린 파동 (시침)'];
+  const X0 = 170, X1 = 620, MAXP = 63, AMP = 22;
+  const xOf = p => X0 + (X1 - X0) * p / MAXP;
+  const rowY = k => 40 + k * 60;
+  function el(tag, attrs, text) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text !== undefined) e.textContent = text;
+    pe.appendChild(e);
+    return e;
+  }
+  const dots = [];
+  freqs.forEach((f, k) => {
+    const y = rowY(k);
+    el('text', { x: 10, y: y + 4, class: k === 0 || k === 3 ? '' : 'mut' }, labels[k]);
+    el('line', { x1: X0, y1: y, x2: X1, y2: y, stroke: 'var(--line)', 'stroke-dasharray': '3 3' });
+    let d = '';
+    for (let p = 0; p <= MAXP; p += 0.2) {
+      d += (p === 0 ? 'M' : 'L') + xOf(p).toFixed(1) + ' ' + (y - AMP * Math.sin(p * f)).toFixed(1) + ' ';
+    }
+    el('path', { d: d, class: 's-accline', 'stroke-width': 2 });
+    dots.push(el('circle', { r: 5, class: 's-dot-warm' }));
+  });
+  el('text', { x: X0, y: 262, class: 'mut small' }, '위치 0');
+  el('text', { x: X1, y: 262, class: 'mut small', 'text-anchor': 'end' }, '위치 63');
+  const vline = el('line', { y1: 12, y2: 245, class: 's-warmline', 'stroke-dasharray': '4 3' });
+  dots.forEach(d => pe.appendChild(d));
+
+  const peSlider = document.getElementById('peSlider');
+  const peOut = document.getElementById('peOut');
+  const peReadout = document.getElementById('peReadout');
+  function updatePE() {
+    const p = +peSlider.value;
+    peOut.textContent = p;
+    const x = xOf(p);
+    vline.setAttribute('x1', x); vline.setAttribute('x2', x);
+    const vals = freqs.map((f, k) => {
+      const v = Math.sin(p * f);
+      dots[k].setAttribute('cx', x);
+      dots[k].setAttribute('cy', rowY(k) - AMP * v);
+      return v.toFixed(2);
+    });
+    peReadout.textContent = '위치 ' + p + '의 위치 벡터(일부) ≈ [' + vals.join(', ') + ', …]';
+  }
+  peSlider.addEventListener('input', updatePE);
+  updatePE();
+
+  // Figure 10: causal mask grid
+  const grid = document.getElementById('maskGrid');
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 4; c++) {
+      const ok = c <= r;
+      const x = 130 + c * 70, y = 62 + r * 50;
+      const rect = document.createElementNS(NS, 'rect');
+      rect.setAttribute('x', x); rect.setAttribute('y', y);
+      rect.setAttribute('width', 66); rect.setAttribute('height', 46); rect.setAttribute('rx', 6);
+      rect.setAttribute('class', ok ? 's-green' : 's-red');
+      grid.appendChild(rect);
+      const t = document.createElementNS(NS, 'text');
+      t.setAttribute('x', x + 33); t.setAttribute('y', y + 28);
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('class', ok ? 'bold' : 'mono');
+      t.setAttribute('style', 'fill:' + (ok ? 'var(--green)' : 'var(--red)'));
+      t.textContent = ok ? '✓' : '−∞';
+      grid.appendChild(t);
+    }
+  }
+
+  // Figure 11: temperature
+  const cand = [
+    { t: '좋아해', l: 8.2 }, { t: '먹어', l: 6.6 }, { t: '봤어', l: 6.2 },
+    { t: '키워', l: 5.4 }, { t: '자동차', l: 1.0 }
+  ];
+  const tempSlider = document.getElementById('tempSlider');
+  const tempOut = document.getElementById('tempOut');
+  const tempBars = document.getElementById('tempBars');
+  function updateTemp() {
+    const T = +tempSlider.value;
+    tempOut.textContent = T.toFixed(1);
+    const p = softmax(cand.map(c => c.l / T));
+    renderBars(tempBars, cand.map((c, i) => ({ t: c.t, s: c.l.toFixed(1), w: p[i] })), false);
+  }
+  tempSlider.addEventListener('input', updateTemp);
+  updateTemp();
+
+  // Q&A toggle
+  const toggle = document.getElementById('toggleAll');
+  toggle.addEventListener('click', () => {
+    const all = document.querySelectorAll('details.qa');
+    const open = Array.from(all).some(d => !d.open);
+    all.forEach(d => { d.open = open; });
+    toggle.textContent = open ? '모두 접기' : '모두 펼치기';
+  });
+})();
+</script>
 </div>
 <div class="notes-editor" hidden data-path="content/study/understanding-transformers-from-start-to-finish/index.ko.md" data-notes data-pagefind-ignore data-astro-cid-krmc5xkp><button type="button" class="ne-open" data-astro-cid-krmc5xkp>내 생각 쓰기</button><form class="ne-form" hidden data-astro-cid-krmc5xkp><textarea rows="8" aria-label="내 생각 (markdown)" placeholder="markdown 으로 쓰기" data-astro-cid-krmc5xkp></textarea><div class="ne-actions" data-astro-cid-krmc5xkp><button type="submit" data-astro-cid-krmc5xkp>저장</button><button type="button" class="ne-delete" data-astro-cid-krmc5xkp>지우기</button><button type="button" class="ne-cancel" data-astro-cid-krmc5xkp>취소</button><span class="ne-status" role="status" data-astro-cid-krmc5xkp></span></div></form></div><div class="post-admin" hidden data-dir="content/study/understanding-transformers-from-start-to-finish" data-lang="en" data-incoming="[]" data-pagefind-ignore data-astro-cid-krmc5xkp></div></div><nav class="toc" aria-labelledby="toc-h" data-pagefind-ignore data-astro-cid-krmc5xkp><h2 id="toc-h" data-astro-cid-krmc5xkp>Contents</h2><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#s1" data-astro-cid-krmc5xkp>01 Why Transformers Were Introduced</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s2" data-astro-cid-krmc5xkp>02 Tokens and Embeddings</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s3" data-astro-cid-krmc5xkp>03 Self-Attention (Q, K, V)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-1" data-astro-cid-krmc5xkp>Try It: Where Does This Word Look?</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s4" data-astro-cid-krmc5xkp>04 Multi-Head Attention</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s5" data-astro-cid-krmc5xkp>05 Positional Encoding</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s6" data-astro-cid-krmc5xkp>06 Transformer Block</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s7" data-astro-cid-krmc5xkp>07 Encoder · Decoder · Masking</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-2" data-astro-cid-krmc5xkp>Masking: No Peeking into the Future</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s8" data-astro-cid-krmc5xkp>08 Learning and Generation</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-3" data-astro-cid-krmc5xkp>From Vectors to the Next Token</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-4" data-astro-cid-krmc5xkp>Selection Methods and Temperature</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-5" data-astro-cid-krmc5xkp>Generation: Sampling One Token at a Time and Feeding It Back</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-6" data-astro-cid-krmc5xkp>Learning: Predicting the Next Token (Q2, Q5)</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s9" data-astro-cid-krmc5xkp>09 The Entire Flow on One Page</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#qa" data-astro-cid-krmc5xkp>Q&amp;#x26;A Questions &amp;#x26; Answers</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#check" data-astro-cid-krmc5xkp>✓ Confusing Concepts</a></li></ol></nav></div></article></main><footer class="wrap" data-astro-cid-hkbrpulz><p class="site-footer" data-astro-cid-hkbrpulz>Tech Blog</p></footer><dialog class="search" aria-label="Search posts" data-unavailable="The search index is built with the site. Run npm run build, then npm run preview." data-astro-cid-ac66eqjo><div class="search-head" data-astro-cid-ac66eqjo><h2 data-astro-cid-ac66eqjo>Search posts</h2><button type="button" class="close" data-search-close data-astro-cid-ac66eqjo>Close</button></div><div id="pagefind" class="search-body" data-astro-cid-ac66eqjo></div></dialog><script type="module">var e=document.querySelector(`dialog.search`),t=e.querySelector(`#pagefind`),n=!1;async function r(){if(!n){n=!0;try{let e=document.createElement(`link`);e.rel=`stylesheet`,e.href=`/pagefind/pagefind-ui.css`,document.head.append(e),await new Promise((e,t)=>{let n=document.createElement(`script`);n.src=`/pagefind/pagefind-ui.js`,n.onload=()=>e(),n.onerror=()=>t(Error(`pagefind missing`)),document.head.append(n)}),new PagefindUI({element:t,showSubResults:!0,showImages:!1,autofocus:!0})}catch{t.textContent=e.dataset.unavailable??``}}}function i(){e.showModal(),r(),t.querySelector(`input`)?.focus()}document.querySelectorAll(`[data-search-open]`).forEach(e=>e.addEventListener(`click`,i)),e.querySelector(`[data-search-close]`).addEventListener(`click`,()=>e.close()),e.addEventListener(`click`,t=>{t.target===e&&e.close()}),document.addEventListener(`keydown`,t=>{let n=t.target.tagName;e.open||n===`INPUT`||n===`TEXTAREA`||(t.key===`/`||(t.metaKey||t.ctrlKey)&&t.key.toLowerCase()===`k`)&&(t.preventDefault(),i())});</script></body></html><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_0_lang.CMBxuFBs.js"></script><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_1_lang.DQvCU8Du.js"></script>
