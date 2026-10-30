@@ -1,0 +1,1 @@
+var e=`blog-editor-token`;function t(){try{return localStorage.getItem(e)}catch{return null}}function n(t){try{t?localStorage.setItem(e,t):localStorage.removeItem(e)}catch{}}export{n,t};
