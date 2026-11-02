@@ -1,0 +1,1978 @@
+<!DOCTYPE html><html lang="ko" data-astro-cid-hkbrpulz><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>LLM과 VLM 개념 노트 | Tech Blog</title><meta name="description" content="LLM/VLM의 Transformer 구조, attention·위치 인코딩·KV cache, 그리고 이미지 토큰화를 중심으로 핵심 개념과 흔한 오해를 정리한 노트."><meta property="og:title" content="LLM과 VLM 개념 노트"><meta property="og:description" content="LLM/VLM의 Transformer 구조, attention·위치 인코딩·KV cache, 그리고 이미지 토큰화를 중심으로 핵심 개념과 흔한 오해를 정리한 노트."><meta name="theme-color" content="#f4f6f9" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#0e131b" media="(prefers-color-scheme: dark)"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate" hreflang="en" href="/en/study/concept-notes-on-llms-and-vlms/"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap"><script>
+      // 깜빡임 방지: 렌더 전에 테마 결정 (저장값 > 시스템 설정)
+      (() => {
+        let saved = null;
+        try {
+          saved = localStorage.getItem('theme');
+        } catch {}
+        const dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      })();
+    </script><link rel="stylesheet" href="/_astro/Base.BJamWqg3.css"><style>.tagpath[data-astro-cid-jjfiepte]{font-size:var(--step--1);color:var(--ink-3);flex-wrap:wrap;align-items:baseline;gap:0 .3em;line-height:1.6;text-decoration:none;display:inline-flex}.leaf[data-astro-cid-jjfiepte]{color:var(--ink-2);font-weight:500}.sep[data-astro-cid-jjfiepte]{opacity:.55}.tagpath[data-astro-cid-jjfiepte]:hover .leaf[data-astro-cid-jjfiepte]{color:var(--ink);text-underline-offset:.2em;text-decoration:underline}.row[data-astro-cid-gc2g3jd6]{border-top:1px solid var(--rule);grid-template-columns:8.5rem 1fr;gap:.25rem 1.5rem;padding-block:1.6rem;display:grid}.meta[data-astro-cid-gc2g3jd6]{font-size:var(--step--1);color:var(--ink-3);font-variant-numeric:tabular-nums;flex-direction:column;gap:.15rem;padding-top:.3rem;display:flex}.type[data-astro-cid-gc2g3jd6]{color:var(--type);align-items:center;gap:.45rem;font-weight:600;display:inline-flex}.type[data-astro-cid-gc2g3jd6]:before{content:"";background:var(--type);border-radius:2px;width:.5rem;height:.5rem}.pending[data-astro-cid-gc2g3jd6]{color:var(--ink-3);align-self:flex-start;font-size:.75rem}.draft[data-astro-cid-gc2g3jd6]{border:1px dashed var(--rule-strong);border-radius:4px;align-self:flex-start;margin-top:.3rem;padding:0 .4rem;font-size:.75rem}.title[data-astro-cid-gc2g3jd6]{font-size:var(--step-2);margin:0;font-weight:600;line-height:1.35}.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]{background-image:linear-gradient(var(--type), var(--type));background-position:0 100%;background-repeat:no-repeat;background-size:0 2px;text-decoration:none;transition:background-size .2s}.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]:hover,.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]:focus-visible{background-size:100% 2px}.summary[data-astro-cid-gc2g3jd6]{max-width:62ch;color:var(--ink-2);margin:.45rem 0 0}.tags[data-astro-cid-gc2g3jd6]{flex-wrap:wrap;gap:.1rem 1.1rem;margin:.6rem 0 0;padding:0;list-style:none;display:flex}@media (width<=640px){.row[data-astro-cid-gc2g3jd6]{grid-template-columns:1fr;padding-block:1.25rem}.meta[data-astro-cid-gc2g3jd6]{flex-flow:wrap;gap:.75rem;padding-top:0}.draft[data-astro-cid-gc2g3jd6]{margin-top:0}.title[data-astro-cid-gc2g3jd6]{font-size:var(--step-1)}}
+</style><link rel="stylesheet" href="/_astro/_slug_.y0bcMRw3.css"></head><body data-astro-cid-hkbrpulz><a class="skip" href="#main" data-astro-cid-hkbrpulz>본문 바로가기</a><header class="site-header wrap" data-astro-cid-nen7h5rs><a class="wordmark" href="/ko/" translate="no" data-astro-cid-nen7h5rs>Tech Blog</a><nav class="nav" aria-label="주 메뉴" data-astro-cid-nen7h5rs><ul data-astro-cid-nen7h5rs><li data-type="paper" data-astro-cid-nen7h5rs><a href="/ko/papers/" data-astro-cid-nen7h5rs>논문</a></li><li data-type="study" data-astro-cid-nen7h5rs><a href="/ko/study/" aria-current="page" data-astro-cid-nen7h5rs>공부</a></li><li data-type="dev" data-astro-cid-nen7h5rs><a href="/ko/dev/" data-astro-cid-nen7h5rs>개발</a></li><li data-type="clip" data-astro-cid-nen7h5rs><a href="/ko/clips/" data-astro-cid-nen7h5rs>클립</a></li><li data-astro-cid-nen7h5rs><a href="/ko/graph/" data-astro-cid-nen7h5rs>그래프</a></li><li data-astro-cid-nen7h5rs><a href="/ko/tags/" data-astro-cid-nen7h5rs>태그</a></li></ul></nav><div class="tools" data-astro-cid-nen7h5rs><button class="icon-btn" type="button" data-search-open aria-label="검색" aria-keyshortcuts="/" data-astro-cid-nen7h5rs><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8" data-astro-cid-nen7h5rs></circle><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-astro-cid-nen7h5rs></path></svg></button><a class="lang" href="/en/study/concept-notes-on-llms-and-vlms/" hreflang="en" aria-label="영어로 보기" data-astro-cid-nen7h5rs>English</a><button class="icon-btn" type="button" data-theme-toggle data-label-light="라이트 모드로 전환" data-label-dark="다크 모드로 전환" aria-label="다크 모드로 전환" data-astro-cid-nen7h5rs><svg class="sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8" data-astro-cid-nen7h5rs></circle><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-astro-cid-nen7h5rs></path></svg><svg class="moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><path d="M19.5 14.6A7.8 7.8 0 0 1 9.4 4.5a7.8 7.8 0 1 0 10.1 10.1Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" data-astro-cid-nen7h5rs></path></svg></button></div></header><script type="module">var e=document.querySelector(`[data-theme-toggle]`),t=document.documentElement,n=()=>{let n=t.dataset.theme===`dark`;document.querySelectorAll(`meta[name="theme-color"]`).forEach(e=>{e.setAttribute(`content`,n?`#0e131b`:`#f4f6f9`),e.removeAttribute(`media`)}),e.setAttribute(`aria-label`,(n?e.dataset.labelLight:e.dataset.labelDark)??``),e.setAttribute(`aria-pressed`,String(n))};n(),e.addEventListener(`click`,()=>{t.dataset.theme=t.dataset.theme===`dark`?`light`:`dark`;try{localStorage.setItem(`theme`,t.dataset.theme)}catch{}n()});</script><main id="main" data-astro-cid-hkbrpulz><article class="post wrap" data-type="study" data-pagefind-body data-astro-cid-krmc5xkp><header class="head" data-astro-cid-krmc5xkp><div class="meta" data-astro-cid-krmc5xkp><a class="type" href="/ko/study/" data-pagefind-ignore data-astro-cid-krmc5xkp>공부</a><time datetime="2026-11-02" data-astro-cid-krmc5xkp>2026년 11월 2일</time></div><h1 data-astro-cid-krmc5xkp>LLM과 VLM 개념 노트</h1><p class="summary" data-astro-cid-krmc5xkp>LLM/VLM의 Transformer 구조, attention·위치 인코딩·KV cache, 그리고 이미지 토큰화를 중심으로 핵심 개념과 흔한 오해를 정리한 노트.</p><dl class="source" data-astro-cid-krmc5xkp><dt data-astro-cid-krmc5xkp>첨부</dt><dd data-astro-cid-krmc5xkp><a href="/files/study/concept-notes-on-llms-and-vlms/study_notes_W1_W2.md" rel="noopener" data-astro-cid-krmc5xkp>원본 Markdown</a></dd></dl><ul class="tags" data-pagefind-ignore data-astro-cid-krmc5xkp><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/method/architecture/transformer/" title="method/architecture/transformer" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>방법론</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="parent" data-astro-cid-jjfiepte>아키텍처</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>트랜스포머</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/method/attention/" title="method/attention" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>방법론</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>어텐션</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/method/architecture/positional-encoding/" title="method/architecture/positional-encoding" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>방법론</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="parent" data-astro-cid-jjfiepte>아키텍처</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>포지셔널 인코딩</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/method/inference/kv-cache/" title="method/inference/kv-cache" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>방법론</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="parent" data-astro-cid-jjfiepte>추론 최적화</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>KV 캐시</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/domain/multimodal/" title="domain/multimodal" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>분야</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>멀티모달</span></a></li></ul><div class="tags-editor" hidden data-dir="content/study/concept-notes-on-llms-and-vlms" data-pagefind-ignore data-astro-cid-krmc5xkp></div></header><div class="columns" data-astro-cid-krmc5xkp><div class="prose" data-astro-cid-krmc5xkp><details class="toc-inline" data-pagefind-ignore data-astro-cid-krmc5xkp><summary data-astro-cid-krmc5xkp>목차</summary><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#s1" data-astro-cid-krmc5xkp>1. 전체 흐름</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s2" data-astro-cid-krmc5xkp>2. 헷갈리기 쉬운 개념</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s3" data-astro-cid-krmc5xkp>3. LLM</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-1" data-astro-cid-krmc5xkp>3.1 모델 구조 (Qwen2.5-7B 예시)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-2" data-astro-cid-krmc5xkp>3.2 토크나이저와 임베딩</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-3" data-astro-cid-krmc5xkp>3.3 Attention과 위치를 끄면</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-4" data-astro-cid-krmc5xkp>3.4 위치 정보 방식</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-5" data-astro-cid-krmc5xkp>3.5 Block 해부</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-6" data-astro-cid-krmc5xkp>3.6 층을 지나며</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-7" data-astro-cid-krmc5xkp>3.7 Linear probe</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-8" data-astro-cid-krmc5xkp>3.8 Causal mask</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-9" data-astro-cid-krmc5xkp>3.9 KV cache</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-10" data-astro-cid-krmc5xkp>3.10 Hybrid 구조 (Qwen3.5의 Gated DeltaNet)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-11" data-astro-cid-krmc5xkp>3.11 어텐션은 왜 혁신이었나</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s4" data-astro-cid-krmc5xkp>4. RL 용어</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s5" data-astro-cid-krmc5xkp>5. 벡터를 비교하는 방법</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s6" data-astro-cid-krmc5xkp>6. VLM</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-1" data-astro-cid-krmc5xkp>6.1 용어</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-2" data-astro-cid-krmc5xkp>6.2 이미지가 토큰이 되기까지 (Qwen2.5-VL-7B 예시)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-3" data-astro-cid-krmc5xkp>6.3 이미지에는 사전이 없다</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-4" data-astro-cid-krmc5xkp>6.4 Adapter</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-5" data-astro-cid-krmc5xkp>6.5 위치 정보</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-6" data-astro-cid-krmc5xkp>6.6 이미지 안에서 attention</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-7" data-astro-cid-krmc5xkp>6.7 이미지 토큰에 logit lens</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-8" data-astro-cid-krmc5xkp>6.8 OCR이 잘 되는 이유</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-9" data-astro-cid-krmc5xkp>6.9 Localization이 약한 이유</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-10" data-astro-cid-krmc5xkp>6.10 Attention 지도</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-11" data-astro-cid-krmc5xkp>6.11 토큰 수와 비용</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-12" data-astro-cid-krmc5xkp>6.12 이미지 토큰 버리기</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s7" data-astro-cid-krmc5xkp>7. VLM에서 로봇으로</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s7-1" data-astro-cid-krmc5xkp>7.1 왜 LLM을 거치나</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s7-2" data-astro-cid-krmc5xkp>7.2 언어와 이미지의 결합을 낮추면 빨라지나</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s7-3" data-astro-cid-krmc5xkp>7.3 카메라를 여러 대 쓰면</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s7-4" data-astro-cid-krmc5xkp>7.4 Flow matching</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s7-5" data-astro-cid-krmc5xkp>7.5 로봇 action 출력: 숫자 토큰과 action head</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s8" data-astro-cid-krmc5xkp>8. 아키텍처 진단표</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s8-x1" data-astro-cid-krmc5xkp>LLM</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s8-x2" data-astro-cid-krmc5xkp>VLM</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s9" data-astro-cid-krmc5xkp>9. 쪽지시험 (답 포함)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s9-x1" data-astro-cid-krmc5xkp>LLM</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s9-x2" data-astro-cid-krmc5xkp>VLM</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s9-x3" data-astro-cid-krmc5xkp>로봇 응용</a></li></ol></details><style>
+.rawhtml { --fg: var(--ink); --text: var(--ink); --muted: var(--ink-3); --line: var(--rule); --border: var(--rule) }
+.rawhtml :is(h2, h3) > span:first-child:not(:only-child) { margin-right: 0.5em }
+.rawhtml { --surface-2: #2b2f38; --mut: #aab0ba; --acc: #ff7a3d; --acc-fg: #1a0e06; --acc-line: #ff8f5c; --focus: #ffffff; --font-body: "Gothic A1", system-ui, sans-serif; --font-code: "JetBrains Mono", "Noto Sans Mono CJK KR", monospace; --ease-out: cubic-bezier(.23, 1, .32, 1); --ease-move: cubic-bezier(.77, 0, .175, 1); color-scheme: dark }
+:root[data-theme="light"] .rawhtml { --surface-2: #d9dce2; --mut: #535863; --acc: #f26a21; --acc-fg: #1a0e06; --acc-line: #b4440a; --focus: #14161b; color-scheme: light }
+.rawhtml a:focus-visible, .rawhtml button:focus-visible, .rawhtml summary:focus-visible, .rawhtml input:focus-visible, .rawhtml select:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px }
+.rawhtml .skip { position: absolute; left: 16px; top: -64px; background: var(--fg); color: var(--bg); padding: 8px 16px; z-index: 5 }
+.rawhtml .skip:focus { top: 16px }
+.rawhtml .hero { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 40px; align-items: center; min-height: 92svh; padding: 76px 0 32px; position: relative }
+.rawhtml .lead { font-size: 1.15rem; margin: 0 0 28px; max-width: 30em }
+.rawhtml .go { display: inline-flex; align-items: center; min-height: 48px; padding: 0 20px; background: var(--acc); color: var(--acc-fg); font-weight: 700; text-decoration: none; transition: transform 140ms var(--ease-out) }
+.rawhtml .go:active { transform: scale(.97) }
+.rawhtml .theme { position: absolute; top: 16px; right: 0; min-height: 44px; padding: 0 16px; font: inherit; font-size: .875rem; font-weight: 600; color: var(--fg); background: var(--surface); border: 0; cursor: pointer; transition: transform 140ms var(--ease-out) }
+.rawhtml .theme:active { transform: scale(.97) }
+.rawhtml .mx { display: grid; grid-template-columns: 80px repeat(5, minmax(0, 1fr)); gap: 4px }
+.rawhtml .mx button, .rawhtml .mx .h { all: unset; font-size: .92rem; font-weight: 600; align-self: center; padding: 8px 0 }
+.rawhtml .mx button { cursor: pointer }
+.rawhtml .mx button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px }
+.rawhtml .mx .c { aspect-ratio: 1; background: var(--surface); transition: opacity 120ms ease }
+.rawhtml .mx .c.y { background: var(--acc) }
+.rawhtml .hero .mx .c.y { animation: cell 280ms var(--ease-out) backwards; animation-delay: calc(var(--i) * 28ms) }
+@keyframes cell { from { opacity: 0; transform: scale(.92); } }
+.rawhtml .mx[data-row] .c { opacity: .22 }
+.rawhtml .mx[data-row="0"] .r0, .rawhtml .mx[data-row="1"] .r1, .rawhtml .mx[data-row="2"] .r2, .rawhtml .mx[data-row="3"] .r3, .rawhtml .mx[data-row="4"] .r4 { opacity: 1 }
+.rawhtml .mxo { margin: 16px 0 0; min-height: 3.5em }
+.rawhtml .toc { grid-column: 1 / -1; align-self: end }
+.rawhtml .toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px }
+.rawhtml .toc a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; background: var(--surface); text-decoration: none; font-size: .92rem; font-weight: 500 }
+.rawhtml .sec { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 9fr); gap: 40px; margin-top: 136px }
+.rawhtml .rail-in { position: sticky; top: 24px }
+.rawhtml .sub { margin-top: 16px; display: grid; gap: 2px; max-height: calc(100svh - 160px); overflow-y: auto }
+.rawhtml .sub a { display: block; padding: 4px 0 4px 16px; color: var(--mut); text-decoration: none; font-size: .875rem; line-height: 1.45; position: relative }
+.rawhtml .sub a.on { color: var(--fg); font-weight: 600 }
+.rawhtml .sub a.on::before { content: ""; position: absolute; left: 0; top: 10px; width: 7px; height: 9px; background: var(--acc-line); clip-path: polygon(0 0, 100% 50%, 0 100%) }
+.rawhtml .body { min-width: 0 }
+.rawhtml .body > :first-child { margin-top: 0 }
+.rawhtml .body > p, .rawhtml .body > ul, .rawhtml .body > ol, .rawhtml .ans p { max-width: 42em }
+.rawhtml .table-wrap { overflow-x: auto; margin: 16px 0 }
+.rawhtml .pad::before { content: "토큰당"; visibility: hidden }
+.rawhtml .merge-wrap { overflow-x: auto; margin: 16px 0 }
+.rawhtml .merge { display: flex; align-items: center; gap: 12px; width: max-content; min-width: 100%; background: var(--code-bg); padding: 16px; font-family: var(--font-sans); font-size: .875rem; line-height: 1.6; white-space: nowrap }
+.rawhtml .merge-in { position: relative; display: grid; grid-template-columns: auto auto; column-gap: 12px; padding-right: 16px }
+.rawhtml .merge-in::after { content: ""; position: absolute; right: 0; top: 12px; bottom: 12px; width: 8px; border: 2px solid var(--mut); border-left: 0 }
+.rawhtml .fig { margin: 24px 0; background: var(--surface); padding: 20px; min-width: 0 }
+.rawhtml .fig figcaption { margin-top: 12px; color: var(--mut); font-size: .875rem; line-height: 1.55 }
+.rawhtml .fig-t { font-weight: 700; margin: 0 0 12px }
+.rawhtml .fig svg { display: block; width: 100%; height: auto }
+.rawhtml .fig svg text { font-family: var(--font-sans); fill: var(--fg); font-size: 14px }
+.rawhtml .fig svg .m { fill: var(--mut) }
+.rawhtml .st { fill: none; stroke: var(--fg); stroke-width: 1.6 }
+.rawhtml .st-m { fill: none; stroke: var(--line); stroke-width: 1.6 }
+.rawhtml .st-a { fill: none; stroke: var(--acc-line); stroke-width: 2.4 }
+.rawhtml .fl-a { fill: var(--acc); stroke: none }
+.rawhtml .fl-t { fill: var(--acc-fg) !important; font-weight: 700 }
+.rawhtml .fl-s { fill: var(--surface-2); stroke: none }
+.rawhtml .seg { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 16px }
+.rawhtml .seg button { font: inherit; font-size: .92rem; font-weight: 600; min-height: 44px; padding: 0 12px; border: 0; cursor: pointer; background: var(--bg); color: var(--mut); transition: transform 140ms var(--ease-out) }
+.rawhtml .seg button[aria-pressed="true"] { background: var(--acc); color: var(--acc-fg) }
+.rawhtml .seg button:active { transform: scale(.97) }
+.rawhtml .ctl { display: grid; gap: 12px; margin-bottom: 16px }
+.rawhtml .ctl label { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 12px; font-size: .92rem }
+.rawhtml .ctl input[type="range"] { grid-column: 1 / -1; width: 100%; min-height: 32px; accent-color: var(--acc) }
+.rawhtml .ctl output { font-weight: 700; font-variant-numeric: tabular-nums }
+.rawhtml .nums { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px }
+.rawhtml .nums label { font-variant-numeric: tabular-nums; display: grid; gap: 4px; font-size: .875rem; color: var(--mut) }
+.rawhtml .nums input, .rawhtml .nums select { font: inherit; color: var(--fg); background: var(--bg); border: 0; min-height: 44px; padding: 0 12px; width: 100%; font-variant-numeric: tabular-nums }
+.rawhtml .kv { display: grid; gap: 8px; margin: 12px 0 0 }
+.rawhtml .kv > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px }
+.rawhtml .kv dt { color: var(--mut); font-size: .875rem }
+.rawhtml .kv dd { margin: 0; font-size: 1.4rem; font-weight: 800; font-variant-numeric: tabular-nums; text-align: right }
+.rawhtml .say { margin: 12px 0 0; font-size: .92rem; line-height: 1.65; min-height: 3.3em }
+.rawhtml .flow { display: grid; gap: 12px }
+.rawhtml .flow ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px }
+.rawhtml .flow li { position: relative; margin: 0; padding: 4px 12px; background: var(--surface-2); font-size: .92rem }
+.rawhtml .flow li:not(.lane):not(:last-child)::after { content: "→"; position: absolute; right: -19px; top: 50%; transform: translateY(-50%); color: var(--mut) }
+.rawhtml .flow .lane { background: none; padding-left: 0; font-weight: 700; min-width: 44px }
+.rawhtml .flow .rep { background: var(--acc); color: var(--acc-fg); font-weight: 700 }
+.rawhtml .flow .end { background: none; outline: 2px solid var(--fg); outline-offset: -2px; font-weight: 600 }
+.rawhtml .switches { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px }
+.rawhtml .switches label { display: inline-flex; min-height: 44px; cursor: pointer }
+.rawhtml .switches label.off { opacity: .45; cursor: not-allowed }
+.rawhtml .switches input:disabled + span { cursor: not-allowed }
+.rawhtml .switches input { position: absolute; opacity: 0; width: 1px; height: 1px }
+.rawhtml .switches span { display: inline-flex; align-items: center; gap: 8px; padding: 0 16px; background: var(--bg); color: var(--mut); font-weight: 600; font-size: .92rem; transition: transform 140ms var(--ease-out) }
+.rawhtml .switches span::before { content: ""; width: 12px; height: 12px; background: currentColor; opacity: .35; clip-path: polygon(0 0, 0 100%, 100% 100%) }
+.rawhtml .switches input:checked + span { background: var(--acc); color: var(--acc-fg) }
+.rawhtml .switches input:checked + span::before { opacity: 1 }
+.rawhtml .switches input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 2px }
+.rawhtml .switches label:active span { transform: scale(.97) }
+.rawhtml .board-body { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 24px; align-items: start }
+.rawhtml .bench g { transition: opacity 180ms var(--ease-out) }
+.rawhtml .bench.no-att .g-att, .rawhtml .bench.no-mlp .g-mlp, .rawhtml .bench.no-pos .g-pos { opacity: .08 }
+.rawhtml .cond { font-weight: 700; font-size: 1.1rem; margin: 0 }
+.rawhtml .ranks { margin: 12px 0; display: grid; gap: 8px }
+.rawhtml .rk { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; font-size: .875rem }
+.rawhtml .rk-v { font-variant-numeric: tabular-nums; font-weight: 700 }
+.rawhtml .tr { grid-column: 1 / -1; display: block; overflow: clip; height: 12px; margin-top: 4px; background: var(--bg); padding-right: 12px }
+.rawhtml .tr i { display: block; width: 100%; transition: transform 260ms var(--ease-move) }
+.rawhtml .tr b { display: block; width: 12px; height: 12px; background: var(--acc-line) }
+.rawhtml .none .tr b { opacity: 0 }
+.rawhtml .ax { display: flex; justify-content: space-between; color: var(--mut); font-size: .875rem }
+.rawhtml .bars { display: grid; gap: 12px; margin-top: 12px }
+.rawhtml .bar-r { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; font-size: .92rem }
+.rawhtml .bar-v { font-weight: 700; font-variant-numeric: tabular-nums }
+.rawhtml .bar-t { grid-column: 1 / -1; position: relative; height: 16px; background: var(--bg); overflow: hidden }
+.rawhtml .bar-t i { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: var(--acc); transform-origin: left; transition: transform 240ms var(--ease-move) }
+.rawhtml .bar-t.zero i { left: 10%; width: 90% }
+.rawhtml .bar-t.zero::after { content: ""; position: absolute; left: 10%; top: 0; bottom: 0; width: 2px; background: var(--fg) }
+.rawhtml .cells { display: grid; grid-template-columns: repeat(28, minmax(0, 1fr)); gap: 2px }
+.rawhtml .cells i { height: 24px; background: var(--surface-2); transition: opacity 160ms ease }
+.rawhtml .cells i.hit { background: var(--acc) }
+.rawhtml .cells i.pre { background: var(--mut) }
+.rawhtml .cells i.cut { background: none; outline: 2px solid var(--acc-line); outline-offset: -2px }
+.rawhtml .cell-row { margin-top: 12px; font-size: .92rem }
+.rawhtml .cell-row p { margin: 0 0 4px }
+.rawhtml .cell-ax { display: flex; justify-content: space-between; color: var(--mut); font-size: .875rem; margin-top: 4px }
+.rawhtml .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 }
+.rawhtml .chips span { padding: 2px 8px; background: var(--surface-2); font-size: .92rem }
+.rawhtml .chips .x { background: var(--acc); color: var(--acc-fg); font-weight: 700 }
+.rawhtml .chips .y { outline: 2px solid var(--fg); outline-offset: -2px; font-weight: 700; background: none }
+.rawhtml .two { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 24px; align-items: start }
+.rawhtml .mk { max-width: 420px; display: grid; grid-template-columns: 64px repeat(5, minmax(0, 1fr)); gap: 4px; font-size: .875rem }
+.rawhtml .mk .h { align-self: center; font-weight: 600 }
+.rawhtml .mk .c { aspect-ratio: 1; background: var(--bg) }
+.rawhtml .mk .c.old { background: var(--surface-2) }
+.rawhtml .mk .c.new { background: var(--acc) }
+.rawhtml .key { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 8px; color: var(--mut); font-size: .875rem }
+.rawhtml .key i { display: inline-block; width: 12px; height: 12px; margin-right: 4px; vertical-align: -1px }
+.rawhtml .key .k-new { background: var(--acc) }
+.rawhtml .key .k-old { background: var(--surface-2) }
+.rawhtml .key .k-obj { background: var(--bg); outline: 2px solid var(--fg); outline-offset: -2px }
+.rawhtml .gridm { max-width: 420px; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px }
+.rawhtml .gridm i { aspect-ratio: 1; background: var(--bg); transition: opacity 160ms ease }
+.rawhtml .gridm i.k { background: var(--acc) }
+.rawhtml .gridm i.o { outline: 2px solid var(--fg); outline-offset: -2px }
+.rawhtml .q2 { display: grid; grid-template-columns: 72px repeat(2, minmax(0, 1fr)); gap: 4px; max-width: 360px; font-size: .92rem }
+.rawhtml .q2 > * { min-height: 56px; display: flex; align-items: center; justify-content: center }
+.rawhtml .q2 .h { font-weight: 600; min-height: 32px }
+.rawhtml .q2 .yes { background: var(--acc); color: var(--acc-fg); font-weight: 700 }
+.rawhtml .q2 .no { background: var(--bg); color: var(--mut) }
+.rawhtml .tri { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px }
+.rawhtml .tri p { margin: 8px 0 0; font-size: .875rem; line-height: 1.5 }
+.rawhtml .tri b { display: block }
+.rawhtml .qa-tools { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap }
+.rawhtml .qa-tools p { color: var(--mut); font-size: .92rem; margin: 0 }
+.rawhtml .qa-tools button { font: inherit; font-size: .92rem; font-weight: 600; min-height: 44px; padding: 0 16px; border: 0; cursor: pointer; background: var(--surface); color: var(--fg); transition: transform 140ms var(--ease-out) }
+.rawhtml .qa-tools button:active { transform: scale(.97) }
+.rawhtml details.quiz { background: var(--surface); margin: 8px 0 }
+.rawhtml details.quiz summary { cursor: pointer; padding: 16px 20px; list-style: none; display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 12px; align-items: baseline }
+.rawhtml details.quiz summary::-webkit-details-marker { display: none }
+.rawhtml details.quiz summary::before { content: ""; width: 10px; height: 12px; align-self: start; margin-top: 8px; background: var(--mut); clip-path: polygon(0 0, 100% 50%, 0 100%); transition: transform 160ms var(--ease-out) }
+.rawhtml details.quiz[open] summary::before { transform: rotate(90deg); background: var(--acc-line) }
+.rawhtml details.quiz summary:focus-visible { outline-offset: -3px }
+.rawhtml .qn { font-weight: 800; color: var(--acc-line); font-variant-numeric: tabular-nums }
+.rawhtml .qt { font-weight: 500 }
+.rawhtml .ans { padding: 0 20px 16px }
+@media (hover: hover) and (pointer: fine) {
+.rawhtml .toc a:hover, .rawhtml .theme:hover, .rawhtml .qa-tools button:hover { background: var(--surface-2) }
+.rawhtml .seg button:not([aria-pressed="true"]):hover, .rawhtml .switches label:not(.off) input:not(:checked) + span:hover { color: var(--fg) }
+.rawhtml .sub a:hover { color: var(--fg) }
+.rawhtml details.quiz summary:hover::before { background: var(--acc-line) }
+.rawhtml .go:hover { background: var(--acc-line) }
+}
+@media (max-width: 900px) {
+.rawhtml .hero { grid-template-columns: minmax(0, 1fr); min-height: 0; padding-top: 72px }
+.rawhtml .sec { grid-template-columns: minmax(0, 1fr); margin-top: 88px; gap: 16px }
+.rawhtml .rail-in { position: static }
+.rawhtml .sub { display: none }
+.rawhtml .board-body, .rawhtml .two { grid-template-columns: minmax(0, 1fr) }
+.rawhtml .tri { grid-template-columns: minmax(0, 1fr) }
+}
+@media (max-width: 520px) {
+.rawhtml .fig { padding: 12px; margin-inline: -4px }
+}
+@media (prefers-reduced-motion: reduce) {
+.rawhtml .hero .mx .c.y { animation: none }
+.rawhtml .bench g, .rawhtml .tr i, .rawhtml .bar-t i, .rawhtml .seg button, .rawhtml .go, .rawhtml .theme, .rawhtml .switches span, .rawhtml details.quiz summary::before { transition: none }
+}
+</style>
+<div class="rawhtml">
+<a class="skip" href="#s1">본문으로 건너뛰기</a>
+
+<div class="hero">
+<button class="theme" data-theme-btn="" type="button">라이트 모드</button>
+
+<div><div aria-label="causal mask 행렬. 각 토큰은 자기 자신과 과거만 본다." class="mx" data-matrix="" role="group"><button data-r="0" type="button">The</button><div class="c r0 y" style="--i:0"></div><div class="c r0"></div><div class="c r0"></div><div class="c r0"></div><div class="c r0"></div><button data-r="1" type="button">capital</button><div class="c r1 y" style="--i:1"></div><div class="c r1 y" style="--i:2"></div><div class="c r1"></div><div class="c r1"></div><div class="c r1"></div><button data-r="2" type="button">of</button><div class="c r2 y" style="--i:3"></div><div class="c r2 y" style="--i:4"></div><div class="c r2 y" style="--i:5"></div><div class="c r2"></div><div class="c r2"></div><button data-r="3" type="button">South</button><div class="c r3 y" style="--i:6"></div><div class="c r3 y" style="--i:7"></div><div class="c r3 y" style="--i:8"></div><div class="c r3 y" style="--i:9"></div><div class="c r3"></div><button data-r="4" type="button">Korea</button><div class="c r4 y" style="--i:10"></div><div class="c r4 y" style="--i:11"></div><div class="c r4 y" style="--i:12"></div><div class="c r4 y" style="--i:13"></div><div class="c r4 y" style="--i:14"></div></div>
+<p aria-live="polite" class="mxo" data-matrix-out="">채워진 칸 15개가 5토큰의 <code>q·k</code> 횟수다. 토큰을 눌러 그 줄이 무엇을 보는지 확인하자.</p></div>
+
+</div>
+<section class="sec"><div class="rail"><div class="rail-in"><h2 id="s1">1. 전체 흐름</h2></div></div><div class="body"><pre><code>LLM: tokenizer → embedding → [attention → MLP] × N → norm → lm_head → 다음 토큰
+VLM: image → ViT(14px) → 2×2 merge + adapter → [이미지·텍스트 벡터] → LLM → 텍스트
+</code></pre>
+<figure class="fig"><div aria-label="LLM과 VLM의 전체 흐름" class="flow" role="group">
+<ol aria-label="LLM"><li class="lane">LLM</li><li>tokenizer</li><li>embedding</li><li class="rep">attention, MLP × N</li><li>norm</li><li>lm_head</li><li class="end">다음 토큰</li></ol>
+<ol aria-label="VLM"><li class="lane">VLM</li><li>image</li><li>ViT (14px)</li><li>2×2 merge + adapter</li><li class="rep">이미지·텍스트 벡터</li><li>LLM</li><li class="end">텍스트</li></ol>
+</div></figure><p><strong>꼭 기억할 문장</strong></p>
+<ol>
+<li>토큰 사이의 정보 이동은 token mixer(attention)에서만 일어난다.</li>
+<li>MLP는 저장소이고 attention은 운반 경로다. 재료가 오지 않으면 MLP는 답을 만들지 못한다.</li>
+<li>Skip connection 덕분에 모든 층이 같은 공간을 공유하고, 중간 어디서든 벡터를 꺼내 읽을 수 있다.</li>
+<li>KV cache는 빈도 기반 조회표가 아니라, 지나간 토큰의 K와 V를 다시 계산하지 않는 장치다.</li>
+<li>이미지 토큰은 단어가 아니라 사전에 없는 벡터다. LLM은 애초에 벡터만 받는다.</li>
+<li>"보는 능력"과 "좌표로 말하는 능력"은 다르다.</li>
+<li>외곽을 버려도 된다는 말은 모델의 성질이 아니라 데이터에 대한 가정이다.</li>
+</ol>
+</div></section>
+<section class="sec"><div class="rail"><div class="rail-in"><h2 id="s2">2. 헷갈리기 쉬운 개념</h2></div></div><div class="body"><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>흔한 오해</th>
+<th>정확한 이해</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>KV cache는 자주 나오는 Q, K에 대한 V를 캐싱한다</td>
+<td>빈도와 무관하다. 한 시퀀스 생성 중 과거 토큰의 K, V를 재계산하지 않는다</td>
+</tr>
+<tr>
+<td>학습된 위치 정보도 어텐션처럼 동작할 수 있다</td>
+<td>위치 벡터에는 다른 토큰의 내용이 없어서 구조적으로 불가능하다</td>
+</tr>
+<tr>
+<td>MLP-Mixer 방식은 언어에서 해 봤다가 실패했다</td>
+<td>MLP-Mixer는 2021년에 이미지용으로 나왔다. "구조상 언어에 잘 맞지 않는다"가 정확하다</td>
+</tr>
+<tr>
+<td>어텐션은 연산 손해를 하드웨어가 메워 줬다</td>
+<td>병렬 계산이 가능해 GPU와 궁합이 좋았고, 2017년 당시 정확도와 학습 시간도 앞섰다</td>
+</tr>
+<tr>
+<td>PCA로 유사도를 비교한다</td>
+<td>PCA는 시각화 도구다. 유사도는 cosine 등으로 잰다</td>
+</tr>
+<tr>
+<td>PCA에 찍힌 것은 생성된 토큰이다</td>
+<td>입력 토큰이 각 층을 지난 hidden state다</td>
+</tr>
+<tr>
+<td>이미지가 언어 토큰으로 바뀐다</td>
+<td>같은 크기의 벡터가 될 뿐, 사전의 단어로 바뀌지 않는다</td>
+</tr>
+<tr>
+<td>이미지 패치에 stop 같은 단어가 붙는다</td>
+<td>logit lens로 측정한 결과일 뿐, 모델 안의 벡터는 연속값이다</td>
+</tr>
+<tr>
+<td>Adapter가 비전 정보를 언어 정보로 바꾼다</td>
+<td>크기를 맞추고 LLM이 읽을 형식으로 쓴다. 단어로 읽히는 변화는 LLM 층을 지나며 일어난다</td>
+</tr>
+</tbody>
+</table></div>
+</div></section>
+<section class="sec"><div class="rail"><div class="rail-in"><h2 id="s3">3. LLM</h2><nav aria-label="LLM 소제목" class="sub"><a href="#s3-1">3.1 모델 구조 (Qwen2.5-7B 예시)</a><a href="#s3-2">3.2 토크나이저와 임베딩</a><a href="#s3-3">3.3 Attention과 위치를 끄면</a><a href="#s3-4">3.4 위치 정보 방식</a><a href="#s3-5">3.5 Block 해부</a><a href="#s3-6">3.6 층을 지나며</a><a href="#s3-7">3.7 Linear probe</a><a href="#s3-8">3.8 Causal mask</a><a href="#s3-9">3.9 KV cache</a><a href="#s3-10">3.10 Hybrid 구조 (Qwen3.5의 Gated DeltaNet)</a><a href="#s3-11">3.11 어텐션은 왜 혁신이었나</a></nav></div></div><div class="body"><h3 id="s3-1">3.1 모델 구조 (Qwen2.5-7B 예시)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th>값</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>층 수</td>
+<td>28</td>
+</tr>
+<tr>
+<td><code>d_model</code></td>
+<td>3584</td>
+</tr>
+<tr>
+<td>Query head / KV head</td>
+<td>28 / 4 (GQA)</td>
+</tr>
+<tr>
+<td><code>head_dim</code></td>
+<td>128</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>한 block의 구조 (pre-norm)</strong></p><figure class="fig"><svg aria-label="pre-norm block. 본선 h에 attention 출력 a와 MLP 출력 m을 차례로 더해 다음 층으로 넘긴다." role="img" viewBox="0 0 640 210">
+<path class="st" d="M16 150H624"></path><path class="st" d="M616 144l8 6-8 6"></path>
+<text x="16" y="178">h_l</text><text x="590" y="178">h_l+1</text>
+<circle class="st" cx="280" cy="150" r="12"></circle><path class="st" d="M274 150h12M280 144v12"></path>
+<circle class="st" cx="520" cy="150" r="12"></circle><path class="st" d="M514 150h12M520 144v12"></path>
+<path class="st-a" d="M80 150V60H110M220 60H280V138"></path>
+<rect class="fl-s" height="48" width="50" x="110" y="36"></rect><text text-anchor="middle" x="135" y="65">Norm</text>
+<rect class="fl-a" height="48" width="56" x="164" y="36"></rect><text class="fl-t" text-anchor="middle" x="192" y="65">Attn</text>
+<text x="290" y="110">a_l</text>
+<path class="st" d="M320 150V60H350M460 60H520V138"></path>
+<rect class="fl-s" height="48" width="50" x="350" y="36"></rect><text text-anchor="middle" x="375" y="65">Norm</text>
+<rect class="fl-s" height="48" width="56" x="404" y="36"></rect><text text-anchor="middle" x="432" y="65">MLP</text>
+<text x="530" y="110">m_l</text>
+<text class="m" text-anchor="middle" x="320" y="200">이 block이 28층 쌓인다. 토큰 사이를 잇는 부품은 Attn뿐이다.</text>
+</svg></figure>
+<pre><code>h_l+1 = h_l + Attn(Norm(h_l)) + MLP(Norm(h_l + a_l))
+      = h_l + a_l + m_l
+</code></pre>
+<h3 id="s3-2">3.2 토크나이저와 임베딩</h3>
+<ul>
+<li>토큰 수 예시: 쉬운 영어 질문 8개, 어려운 영어 질문 14개, 한국어 질문 34개</li>
+<li>한국어는 byte 단위로 쪼개져 한 글자가 여러 토큰에 걸치고, 하나씩 디코드하면 <code>�</code>가 보인다.</li>
+<li>이웃 단어 예시
+<ul>
+<li><code>Seoul</code> → <code>Tokyo</code>, <code>서울</code>, <code>Beijing</code>, <code>Beirut</code>, <code>Bangkok</code></li>
+<li><code>Galaxy</code> → <code>galaxy</code>, <code>axy</code>, <code>galaxies</code>, <code>Nexus</code>, <code>cosmos</code>, <code>Milky</code></li>
+</ul>
+</li>
+<li>임베딩은 "어떤 단어와 관련 있는가"를 담지만, 단어당 벡터가 하나뿐이라 "이 질문에서 무엇을 묻는가"는 담지 못한다. <code>Galaxy</code> 벡터 하나에 스마트폰과 은하의 뜻이 섞여 있다.</li>
+</ul>
+<h3 id="s3-3">3.3 Attention과 위치를 끄면</h3>
+<p><strong>Qwen2.5-7B 실험</strong></p><figure class="fig" data-board="">
+<div aria-label="모델 부품 끄고 켜기" class="switches" role="group">
+<label><input checked data-sw="att" type="checkbox"><span>Attention</span></label>
+<label><input checked data-sw="mlp" type="checkbox"><span>MLP</span></label>
+<label data-pos-label=""><input checked data-sw="pos" type="checkbox"><span>위치 정보</span></label>
+</div>
+<div class="board-body"><svg aria-label="토큰 네 개가 층을 지나는 구조도. 정보는 attention 곡선으로만 마지막 토큰에 도착한다." class="bench" role="img" viewBox="0 0 360 292">
+<path class="st-m" d="M50 256V62M130 256V62M210 256V62M310 256V38"></path>
+<g class="g-att"><path class="st-a" d="M50 196C50 150 250 176 310 150"></path><path class="st-a" d="M130 196C130 158 260 178 310 150"></path><path class="st-a" d="M210 196C210 170 280 180 310 150"></path><text text-anchor="middle" x="180" y="146">attention</text></g>
+<g class="g-pos"><circle class="st" cx="50" cy="196" r="6"></circle><path class="st" d="M50 196l4-4"></path><circle class="st" cx="130" cy="196" r="6"></circle><path class="st" d="M130 196l2-5"></path><circle class="st" cx="210" cy="196" r="6"></circle><path class="st" d="M210 196l5-2"></path><text class="m" x="40" y="226">위치 (RoPE 회전)</text></g>
+<g class="g-mlp"><rect class="st" height="30" width="48" x="26" y="82"></rect><rect class="st" height="30" width="48" x="106" y="82"></rect><rect class="st" height="30" width="48" x="186" y="82"></rect><rect class="st" height="30" width="48" x="286" y="82"></rect>
+<text text-anchor="middle" x="50" y="102">MLP</text><text text-anchor="middle" x="130" y="102">MLP</text><text text-anchor="middle" x="210" y="102">MLP</text><text text-anchor="middle" x="310" y="102">MLP</text></g>
+<rect class="st" height="28" width="56" x="22" y="256"></rect><rect class="st" height="28" width="56" x="102" y="256"></rect><rect class="st" height="28" width="56" x="182" y="256"></rect><rect class="st" height="28" width="68" x="276" y="256"></rect>
+<text text-anchor="middle" x="50" y="275">앞 토큰</text><text text-anchor="middle" x="130" y="275">앞 토큰</text><text text-anchor="middle" x="210" y="275">앞 토큰</text><text text-anchor="middle" x="310" y="275">마지막</text>
+<rect class="fl-a" height="32" width="96" x="262" y="6"></rect><text class="fl-t" text-anchor="middle" x="310" y="27">다음 토큰</text>
+</svg>
+<div aria-live="polite"><p class="cond" data-cond="">③ 전체</p>
+<dl class="kv"><div><dt>Seoul 확률</dt><dd data-p="">0.977</dd></div></dl>
+<div class="ranks"><div class="rk"><span>Seoul</span><span class="rk-v" data-v="">1</span><span class="tr"><i data-m=""><b></b></i></span></div><div class="rk"><span>fold 질문 Z</span><span class="rk-v" data-v="">1</span><span class="tr"><i data-m=""><b></b></i></span></div><div class="rk"><span>pen 질문 Note/S</span><span class="rk-v" data-v="">1</span><span class="tr"><i data-m=""><b></b></i></span></div><div aria-hidden="true" class="ax"><span>rank 10만</span><span>1,000</span><span>10</span><span>1</span></div></div>
+<dl class="kv"><div><dt>Pair test, max |Δlogit|</dt><dd data-d="">10.5000</dd></div></dl>
+<p class="say" data-why=""></p></div></div>
+<figcaption>값은 아래 표와 같은 Qwen2.5-7B 실험 결과다. RoPE는 attention 안에 있어서 attention을 끄면 함께 사라진다.</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>조건</th>
+<th>Seoul p</th>
+<th>Seoul rank</th>
+<th>fold 질문 Z rank</th>
+<th>pen 질문 Note/S rank</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>① 임베딩만</td>
+<td>0.000</td>
+<td>86,669</td>
+<td>101,713</td>
+<td>39,413</td>
+</tr>
+<tr>
+<td>② MLP만 (attention=0)</td>
+<td>0.000</td>
+<td>98,710</td>
+<td>52,213</td>
+<td>8,970</td>
+</tr>
+<tr>
+<td>④ attention, 위치 끔</td>
+<td>0.555</td>
+<td>1</td>
+<td>77</td>
+<td>6</td>
+</tr>
+<tr>
+<td>③ 전체</td>
+<td>0.977</td>
+<td>1</td>
+<td>1 (p=0.602)</td>
+<td>1 (p=0.702)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Pair test: 마지막 토큰이 같은 fold 질문과 pen 질문의 max |Δlogit|</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>①</th>
+<th>②</th>
+<th>④</th>
+<th>③</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.0000</td>
+<td>0.0000</td>
+<td>4.7578</td>
+<td>10.5000</td>
+</tr>
+</tbody>
+</table></div>
+<p>해석:</p>
+<ul>
+<li>①과 ②의 Δ가 0인 것은 구조적으로 보장된다. 토큰끼리 섞는 연산이 attention뿐이기 때문이다.</li>
+<li>②가 실패한 이유는 지식이 없어서가 아니라 단서가 마지막 위치로 운반되지 않아서다.</li>
+<li>④가 버티는 이유는 순서를 몰라도 단어들을 끌어모을 수 있고, causal mask가 "앞에 토큰이 몇 개 있는가"라는 암묵적 위치 신호를 주기 때문이다. 단, 순서가 중요한 어려운 질문은 크게 약해진다.</li>
+<li>②의 top5가 이상한 것은 학습 때 본 적 없는 activation 분포가 들어갔기 때문이다(out-of-distribution).</li>
+<li>어텐션이 없으면 순서뿐 아니라 앞 내용을 통째로 바꿔도 마지막 토큰의 답이 같다.</li>
+</ul>
+<p><strong>GPT-2 실험</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>조건</th>
+<th>Seoul rank</th>
+<th>Pair test Δ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>① 임베딩 (PE 끔)</td>
+<td>39,643</td>
+<td>0.0000</td>
+</tr>
+<tr>
+<td>①' 임베딩 + PE</td>
+<td>15,651</td>
+<td>4.3372</td>
+</tr>
+<tr>
+<td>② MLP (PE 끔)</td>
+<td>21,983</td>
+<td>0.0000</td>
+</tr>
+<tr>
+<td>②' MLP + PE</td>
+<td>7,882</td>
+<td>0.9938</td>
+</tr>
+<tr>
+<td>④ attention, PE 끔</td>
+<td>692</td>
+<td>25.8304</td>
+</tr>
+<tr>
+<td>③ 전체</td>
+<td>1 (p=0.183)</td>
+<td>7.9097</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Filler 대조군:</strong> ②'에서 질문을 <code>" the the ... Galaxy"</code>로 바꾸고 길이만 맞춰도 차이가 0.0000이다.</p>
+<ul>
+<li>②'의 Δ는 전부 마지막 토큰의 <strong>위치</strong>(30번째와 35번째) 차이에서 나왔다.</li>
+<li>질문 내용은 전혀 들어 있지 않다.</li>
+<li>PE는 "나는 몇 번째인가"를 알려 줄 뿐, "앞에 무엇이 있었나"는 알려 주지 않는다.</li>
+</ul>
+<p><strong>위치를 끌 때 차이:</strong> GPT-2의 PE는 입력 벡터의 일부라 빼면 첫 층부터 분포가 바뀌어 크게 무너진다. RoPE는 attention 점수에만 작용해 빼도 내용 매칭은 남는다.</p>
+<h3 id="s3-4">3.4 위치 정보 방식</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>방식</th>
+<th>모델</th>
+<th>작동</th>
+<th>특징</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>절대 PE</td>
+<td>GPT-2</td>
+<td><code>h0 = wte[token] + wpe[position]</code></td>
+<td>wpe가 1024개 위치까지만 학습되어 더 긴 입력을 처리할 수 없음</td>
+</tr>
+<tr>
+<td>RoPE</td>
+<td>Qwen2.5</td>
+<td>attention에서 Q, K를 위치만큼 회전</td>
+<td>상대 거리에 작용, attention을 끄면 함께 사라짐</td>
+</tr>
+<tr>
+<td>Recurrence</td>
+<td>Qwen3.5의 linear attention</td>
+<td>토큰을 순서대로 읽으며 상태 갱신</td>
+<td>위치를 따로 넣지 않아도 순서를 앎</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>RoPE 직관:</strong> 위치 3과 5의 벡터를 각각 <code>3θ</code>, <code>5θ</code>만큼 돌리면, 내적은 각도 차이 <code>2θ</code>에 따라 달라진다. 그래서 모델이 상대 거리를 알 수 있다.</p><figure class="fig" data-rope=""><div class="two">
+<svg aria-label="두 위치의 벡터를 위치 번호만큼 돌린 그림" role="img" viewBox="0 0 260 260">
+<circle class="st-m" cx="130" cy="130" r="108"></circle>
+<g data-vi=""><path class="st" d="M130 130H238"></path><circle cx="238" cy="130" r="6" style="fill:var(--fg)"></circle></g>
+<g data-vj=""><path class="st-a" d="M130 130H238"></path><circle cx="238" cy="130" r="6" style="fill:var(--acc-line)"></circle></g>
+</svg>
+<div><div class="ctl"><label>위치 i (흰 벡터)<output data-o="i"></output><input max="12" min="0" name="rope-i" step="1" type="range" value="3"></label><label>위치 j (주황 벡터)<output data-o="j"></output><input max="12" min="0" name="rope-j" step="1" type="range" value="5"></label></div>
+<div class="seg"><button aria-pressed="false" data-rope-shift="" type="button">둘 다 한 칸 뒤로</button></div>
+<dl class="kv"><div><dt>각도 차이</dt><dd data-dist="">2θ</dd></div><div><dt>각도 차이의 cos (θ=15° 예시)</dt><dd data-cos=""></dd></div></dl></div></div>
+<figcaption>내적은 위치 자체가 아니라 각도 차이에 따라 달라진다. 둘을 함께 옮겨도 차이는 그대로라 모델이 상대 거리를 알 수 있다. θ=15°는 그림을 위한 예시 값이다.</figcaption></figure>
+<p><strong>Recurrence:</strong> <code>S_t = f(S_t-1, x_t)</code>. 읽는 순서 자체가 상태에 남는다.</p>
+<h3 id="s3-5">3.5 Block 해부</h3>
+<p><strong>Attention 계산 순서</strong></p>
+<pre><code>Q, K, V 투영 → RoPE 회전 → GQA 확장 → q·k/√d → causal mask → softmax → V 가중 평균 → o_proj
+</code></pre>
+<ul>
+<li>Q: 내가 찾는 것</li>
+<li>K: 내가 가진 것</li>
+<li>V: 선택되면 넘겨줄 내용</li>
+<li>위치 정보: Q와 K의 회전으로 들어감</li>
+<li>GQA: KV head 몇 개를 query head 여러 개가 공유 (Qwen2.5-7B는 KV 4개를 query 28개가 공유)</li>
+</ul>
+<p><strong>MLP (FFN, Feed-Forward Network)</strong></p>
+<ul>
+<li>트랜스포머 안의 MLP를 보통 FFN이라고 부른다.</li>
+<li>토큰마다 같은 가중치로 따로 계산한다. 토큰끼리는 섞지 않고 한 토큰 안의 채널을 섞는다.</li>
+<li>Qwen은 SwiGLU를 쓴다: <code>silu(gate·x) ⊙ (up·x)</code>. 두 특징이 함께 있을 때만 크게 켜지는 AND 형태의 조합을 만들 수 있다.</li>
+</ul>
+<p><strong>Skip connection이 필요한 이유 3가지</strong></p>
+<ol>
+<li><code>∂h_l+1/∂h_l = I + ∂branch</code>라서 gradient가 깊은 층까지 전달된다.</li>
+<li>기본 동작이 identity라서 각 block은 수정량만 배우면 된다.</li>
+<li>모든 층이 같은 공간에 읽고 쓰는 공유 버스가 되어, 출력을 부품별 합으로 분해할 수 있다.</li>
+</ol>
+<p><strong>Skip 실험</strong></p><figure class="fig" data-skip="">
+<div class="seg"><button aria-pressed="true" data-v="0" type="button">끊지 않음</button><button aria-pressed="false" data-v="1" type="button">layer 1</button><button aria-pressed="false" data-v="14" type="button">layer 14</button><button aria-pressed="false" data-v="26" type="button">layer 26</button></div>
+<div aria-hidden="true" class="cells"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div aria-hidden="true" class="cell-ax"><span>layer 1</span><span>layer 28</span></div>
+<div aria-live="polite" class="ranks"><div class="rk"><span>Seoul rank</span><span class="rk-v" data-sk-v="">1</span><span class="tr"><i data-sk-m=""><b></b></i></span></div><div aria-hidden="true" class="ax"><span>rank 10만</span><span>1,000</span><span>10</span><span>1</span></div></div>
+<p class="say" data-sk-c=""></p></figure>
+<ul>
+<li>
+<p>재구성: <code>h_l + a_l + m_l</code>로 <code>h_l+1</code>을 재구성한 오차 0.0</p>
+</li>
+<li>
+<p>학습된 모델에서 하나만 제거</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>끊은 층</th>
+<th>Seoul rank</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>없음</td>
+<td>1 (p=0.977)</td>
+</tr>
+<tr>
+<td>layer 1</td>
+<td>101,310</td>
+</tr>
+<tr>
+<td>layer 14</td>
+<td>52,501</td>
+</tr>
+<tr>
+<td>layer 26</td>
+<td>4,295</td>
+</tr>
+</tbody>
+</table></div>
+<p>이후 층이 "본선에 이전 내용이 그대로 있다"고 가정하고 학습되었기 때문이다.</p>
+</li>
+<li>
+<p>32-block toy 학습</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>cos(입력, 출력)</th>
+<th>출력끼리 평균 cos</th>
+<th>첫/끝 block grad</th>
+<th>300 step 후 loss</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>skip 있음</td>
+<td>+0.65</td>
+<td>0.15</td>
+<td>1.4e-1 / 1.8e-1</td>
+<td>0.001</td>
+</tr>
+<tr>
+<td>skip 없음</td>
+<td>-0.01</td>
+<td>0.91</td>
+<td>3.0e-2 / 2.5e-1</td>
+<td>0.395</td>
+</tr>
+</tbody>
+</table></div>
+<p>Skip이 없으면 서로 다른 입력이 비슷한 출력으로 뭉개진다(rank collapse).</p>
+</li>
+</ul>
+<p><strong>Direct Logit Attribution (DLA):</strong> 최종 logit 차이를 임베딩과 각 층의 <code>a_l</code>, <code>m_l</code> 기여로 나눈다. 예: 임베딩 + Σa + Σm = 10.75, 실제 logit(Seoul) − logit(Tokyo) = 10.69</p>
+<p><strong>Knockout: 특정 토큰이 정보를 보내지 못하게 막기</strong></p><figure class="fig" data-ko="">
+<div class="seg"><button aria-pressed="true" data-v="none" type="button">차단 없음</button><button aria-pressed="false" data-v="ctl" type="button">대조군 4토큰 차단</button><button aria-pressed="false" data-v="sk" type="button">South·Korea 차단</button></div>
+<div aria-live="polite" class="bars">
+<div class="bar-r"><span>p(Seoul)</span><span class="bar-v" data-ko-p=""></span><span class="bar-t"><i data-ko-pb=""></i></span></div>
+<div class="bar-r"><span>Seoul 뉴런 top20 유지율</span><span class="bar-v" data-ko-k=""></span><span class="bar-t"><i data-ko-kb=""></i></span></div>
+<div class="bar-r"><span>Σ MLP 기여</span><span class="bar-v" data-ko-m=""></span><span class="bar-t zero"><i data-ko-mb=""></i></span></div>
+<div class="bar-r"><span>Σ attention 기여</span><span class="bar-v" data-ko-a=""></span><span class="bar-t zero"><i data-ko-ab=""></i></span></div>
+</div><figcaption>아래 두 막대의 세로선이 0이다. 재료를 막으면 attention뿐 아니라 MLP 기여까지 함께 사라진다.</figcaption></figure>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>조건</th>
+<th>p(Seoul)</th>
+<th>Σ MLP 기여</th>
+<th>Σ attention 기여</th>
+<th>Seoul 뉴런 top20 유지율</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>없음</td>
+<td>0.977</td>
+<td>+8.09</td>
+<td>+2.66</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>대조군 4토큰 차단</td>
+<td>0.933</td>
+<td>+7.83</td>
+<td>+1.46</td>
+<td>97%</td>
+</tr>
+<tr>
+<td>South·Korea 차단</td>
+<td>0.006</td>
+<td>+0.09</td>
+<td>-0.49</td>
+<td>15%</td>
+</tr>
+</tbody>
+</table></div>
+<p>"South Korea"의 전달을 막으면 Seoul 뉴런도 꺼진다. MLP가 답을 조합하려면 attention이 재료를 날라 와야 한다.</p>
+<p><strong>Attention sink</strong></p>
+<ul>
+<li>마지막 토큰이 의미 없는 첫 토큰을 많이 본다 (예: head 중 최대값 기준 평균 0.84).</li>
+<li>Softmax 합이 1이어야 하므로, 볼 것이 없을 때 남는 가중치가 모이는 곳이다.</li>
+</ul>
+<h3 id="s3-6">3.6 층을 지나며</h3>
+<p><strong>왜 층 단위로 보나:</strong> 정보가 어느 깊이에서 생기는지 알아야 어디를 고칠지 정할 수 있기 때문이다. Skip 구조 덕분에 중간 벡터도 같은 classifier로 읽을 수 있다.</p>
+<p><strong>Logit lens:</strong> 중간 층 벡터를 final norm과 lm_head에 통과시켜 어떤 단어로 읽히는지 본다. 중간 층의 top1은 이상한 토큰이 많으므로, 정답 토큰의 rank 곡선을 보는 편이 정확하다.</p>
+<p><strong>정답이 rank 1이 되는 층</strong></p><figure aria-label="정답이 rank 1이 되는 층" class="fig" role="group">
+<div class="cell-row"><p>Seoul: L24</p><div aria-hidden="true" class="cells"><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="hit"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></div></div><div class="cell-row"><p>Note (pen): L26, L22~25에 series가 먼저</p><div aria-hidden="true" class="cells"><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="pre"></i><i class="pre"></i><i class="pre"></i><i class="pre"></i><i class="hit"></i><i class=""></i><i class=""></i></div></div><div class="cell-row"><p>Z (fold): L28, L24~27에 折叠, fold가 먼저</p><div aria-hidden="true" class="cells"><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class="pre"></i><i class="pre"></i><i class="pre"></i><i class="pre"></i><i class="hit"></i></div></div>
+<div aria-hidden="true" class="cell-ax"><span>L1</span><span>L28</span></div>
+<div class="key"><span><i class="k-new"></i>정답이 rank 1이 되는 층</span><span><i style="background:var(--mut)"></i>관련 단어가 먼저 나오는 층</span></div></figure>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>질문</th>
+<th>층</th>
+<th>특징</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Seoul</td>
+<td>L24</td>
+<td></td>
+</tr>
+<tr>
+<td>Note (pen)</td>
+<td>L26</td>
+<td>L22~25에 <code>series</code>가 먼저 나옴</td>
+</tr>
+<tr>
+<td>Z (fold)</td>
+<td>L28</td>
+<td>L24~27에 <code>折叠</code>, <code>fold</code>가 먼저 나옴</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>같은 마지막 토큰의 벡터</strong></p>
+<ul>
+<li>Layer 0에서 fold와 pen의 cosine은 1이고, 이후의 차이는 전부 token mixer가 가져온 정보다.</li>
+<li>각 block은 본선을 덮어쓰지 않고 조금씩 더한다.</li>
+<li>같은 <code>" Galaxy"</code>도 앞 문장이 스마트폰인지 우주인지에 따라 층을 지나며 갈라진다.</li>
+</ul>
+<h3 id="s3-7">3.7 Linear probe</h3>
+<p><code>"The Galaxy has X, but the iPhone does not."</code>과 <code>"The iPhone has X, but the Galaxy does not."</code>은 토큰 구성이 같고 순서만 다르다.</p>
+<figure class="fig"><div aria-label="첫 번째 문장" class="chips"><span>The</span><span class="x">Galaxy</span><span>has</span><span>X,</span><span>but</span><span>the</span><span class="y">iPhone</span><span>does</span><span>not.</span></div>
+<div aria-label="두 번째 문장" class="chips"><span>The</span><span class="y">iPhone</span><span>has</span><span>X,</span><span>but</span><span>the</span><span class="x">Galaxy</span><span>does</span><span>not.</span></div>
+<figcaption>토큰 구성이 같으니 layer 0 평균은 같은 벡터가 된다. 그런데 정답은 다르므로 정확도가 정확히 0.50이다.</figcaption></figure><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>과제</th>
+<th>pooling</th>
+<th>layer 0</th>
+<th>최고</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A: Pixel이 언급되는가</td>
+<td>mean</td>
+<td>1.00</td>
+<td>1.00 @L0</td>
+</tr>
+<tr>
+<td>A: Pixel이 언급되는가</td>
+<td>last</td>
+<td>0.67</td>
+<td>1.00 @L1</td>
+</tr>
+<tr>
+<td>B: 기능을 가진 쪽이 Galaxy인가</td>
+<td>mean</td>
+<td>0.50</td>
+<td>1.00 @L1</td>
+</tr>
+<tr>
+<td>B: 기능을 가진 쪽이 Galaxy인가</td>
+<td>last</td>
+<td>0.50</td>
+<td>1.00 @L4</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>과제 B의 layer 0이 정확히 0.50인 이유: 같은 입력 벡터에 서로 다른 정답이 붙으므로 어떤 classifier도 찍기 이상을 할 수 없다. 표현이 정보를 잃은 것이다.</li>
+<li>Last token은 layer 0에서 <code>.</code>일 뿐이지만 몇 층을 지나면 문장의 요약이 된다.</li>
+</ul>
+<h3 id="s3-8">3.8 Causal mask</h3>
+<p>Attention 점수 행렬의 위쪽 삼각형(미래 토큰)을 <code>-inf</code>로 덮어, softmax 후 가중치가 0이 되게 하는 장치다. 각 토큰은 자기 자신과 과거만 본다.</p>
+<pre><code>        The  capital  of
+The      O     X      X
+capital  O     O      X
+of       O     O      O
+</code></pre>
+<ul>
+<li>필요한 이유: 생성할 때 미래 토큰은 아직 없다. 학습할 때도 정답을 미리 보지 못하게 해야 한다.</li>
+<li>얻는 것: KV cache</li>
+<li>잃는 것: 뒤 내용을 보고 앞 토큰을 고칠 수 없다.</li>
+</ul>
+<h3 id="s3-9">3.9 KV cache</h3>
+<p><strong>원리:</strong> causal mask가 있으면 과거 토큰은 미래 토큰을 보지 않는다. 그래서 과거 토큰의 hidden state와 K, V는 새 토큰이 와도 변하지 않는다.</p>
+<p><strong>쓸 때와 안 쓸 때 비교.</strong> 프롬프트 <code>The capital of</code>에 이어 <code>South</code>, <code>Korea</code>를 입력하며 생성하는 경우</p><figure class="fig" data-kv="">
+<div class="seg"><button aria-pressed="true" data-v="off" type="button">cache 없음</button><button aria-pressed="false" data-v="on" type="button">cache 있음</button></div><div class="seg"><button aria-pressed="true" data-v="1" type="button">1단계</button><button aria-pressed="false" data-v="2" type="button">2단계</button><button aria-pressed="false" data-v="3" type="button">3단계</button></div>
+<div class="two"><div><div aria-hidden="true" class="mk"><span class="h">The</span><i class="c" data-q="0" data-r="0"></i><i class="c" data-q="1" data-r="0"></i><i class="c" data-q="2" data-r="0"></i><i class="c" data-q="3" data-r="0"></i><i class="c" data-q="4" data-r="0"></i><span class="h">capital</span><i class="c" data-q="0" data-r="1"></i><i class="c" data-q="1" data-r="1"></i><i class="c" data-q="2" data-r="1"></i><i class="c" data-q="3" data-r="1"></i><i class="c" data-q="4" data-r="1"></i><span class="h">of</span><i class="c" data-q="0" data-r="2"></i><i class="c" data-q="1" data-r="2"></i><i class="c" data-q="2" data-r="2"></i><i class="c" data-q="3" data-r="2"></i><i class="c" data-q="4" data-r="2"></i><span class="h">South</span><i class="c" data-q="0" data-r="3"></i><i class="c" data-q="1" data-r="3"></i><i class="c" data-q="2" data-r="3"></i><i class="c" data-q="3" data-r="3"></i><i class="c" data-q="4" data-r="3"></i><span class="h">Korea</span><i class="c" data-q="0" data-r="4"></i><i class="c" data-q="1" data-r="4"></i><i class="c" data-q="2" data-r="4"></i><i class="c" data-q="3" data-r="4"></i><i class="c" data-q="4" data-r="4"></i></div>
+<div class="key"><span><i class="k-new"></i>이번 단계에 계산</span><span><i class="k-old"></i>저장한 K, V 재사용</span></div></div>
+<div aria-live="polite"><dl class="kv"><div><dt>모델 입력</dt><dd data-kv-in="" style="font-size:1rem"></dd></div><div><dt>이번 단계 q·k</dt><dd data-kv-c=""></dd></div><div><dt>누적 q·k</dt><dd data-kv-sc=""></dd></div><div><dt>누적 처리 토큰</dt><dd data-kv-st=""></dd></div></dl></div></div>
+<figcaption>각 줄이 토큰 하나의 Q이고, 각 칸이 과거 토큰의 K와 만나는 q·k 한 번이다. cache가 있어도 새 토큰의 q·k는 여전히 계산한다.</figcaption></figure>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>단계</th>
+<th>cache 없음 입력</th>
+<th>cache 있음 입력</th>
+<th>cache 없음 <code>q·k</code></th>
+<th>cache 있음 <code>q·k</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>The capital of</code> (3개)</td>
+<td><code>The capital of</code> (3개)</td>
+<td>6</td>
+<td>6</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>The capital of South</code> (4개)</td>
+<td><code>South</code> (1개)</td>
+<td>10</td>
+<td>4</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>The capital of South Korea</code> (5개)</td>
+<td><code>Korea</code> (1개)</td>
+<td>15</td>
+<td>5</td>
+</tr>
+<tr>
+<td>합계</td>
+<td>토큰 12번</td>
+<td>토큰 5번</td>
+<td>31</td>
+<td>15</td>
+</tr>
+</tbody>
+</table></div>
+<pre><code class="language-python">if use_cache:
+    past, inp = out.past_key_values, nxt   # 다음엔 새 토큰 1개만
+else:
+    inp = seq                              # 다음엔 전체 시퀀스
+</code></pre>
+<p><strong>정리</strong></p>
+<ul>
+<li>Q는 저장하지 않는다. 과거 토큰의 출력은 이미 계산이 끝났기 때문이다.</li>
+<li>모든 층과 KV head마다 저장한다.</li>
+<li>근사가 아니라 같은 계산을 생략하는 것이라 출력이 같다.</li>
+<li>첫 토큰(TTFT)은 프롬프트 전체를 처리해야 해서 빨라지지 않는다.</li>
+<li>이 cache는 기본적으로 한 생성 과정 안에서만 쓴다. 요청 간 재사용은 prompt caching이라는 별도 기능이다.</li>
+</ul>
+<p><strong>메모리</strong></p><figure class="fig" data-mem="">
+<div class="seg"><button aria-pressed="false" data-preset="4" type="button">Qwen2.5-7B (kv 4)</button><button aria-pressed="false" data-preset="28" type="button">GQA 없을 때 (head 28)</button></div>
+<div class="nums">
+<label>층 수<input inputmode="numeric" min="1" name="layers" type="number" value="28"></label>
+<label>kv_heads<input inputmode="numeric" min="1" name="kv" type="number" value="4"></label>
+<label>head_dim<input inputmode="numeric" min="1" name="dim" type="number" value="128"></label>
+<label>bytes<select name="bytes"><option selected value="2">2B</option><option value="4">4B (float32)</option></select></label>
+<label>토큰 수<input inputmode="numeric" min="0" name="tokens" type="number" value="32768"></label>
+</div>
+<div aria-live="polite"><p class="say" data-mem-f="" style="min-height:0"></p>
+<dl class="kv"><div><dt>토큰당</dt><dd data-mem-p=""></dd></div><div><dt>전체</dt><dd data-mem-t=""></dd></div></dl></div></figure>
+<pre><code>토큰당 = 2 × 층 수 × kv_heads × head_dim × bytes
+<span class="pad"></span> = 2 × 28 × 4 × 128 × 2B = 57,344B = 56KB
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>토큰 수</th>
+<th>GQA (kv 4)</th>
+<th>GQA 없을 때 (head 28)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>토큰당</td>
+<td>56KB</td>
+<td>392KB</td>
+</tr>
+<tr>
+<td>2,048</td>
+<td>0.11GB</td>
+<td>0.77GB</td>
+</tr>
+<tr>
+<td>32,768</td>
+<td>1.75GB</td>
+<td>12.25GB</td>
+</tr>
+<tr>
+<td>131,072</td>
+<td>7.00GB</td>
+<td>49.00GB</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>용어</strong></p>
+<ul>
+<li>토큰 윈도우보다는 <strong>문맥(context)</strong> 또는 <strong>시퀀스</strong>가 정확하다. Context window는 모델이 다룰 수 있는 최대 길이를 뜻한다.</li>
+<li>디코더의 두 가지 뜻
+<ul>
+<li>구조: causal mask로 과거만 보는 모델. GPT와 Qwen은 decoder-only 모델이다.</li>
+<li>단계: 첫 토큰 이후 토큰을 하나씩 만드는 decode. 프롬프트를 처리하는 prefill과 구분한다.</li>
+</ul>
+</li>
+<li>BERT 같은 양방향 인코더에는 맞지 않는다. 새 토큰이 과거 토큰의 hidden state까지 바꾸기 때문이다.</li>
+</ul>
+<h3 id="s3-10">3.10 Hybrid 구조 (Qwen3.5의 Gated DeltaNet)</h3>
+<ul>
+<li>24층 중 18층은 linear attention, layer 3, 7, 11, ... 23의 6층은 full attention</li>
+<li>상태 갱신: <code>S_t = α_t S_t-1 + β_t (v_t − α_t S_t-1 k_t) k_tᵀ</code> (α: 망각, β: 쓰기 강도)</li>
+<li>그 앞에 길이 4짜리 causal conv1d가 바로 옆 토큰을 섞는다.</li>
+<li>얻는 것: 메모리와 step 비용이 context 길이와 무관</li>
+<li>잃을 수 있는 것: 과거를 고정 크기로 압축하므로 먼 과거를 정확히 찾아오는 능력이 약해질 수 있음. 4번째 층마다 full attention을 남긴 것이 보완책이다.</li>
+<li>Knockout은 두 경로를 모두 막아야 효과가 있다.</li>
+<li>Cache 메모리는 "고정 state + 길이에 비례하는 KV"로 나뉜다.</li>
+</ul>
+<h3 id="s3-11">3.11 어텐션은 왜 혁신이었나</h3>
+<p><strong>학습된 위치 정보로 대신할 수 없는 이유:</strong> <code>h_i = 토큰_i 임베딩 + 위치_i 벡터</code>에는 다른 토큰의 내용이 없고, MLP도 자기 토큰만 처리한다. 학습량이 아니라 구조의 문제다. Filler 대조군이 증거다.</p>
+<p><strong>MLP-Mixer</strong>는 토큰끼리 섞는 경로를 위치 기준으로 학습한다("3번에서 7번으로 얼마나 옮길지"를 고정된 가중치로 배움). 격자가 고정된 이미지에는 잘 맞지만, <code>not</code>이 수식하는 대상이 문장마다 다른 언어에는 구조상 잘 맞지 않는다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>방식</th>
+<th>정보 전달</th>
+<th>한계</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RNN</td>
+<td>고정 크기 상태에 순서대로 압축</td>
+<td>먼 과거가 희미해지고, 병렬 처리가 어려움</td>
+</tr>
+<tr>
+<td>CNN</td>
+<td>가까운 이웃끼리 전달</td>
+<td>멀리 보려면 층을 많이 쌓아야 함</td>
+</tr>
+<tr>
+<td>Attention</td>
+<td>어떤 토큰이든 직접 참조</td>
+<td>계산량과 메모리가 길이에 따라 커짐</td>
+</tr>
+</tbody>
+</table></div>
+<figure class="fig"><div class="tri"><div><svg aria-label="RNN: 고정 크기 상태에 순서대로 압축" role="img" viewBox="0 0 240 90"><path class="st-a" d="M28 70H52"></path><path class="st-a" d="M68 70H92"></path><path class="st-a" d="M108 70H132"></path><path class="st-a" d="M148 70H172"></path><path class="st-a" d="M188 70H212"></path><circle class="st" cx="20" cy="70" r="8"></circle><circle class="st" cx="60" cy="70" r="8"></circle><circle class="st" cx="100" cy="70" r="8"></circle><circle class="st" cx="140" cy="70" r="8"></circle><circle class="st" cx="180" cy="70" r="8"></circle><circle class="st" cx="220" cy="70" r="8"></circle></svg><p><b>RNN</b>고정 크기 상태에 순서대로 압축</p></div><div><svg aria-label="CNN: 가까운 이웃끼리 전달" role="img" viewBox="0 0 240 90"><path class="st-a" d="M20 62Q40 30 60 62M60 62Q80 30 100 62M100 62Q120 30 140 62M140 62Q160 30 180 62M180 62Q200 30 220 62"></path><circle class="st" cx="20" cy="70" r="8"></circle><circle class="st" cx="60" cy="70" r="8"></circle><circle class="st" cx="100" cy="70" r="8"></circle><circle class="st" cx="140" cy="70" r="8"></circle><circle class="st" cx="180" cy="70" r="8"></circle><circle class="st" cx="220" cy="70" r="8"></circle></svg><p><b>CNN</b>가까운 이웃끼리 전달</p></div><div><svg aria-label="Attention: 어떤 토큰이든 직접 참조" role="img" viewBox="0 0 240 90"><path class="st-a" d="M20 62Q120 6 220 62"></path><path class="st-a" d="M60 62Q140 14 220 62"></path><path class="st-a" d="M100 62Q160 22 220 62"></path><path class="st-a" d="M140 62Q180 30 220 62"></path><path class="st-a" d="M180 62Q200 38 220 62"></path><circle class="st" cx="20" cy="70" r="8"></circle><circle class="st" cx="60" cy="70" r="8"></circle><circle class="st" cx="100" cy="70" r="8"></circle><circle class="st" cx="140" cy="70" r="8"></circle><circle class="st" cx="180" cy="70" r="8"></circle><circle class="st" cx="220" cy="70" r="8"></circle></svg><p><b>Attention</b>어떤 토큰이든 직접 참조</p></div></div></figure><p><strong>장점 4가지</strong></p>
+<ol>
+<li>내용에 따라 경로가 바뀐다 (<code>q·k</code>를 입력마다 새로 계산). 가장 큰 차이점이다.</li>
+<li>같은 가중치를 공유해 길이가 달라도 쓸 수 있다.</li>
+<li>먼 토큰에도 한 번에 닿는다.</li>
+<li>행렬곱 중심이라 병렬 계산이 가능해 GPU와 궁합이 좋다.</li>
+</ol>
+<p><strong>주의</strong></p>
+<ul>
+<li>2017년 Transformer는 하드웨어 덕에 겨우 쓸 만해진 것이 아니라, 당시 번역 모델보다 정확도가 높으면서 학습 시간도 짧았다.</li>
+<li>연산 비용은 지금도 남아 있고 KV cache 메모리, prefill 시간으로 나타난다. 이미지 토큰 버리기도 이 비용을 줄이려는 시도다.</li>
+<li>어텐션만이 유일한 답은 아니다. Skip connection, 대규모 데이터도 함께 기여했고, Gated DeltaNet 같은 대안도 나오고 있다.</li>
+</ul>
+</div></section>
+<section class="sec"><div class="rail"><div class="rail-in"><h2 id="s4">4. RL 용어</h2></div></div><div class="body"><p>정책(policy)은 지금까지 본 정보로 다음 행동을 고르는 함수다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>용어</th>
+<th>입력</th>
+<th>트랜스포머에 대응</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Markov policy</td>
+<td>현재 상태 <code>s_t</code></td>
+<td>임베딩만 쓰는 모델</td>
+</tr>
+<tr>
+<td>Memoryless policy</td>
+<td>현재 관측 <code>o_t</code></td>
+<td>MLP만 남긴 모델</td>
+</tr>
+<tr>
+<td>History-conditioned policy</td>
+<td><code>o_1 ... o_t</code></td>
+<td>attention이 있는 모델</td>
+</tr>
+<tr>
+<td>Residual policy learning</td>
+<td>기본 정책 + 수정량</td>
+<td><code>h + block(h)</code></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>POMDP:</strong> 정책이 아니라 문제의 종류. 진짜 상태 중 일부만 보이는 상황이다. 마지막 토큰 <code>Galaxy</code>만으로는 무엇을 묻는지 알 수 없는 것과 같다.</li>
+<li><strong>Atari policy:</strong> 특별한 정책 종류가 아니라 Atari 게임을 하는 정책이다. 화면 한 장으로는 공의 속도를 몰라 최근 프레임을 겹쳐 넣는다(frame stacking).</li>
+<li><strong>Markov와 memoryless의 차이:</strong> 전체 상태가 보이면 같고, 일부만 보이면 다르다. 임베딩 모델도 엄밀히는 memoryless에 더 가깝다.</li>
+<li><strong>MLP + PE 모델:</strong> 관측에 시간 t만 붙인 정책과 같다. 시간 정보는 기억을 대신하지 못한다.</li>
+<li><strong>Projection layer:</strong> 벡터를 다른 크기의 공간으로 옮기는 층. RL에서 인코더와 정책 사이에 두며, adapter와 역할이 같다.</li>
+<li><strong>KV cache와 LSTM hidden state:</strong> RNN은 과거를 고정 크기로 압축하고, KV cache는 압축 없이 보관해 크기가 계속 늘어난다.</li>
+</ul>
+</div></section>
+<section class="sec"><div class="rail"><div class="rail-in"><h2 id="s5">5. 벡터를 비교하는 방법</h2></div></div><div class="body"><p><strong>PCA는 유사도 측정법이 아니라 시각화 도구다.</strong> 3584차원을 2차원으로 줄이며 정보를 많이 버리고, 최적의 비교 방법도 아니다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>방법</th>
+<th>보는 것</th>
+<th>용도</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cosine 유사도</td>
+<td>방향</td>
+<td>이웃 단어 찾기, 두 문맥의 벡터 비교</td>
+</tr>
+<tr>
+<td>Norm</td>
+<td>크기</td>
+<td>이미지 토큰과 단어 임베딩의 크기 비교</td>
+</tr>
+<tr>
+<td>Linear probe</td>
+<td>특정 정보를 선형으로 꺼낼 수 있는가</td>
+<td>벡터에 담긴 정보 검사</td>
+</tr>
+<tr>
+<td>Logit lens</td>
+<td>어떤 단어로 읽히는가</td>
+<td>층별 의미 변화 추적</td>
+</tr>
+<tr>
+<td>내적, 유클리드 거리</td>
+<td>방향과 크기</td>
+<td>일반적인 벡터 비교</td>
+</tr>
+<tr>
+<td>t-SNE, UMAP</td>
+<td>시각화</td>
+<td>고차원 구조 살펴보기</td>
+</tr>
+</tbody>
+</table></div>
+<p>이미지 토큰은 단어보다 훨씬 길어서(3B 기준 95 vs 1), 원시 PCA에서는 단어가 한 점에 뭉친다. 그래서 길이를 1로 맞춘 PCA도 함께 본다.</p>
+</div></section>
+<section class="sec"><div class="rail"><div class="rail-in"><h2 id="s6">6. VLM</h2><nav aria-label="VLM 소제목" class="sub"><a href="#s6-1">6.1 용어</a><a href="#s6-2">6.2 이미지가 토큰이 되기까지 (Qwen2.5-VL-7B 예시)</a><a href="#s6-3">6.3 이미지에는 사전이 없다</a><a href="#s6-4">6.4 Adapter</a><a href="#s6-5">6.5 위치 정보</a><a href="#s6-6">6.6 이미지 안에서 attention</a><a href="#s6-7">6.7 이미지 토큰에 logit lens</a><a href="#s6-8">6.8 OCR이 잘 되는 이유</a><a href="#s6-9">6.9 Localization이 약한 이유</a><a href="#s6-10">6.10 Attention 지도</a><a href="#s6-11">6.11 토큰 수와 비용</a><a href="#s6-12">6.12 이미지 토큰 버리기</a></nav></div></div><div class="body"><h3 id="s6-1">6.1 용어</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>용어</th>
+<th>뜻</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Patch</td>
+<td>이미지를 14×14px로 자른 조각</td>
+</tr>
+<tr>
+<td>ViT</td>
+<td>Vision Transformer. patch를 토큰처럼 다루는 트랜스포머</td>
+</tr>
+<tr>
+<td>Adapter</td>
+<td>ViT 출력을 LLM 입력 크기로 바꾸는 작은 MLP (<code>merger</code>)</td>
+</tr>
+<tr>
+<td>OCR</td>
+<td>이미지 속 글자 읽기</td>
+</tr>
+<tr>
+<td>Localization</td>
+<td>물체의 위치 짚기. 주로 bbox 좌표로 답함</td>
+</tr>
+<tr>
+<td>Sink 토큰</td>
+<td>질문과 상관없이 attention을 많이 받는 토큰</td>
+</tr>
+<tr>
+<td>Prefill</td>
+<td>프롬프트와 이미지 토큰 전체를 처음 처리해 KV cache를 채우는 단계</td>
+</tr>
+<tr>
+<td>M-RoPE</td>
+<td>RoPE를 시간 t, 세로 h, 가로 w 세 방향으로 나눠 쓰는 방식</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="s6-2">6.2 이미지가 토큰이 되기까지 (Qwen2.5-VL-7B 예시)</h3><figure class="fig" data-patch="">
+<div class="seg"><button aria-pressed="true" data-v="14" type="button">14px patch</button><button aria-pressed="false" data-v="28" type="button">28px LLM 토큰</button></div>
+<svg aria-label="448×336 이미지를 patch와 토큰 격자로 나눈 그림" role="img" viewBox="0 0 450 338">
+<defs><pattern height="14" id="p14" patternUnits="userSpaceOnUse" width="14"><path class="st-m" d="M14 0H0V14" style="stroke-width:1"></path></pattern><pattern height="28" id="p28" patternUnits="userSpaceOnUse" width="28"><path class="st-m" d="M28 0H0V28" style="stroke-width:1.6"></path></pattern></defs>
+<rect class="fl-s" height="336" width="448" x="1" y="1"></rect>
+<rect data-pt-14="" fill="url(#p14)" height="336" width="448" x="1" y="1"></rect><rect data-pt-28="" fill="url(#p28)" height="336" width="448" x="1" y="1"></rect>
+<rect class="fl-a" data-pt-one="" height="14" width="14" x="113" y="85"></rect>
+</svg>
+<p aria-live="polite" class="say" data-pt-s=""></p>
+<div class="flow"><ol aria-label="차원 변화"><li>1176</li><li>1280</li><li>1280 (ViT 32층)</li><li>5120 (4개 이어 붙임)</li><li class="rep">3584 (LLM 크기)</li></ol></div></figure>
+<pre><code>336×448 이미지
+→ 14px patch 32×24 = 768개
+→ pixel_values (768, 1176)   patch 하나 = 2프레임 × 3채널 × 14 × 14
+→ patch embedding: 1176 → 1280
+→ ViT 32층: 1280 → 1280 (patch끼리 attention)
+→ 이웃 4개 이어 붙이기: 5120
+→ adapter MLP: 3584 (LLM 크기)
+→ LLM 토큰 16×12 = 192개
+</code></pre>
+<ul>
+<li>LLM 토큰 하나는 28×28px이다.</li>
+<li><code>pixel_values</code>까지는 학습 파라미터가 없다. 자르고 펼치기만 하므로 다시 붙이면 원본과 같다.</li>
+<li>정지 사진이 2프레임인 이유: 영상과 같은 Conv3d를 쓰려고 같은 사진을 두 번 넣는다.</li>
+<li>행 순서가 가로줄 순서가 아닌 이유: 합쳐질 2×2 patch 4개를 연달아 놓아 merge를 단순한 reshape로 만들기 위해서다.</li>
+<li>입력 줄에서 <code>&#x3C;|image_pad|></code> 192개 자리가 adapter 출력 192행으로 바뀐다.</li>
+</ul>
+<h3 id="s6-3">6.3 이미지에는 사전이 없다</h3>
+<div class="merge-wrap"><div class="merge">
+<div class="merge-in">
+<span>단어:</span><span>"cup" → 사전에서 조회 → 3584차원 벡터</span>
+<span>이미지:</span><span>패치 4개 → ViT → adapter → 3584차원 벡터</span>
+</div>
+<span>→ LLM → 벡터 → lm_head → 단어 확률</span>
+</div></div>
+<ul>
+<li>LLM 본체는 단어가 아니라 벡터를 받는다.</li>
+<li>사전은 입력의 단어 조회와 출력의 <code>lm_head</code>에서만 쓰인다.</li>
+<li>단어 입력은 약 15만 개 중 하나이지만, adapter 입출력은 연속값이라 목록에서 고르는 일이 없다.</li>
+</ul>
+<p><strong>입력 예시</strong></p>
+<pre><code>&#x3C;user> &#x3C;vision_start> [이미지 벡터 192개] &#x3C;vision_end> 이 사진에서 컵이 어디 있어? &#x3C;assistant>
+</code></pre>
+<h3 id="s6-4">6.4 Adapter</h3>
+<ul>
+<li>작동: 이웃 patch 4개를 이어 붙여 5120차원을 만들고, MLP로 3584차원으로 바꾼다.</li>
+<li>크기 (3B 기준): adapter 37M, ViT 630M(6%), LLM 3.1B(1%)</li>
+<li>원리: <strong>함께 학습한다.</strong> "이 벡터는 stop이다"라고 가르치지 않고, 답이 맞도록 학습되는 동안 LLM이 읽기 좋은 벡터를 내게 된다.</li>
+<li>이미지 토큰은 어떤 단어와도 가깝지 않다. 가장 가까운 단어와의 cosine이 무작위 수준이다 (약 0.08).</li>
+</ul>
+<figure class="fig"><p class="fig-t">파라미터 수 (3B 기준)</p><div class="bars"><div class="bar-r"><span>Adapter</span><span class="bar-v">37M</span><span class="bar-t"><i style="transform:scaleX(0.011935483870967743)"></i></span></div><div class="bar-r"><span>ViT</span><span class="bar-v">630M</span><span class="bar-t"><i style="transform:scaleX(0.2032258064516129)"></i></span></div><div class="bar-r"><span>LLM</span><span class="bar-v">3.1B</span><span class="bar-t"><i style="transform:scaleX(1)"></i></span></div></div></figure><p><strong>이미지 토큰 바꿔 끼우기 (3B 기준)</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>조건</th>
+<th>결과</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>학습된 adapter</td>
+<td>정상</td>
+<td></td>
+</tr>
+<tr>
+<td>무작위 adapter</td>
+<td>없는 물체를 지어냄, 표지판을 "Do Not Enter"로 읽음</td>
+<td>ViT와 LLM을 잇는 계약이 adapter 안에 있음</td>
+</tr>
+<tr>
+<td>순서 섞기</td>
+<td>설명과 "STOP" 모두 맞힘</td>
+<td>토큰이 각자 내용을 들고 있음</td>
+</tr>
+<tr>
+<td>평균 하나</td>
+<td>장면 요지는 말하지만 글자는 못 읽음</td>
+<td>요지는 퍼져 있고 세부는 특정 토큰에 있음</td>
+</tr>
+<tr>
+<td>이미지 제거</td>
+<td>"이미지가 없다"고 답함</td>
+<td>읽을 수 없는 벡터가 있으면 모른다기보다 지어냄</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="s6-5">6.5 위치 정보</h3>
+<p>"위치"는 그 patch 또는 토큰이 이미지의 <strong>몇 행 몇 열</strong>에 있었는지를 뜻한다. 두 경로로 들어간다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>경로</th>
+<th>무엇을 넣나</th>
+<th>어디에</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M-RoPE</td>
+<td>(t, h, w) 번호</td>
+<td>LLM attention의 회전각. 벡터에 더하지 않음</td>
+</tr>
+<tr>
+<td>ViT가 새긴 위치</td>
+<td>"3행"이라고 직접 적는 것이 아니라, ViT를 거치며 벡터 안에 생긴 대략적 위치</td>
+<td>벡터 내용</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>선형 probe: ViT 앞 R²≈0, ViT와 adapter 뒤 R² 0.6~0.7, 오차 토큰 1~2개</li>
+<li>텍스트 토큰은 t, h, w 값이 같고, 이미지 토큰은 격자의 행과 열을 받는다.</li>
+<li>이미지 뒤 텍스트는 "이미지 최대 위치 + 1"부터 다시 센다. 그래서 큰 이미지를 넣어도 질문이 위치상 멀리 밀려나지 않는다.</li>
+</ul>
+<p><strong>ViT 앞뒤에서 섞기</strong></p><figure class="fig"><div class="flow">
+<ol aria-label="ViT 앞에서 섞기"><li class="lane">앞</li><li class="rep">타일 섞기</li><li>ViT</li><li>LLM</li><li class="end">0.50</li></ol>
+<ol aria-label="ViT 뒤에서 섞기"><li class="lane">뒤</li><li>ViT</li><li class="rep">벡터 순서 섞기</li><li>LLM</li><li class="end">3B 1.00, Qwen3.5 0.70</li></ol>
+</div><figcaption>끝 칸은 왼쪽 도형 정답률이다.</figcaption></figure>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>하는 일</th>
+<th>비유</th>
+<th>왼쪽 도형 정답률</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ViT 앞</td>
+<td>그림 타일을 섞어 ViT에 넣음</td>
+<td>찢어 섞은 사진을 보고 메모 작성</td>
+<td>0.50</td>
+</tr>
+<tr>
+<td>ViT 뒤</td>
+<td>ViT가 원본을 본 뒤 벡터 순서만 섞음</td>
+<td>"나는 왼쪽"이라 적은 메모의 순서만 섞음</td>
+<td>3B 1.00, Qwen3.5 0.70</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="s6-6">6.6 이미지 안에서 attention</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>단계</th>
+<th>누가 누구를 보나</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ViT 안</td>
+<td>patch ↔ patch (질문은 아직 없음)</td>
+</tr>
+<tr>
+<td>LLM 안</td>
+<td>텍스트 ↔ 텍스트, 이미지 ↔ 이미지, 질문 → 이미지</td>
+</tr>
+</tbody>
+</table></div>
+<p>Causal mask 때문에 이미지 뒤의 질문 토큰은 이미지를 보지만, 이미지 토큰은 뒤의 질문을 보지 못한다.</p>
+<figure class="fig"><div aria-label="이미지는 질문을 보지 못하고, 질문은 이미지를 볼 수 있다" class="q2" role="img">
+<span class="h">보는 쪽</span><span class="h">이미지를</span><span class="h">질문을</span>
+<span class="h">이미지</span><span class="yes">O</span><span class="no">X</span>
+<span class="h">질문</span><span class="yes">O</span><span class="yes">O</span></div></figure><p><strong>이미지를 질문 뒤에 한 번 더 넣으면?</strong></p>
+<p><code>[이미지] 질문 [이미지]</code>는 기술적으로 가능하며, 두 번째 이미지 토큰은 질문을 볼 수 있다.</p>
+<ul>
+<li>비용: 이미지 토큰이 2배가 되어 attention 비용이 최대 4배로 늘어난다.</li>
+<li>위험: 학습 때 보지 못한 입력 형식이라 효과를 장담할 수 없다.</li>
+<li>꼭 필요하지 않은 이유: 질문 토큰과 답을 만드는 토큰은 이미 이미지를 볼 수 있어 정보가 사라지지 않는다.</li>
+<li>비슷한 목적의 방법: 언어로 시각 처리 자체를 조절하는 방식. FiLM이 대표적이며 RT-1이 쓴다.</li>
+</ul>
+<h3 id="s6-7">6.7 이미지 토큰에 logit lens</h3>
+<ul>
+<li>Layer 0에서는 의미 없는 토큰이 나온다. 뒤쪽 층으로 갈수록 그 칸의 내용이 단어로 떠오른다 (ROBOT 칸의 <code>robot</code>, 표지판 칸의 <code>stop</code>, 하늘 칸의 <code>sky</code>).</li>
+<li><strong>단어가 실제로 붙는 것이 아니다.</strong> 중간 벡터를 <code>lm_head</code>로 읽어 본 측정 결과이고, 모델 안의 벡터는 연속값이다.</li>
+<li>글자는 글자 조각 토큰으로 번역되지만, "12행 7열" 같은 위치는 어떤 단어로도 번역되지 않는다.</li>
+</ul>
+<h3 id="s6-8">6.8 OCR이 잘 되는 이유</h3>
+<p>토큰 한 변의 1/3 크기 글자도 읽는다. 2×2 merge는 ViT가 14px 단위로 세부를 벡터 채널에 담은 뒤에 일어나므로, 토큰 하나에 글자 여러 개의 모양이 들어간다.</p>
+<p><strong>이유 4가지</strong></p>
+<ol>
+<li>출력이 곧 LLM의 토큰이라 변환이 필요 없다.</li>
+<li>학습 데이터에 문서, 간판, UI 화면이 많다.</li>
+<li>언어 지식(prior)이 오류를 보정한다. 그래서 실제 단어가 무작위 문자열보다 작은 크기에서도 읽힌다.</li>
+<li>원본 해상도 그대로 넣을 수 있다 (dynamic resolution).</li>
+</ol>
+<p><strong>로봇 관점:</strong> 라벨, 계기판, 화면 글자 읽기는 VLM에 맡길 만하다. 단, 무작위 일련번호는 prior가 도와주지 않아 해상도가 정확도를 결정한다. OCR이 틀리면 모델을 바꾸기 전에 해상도(<code>max_pixels</code>)부터 올려 본다.</p>
+<h3 id="s6-9">6.9 Localization이 약한 이유</h3>
+<p>"보는 능력"과 "좌표로 말하는 능력"은 다르다.</p>
+<ol>
+<li>글자는 출력 단어로 바로 이어지지만, 위치는 그렇게 번역되지 않는다.</li>
+<li>좌표는 <code>3</code>, <code>1</code>, <code>2</code> 같은 숫자 토큰으로 말해야 하고, 그 방법을 학습 데이터로 따로 배워야 한다.</li>
+<li>그래서 데이터 분포에 좌우된다. 3B는 COCO 사진에서 IoU 0.87, 단순한 도형에서 0.19였다.</li>
+<li>위치 정보의 오차가 토큰 1~2개 수준이다.</li>
+</ol>
+<figure class="fig"><p class="fig-t">3B의 IoU</p><div class="bars"><div class="bar-r"><span>COCO 사진</span><span class="bar-v">0.87</span><span class="bar-t"><i style="transform:scaleX(0.87)"></i></span></div><div class="bar-r"><span>단순한 도형</span><span class="bar-v">0.19</span><span class="bar-t"><i style="transform:scaleX(0.19)"></i></span></div></div></figure><p>추가 사항:</p>
+<ul>
+<li>좌표 규약도 학습 데이터가 정한다. Qwen3.5-0.8B는 COCO에서 0~1000 정규화 좌표로, 도형에서는 픽셀 좌표로 답했다.</li>
+<li>상대 위치는 절대 위치보다 어렵다. 위치를 각각 찾은 뒤 비교까지 해야 하기 때문이다.</li>
+<li>작은 물체는 덮는 토큰이 적어 더 자주 틀린다.</li>
+<li>개선 방법: hidden state에서 위치를 회귀하는 head 또는 attention 지도 활용</li>
+</ul>
+<p><strong>Patch를 더 잘게 쪼개면?</strong> Patch 크기는 학습 때 고정되어 임의로 바꿀 수 없다. 대신 해상도를 올리면 비슷한 효과가 난다.</p>
+<ul>
+<li>도움이 되는 경우: 작은 글자, 작은 물체처럼 세부가 부족한 경우</li>
+<li>해결되지 않는 경우: 도형 장면의 좌표처럼 원인이 학습 데이터에 있는 경우</li>
+</ul>
+<h3 id="s6-10">6.10 Attention 지도</h3>
+<ul>
+<li>질문 단어 토큰은 중간 층에서 대상의 위치를 본다. 질문의 물체가 바뀌면 attention 덩어리도 옮겨 간다.</li>
+<li>마지막 토큰의 attention은 위치를 잘 가리키지 않는다. 이를 "모델이 본 곳"으로 해석하면 틀린다.</li>
+<li>Sink 토큰은 주로 맨 윗줄이나 모서리의 배경 토큰이고, 이미지 쪽 attention의 약 20%를 가져간다.</li>
+<li>ViT에서 이런 토큰을 위해 register 토큰을 따로 두는 연구가 있다 (Darcet et al., 2024).</li>
+<li>Lift: 정답 bbox 안의 attention이 면적 대비 몇 배인지 나타낸다. 1이면 무작위, 클수록 정답에 집중한 것이다.</li>
+</ul>
+<h3 id="s6-11">6.11 토큰 수와 비용</h3><figure class="fig" data-cost=""><div class="ctl"><label>해상도 (가로세로 배수)<output data-o="scale"></output><input max="4" min="1" name="scale" step="1" type="range" value="2"></label><label>이미지 처리 시간<output data-o="ms"></output><input max="200" min="20" name="ms" step="10" type="range" value="100"></label></div>
+<dl aria-live="polite" class="kv"><div><dt>LLM 토큰 (192개 기준)</dt><dd data-c-t=""></dd></div><div><dt>Prefill 비용</dt><dd data-c-p=""></dd></div><div><dt>도달 가능한 제어 주기</dt><dd data-c-h=""></dd></div></dl>
+<figcaption>Prefill은 MLP(n)와 attention(n²) 사이에서 늘어난다. 192개는 §6.2의 336×448 예시다.</figcaption></figure>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>부분</th>
+<th>토큰 수 n에 대한 비용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MLP</td>
+<td>n에 비례</td>
+</tr>
+<tr>
+<td>Prefill의 attention</td>
+<td>n²에 비례</td>
+</tr>
+<tr>
+<td>Prefill 전체</td>
+<td>n과 n² 사이</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>로그도 지수도 아닌 <strong>다항식</strong>이다.</li>
+<li>해상도를 가로세로 2배로 키우면 토큰은 4배, prefill은 4배에서 16배 사이로 는다.</li>
+<li>50Hz 제어의 한 주기는 20ms다. 이미지 처리에 100ms가 걸리면 10Hz밖에 돌지 못한다.</li>
+</ul>
+<h3 id="s6-12">6.12 이미지 토큰 버리기</h3>
+<ul>
+<li>전제: 사람이 피사체를 가운데 두고 찍는다(center bias). 그래서 가운데 물체는 외곽 75%를 버려도 p(yes)가 거의 유지된다.</li>
+<li>물체가 가장자리에 있으면 외곽 버리기가 무너진다. 이것은 모델의 성질이 아니라 <strong>데이터에 대한 가정</strong>이다. 로봇 손목 카메라에서는 성립하지 않는다.</li>
+<li>질문 attention으로 고르면 25%만 남겨도 두 경우 모두 거의 유지된다.</li>
+<li>무작위 25%도 꽤 버틴다. 물체가 여러 토큰에 걸쳐 있어 일부가 남기 때문이다.</li>
+<li>토큰 버리기와 픽셀 지우기는 결과가 거의 같다. 가장자리 정보가 가운데 토큰으로 새어 드는 양은 적다.</li>
+</ul>
+<figure class="fig" data-drop="">
+<div class="seg"><button aria-pressed="true" data-v="outer" type="button">외곽 버리기</button><button aria-pressed="false" data-v="att" type="button">질문 attention으로 고르기</button><button aria-pressed="false" data-v="rnd" type="button">무작위</button></div><div class="seg"><button aria-pressed="true" data-v="center" type="button">물체가 가운데</button><button aria-pressed="false" data-v="edge" type="button">물체가 가장자리</button></div>
+<div class="two"><div aria-hidden="true" class="gridm"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+<div><p aria-live="polite" class="say" data-d-s=""></p><div class="key"><span><i class="k-new"></i>남긴 토큰 25%</span><span><i class="k-obj"></i>물체</span></div></div></div>
+<figcaption>결과 문장은 노트의 내용이고, 칸의 배치는 설명을 위한 예시다.</figcaption></figure><p><strong>FastV</strong></p>
+<ul>
+<li>아이디어: LLM을 앞쪽 몇 층만 돌리고, 2층쯤의 attention으로 이미지 토큰을 골라 버린 뒤 나머지 층을 계산한다.</li>
+<li>기준: "관계없음"을 직접 판정하는 것이 아니라 <strong>attention을 적게 받은 토큰</strong>을 버린다. 적게 받았다고 항상 필요 없다는 보장은 없고, sink처럼 많이 받아도 의미 없는 토큰이 있다.</li>
+<li>전체 forward를 먼저 돌려 토큰을 고르면 시간이 절약되지 않는다. FastV는 뒤쪽 층의 계산이 실제로 줄어든다.</li>
+</ul>
+</div></section>
+<section class="sec"><div class="rail"><div class="rail-in"><h2 id="s7">7. VLM에서 로봇으로</h2><nav aria-label="VLM에서 로봇으로 소제목" class="sub"><a href="#s7-1">7.1 왜 LLM을 거치나</a><a href="#s7-2">7.2 언어와 이미지의 결합을 낮추면 빨라지나</a><a href="#s7-3">7.3 카메라를 여러 대 쓰면</a><a href="#s7-4">7.4 Flow matching</a><a href="#s7-5">7.5 로봇 action 출력: 숫자 토큰과 action head</a></nav></div></div><div class="body"><h3 id="s7-1">7.1 왜 LLM을 거치나</h3>
+<p>꼭 거칠 필요는 없다. Diffusion Policy, ACT처럼 이미지 특징에서 바로 행동을 내는 정책도 많다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>얻는 것</th>
+<th>치르는 비용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>언어 지시와 바로 결합</td>
+<td>토큰 수만큼 지연 증가</td>
+</tr>
+<tr>
+<td>사전학습된 언어·상식 지식 활용</td>
+<td>정밀 위치·힘·속도가 흐려질 수 있음</td>
+</tr>
+<tr>
+<td>질문에 따라 볼 곳을 바꾸는 attention</td>
+<td>구조가 크고 무거움</td>
+</tr>
+</tbody>
+</table></div>
+<p>π0 같은 많은 VLA의 입력 쪽은 VLM과 비슷하지만, 출력은 단어가 아니라 action이다. 언어 없이 설계한 정책도 있어 모든 VLA가 같은 구조는 아니다.</p>
+<h3 id="s7-2">7.2 언어와 이미지의 결합을 낮추면 빨라지나</h3>
+<p><strong>부분적으로 맞다. 다만 비용의 주범은 언어가 아니라 이미지 토큰이다.</strong> 언어 토큰은 보통 수십 개이고 이미지 토큰은 수백~수천 개라, 언어만 뺀다고 크게 빨라지지 않는다. 핵심은 <strong>매 제어 주기마다 많은 이미지 토큰을 큰 LLM에 통과시키지 않는 것</strong>이다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>방법</th>
+<th>얻는 것</th>
+<th>잃는 것</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>큰 모델은 느리게, 작은 정책은 빠르게 돌림</td>
+<td>빠른 제어 주기</td>
+<td>상위 판단이 느리게 갱신됨</td>
+</tr>
+<tr>
+<td>언어를 벡터 하나로 압축해 시각 처리를 조절 (FiLM)</td>
+<td>LLM 없이 언어 조건 사용</td>
+<td>복잡한 지시의 표현력 감소</td>
+</tr>
+<tr>
+<td>이미지·언어 처리 결과를 cache하고 action 부분만 반복 (π0 방식)</td>
+<td>action 샘플링 비용 감소</td>
+<td>이미지가 바뀌면 다시 계산</td>
+</tr>
+<tr>
+<td>한 번에 여러 스텝의 action을 예측 (action chunking)</td>
+<td>추론 빈도 감소</td>
+<td>변화 대응이 느려짐</td>
+</tr>
+<tr>
+<td>이미지 토큰 줄이기 (해상도, FastV)</td>
+<td>prefill 감소</td>
+<td>세부 정보 손실 가능</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="s7-3">7.3 카메라를 여러 대 쓰면</h3><figure class="fig" data-cam=""><div class="ctl"><label>카메라<output data-o="cams"></output><input max="4" min="1" name="cams" step="1" type="range" value="2"></label><label>프레임<output data-o="frames"></output><input max="8" min="1" name="frames" step="1" type="range" value="4"></label></div>
+<dl aria-live="polite" class="kv"><div><dt>토큰</dt><dd data-cam-t=""></dd></div><div><dt>Attention 비용</dt><dd data-cam-a=""></dd></div></dl></figure>
+<ul>
+<li>장점: 가려진 곳 보완, 손목 카메라의 세밀한 시야</li>
+<li>비용: 2대 × 프레임 4장이면 토큰 8배, attention 비용 최대 64배</li>
+<li>카메라 간 기하 관계는 자동으로 주어지지 않아 따로 학습해야 한다.</li>
+<li>앞쪽 이미지가 매 주기 바뀌면 그 뒤의 KV cache를 다시 쓸 수 없다.</li>
+</ul>
+<h3 id="s7-4">7.4 Flow matching</h3>
+<p>노이즈를 정답 action으로 옮기는 <strong>속도장</strong>을 학습하는 생성 방식이다.</p>
+<ul>
+<li><strong>학습:</strong> 노이즈 <code>x0</code>와 정답 <code>x1</code>을 잇는 직선 위의 점 <code>x_t = (1-t)x0 + t·x1</code>에서, 속도 <code>x1 - x0</code>를 맞히도록 학습한다.</li>
+<li><strong>추론:</strong> 노이즈에서 출발해 예측한 속도를 따라 몇 단계 이동하면 action이 나온다.</li>
+<li><strong>직선 위의 점은 정답이 아니다.</strong> 학습에 쓰는 중간 지점일 뿐이다.</li>
+<li><strong>평균 문제를 피하는 방식:</strong> 평균을 내는 것이 아니라, 어떤 노이즈에서 출발했는지에 따라 왼쪽이나 오른쪽 중 하나에 도착한다. 평균은 action이 아니라 각 지점의 속도 학습 단계에서 나타난다.</li>
+</ul>
+<figure class="fig" data-fm="">
+<div class="seg"><button aria-pressed="true" data-v="a" type="button">노이즈 A</button><button aria-pressed="false" data-v="b" type="button">노이즈 B</button></div>
+<svg aria-label="노이즈 x0에서 정답 x1로 가는 직선과 그 위의 학습 지점 x_t. 단순 회귀는 두 정답의 평균인 장애물로 향한다." role="img" viewBox="0 0 480 260">
+<defs><marker id="ah" markerHeight="5" markerWidth="5" orient="auto" refX="6" refY="5" viewBox="0 0 10 10"><path d="M0 0L10 5L0 10z" style="fill:var(--acc-line)"></path></marker></defs><circle class="st" cx="40" cy="70" r="6"></circle><circle class="st" cx="40" cy="190" r="6"></circle><text class="m" x="16" y="56">A</text><text class="m" x="16" y="216">B</text>
+<rect class="fl-a" height="16" width="16" x="432" y="42"></rect><text text-anchor="end" x="424" y="36">위쪽 돌기</text>
+<rect class="fl-a" height="16" width="16" x="432" y="202"></rect><text text-anchor="end" x="424" y="238">아래쪽 돌기</text>
+<rect class="st" height="36" stroke-dasharray="4 3" width="32" x="424" y="112"></rect><text class="m" text-anchor="end" x="416" y="135">평균 = 장애물</text>
+<path class="st-m" data-fm-l=""></path>
+<g data-fm-p=""><path class="st-a" data-fm-v="" marker-end="url(#ah)"></path><circle r="7" style="fill:var(--acc-line)"></circle><text x="10" y="24">x_t</text></g>
+</svg>
+<div class="ctl"><label>t<output data-o="t"></output><input max="100" min="0" name="t" step="1" type="range" value="40"></label></div>
+<p aria-live="polite" class="say" data-fm-s=""></p>
+<figcaption>주황 화살표가 맞혀야 할 속도 x1 − x0다. 직선 위의 점은 정답이 아니라 학습용 중간 지점이다. 위치는 개념을 보여 주는 그림이다.</figcaption></figure><p><strong>미리 정의한 동작으로 공간을 좁혀도 되나?</strong> 된다. 실제로 쓰는 접근이고, <strong>먼저 어떤 동작인지 고른 뒤, 그 안에서만 평균이나 세부 조정을 하는 것</strong>이 핵심이다.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>방법</th>
+<th>작동</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Behavior Transformer (BeT)</td>
+<td>action을 k-means로 묶어 묶음을 분류하고 작은 offset을 회귀</td>
+</tr>
+<tr>
+<td>VQ-BeT</td>
+<td>묶음을 VQ로 학습</td>
+</tr>
+<tr>
+<td>Action primitive</td>
+<td>미리 만든 동작을 고르고 파라미터만 예측</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>장점: 학습이 쉽고 안정적이며, 좌우 평균으로 장애물에 돌진하는 일을 막기 쉽다.</li>
+<li>단점: 정의 밖의 동작을 하기 어렵고, 관절이 많으면 조합이 폭발적으로 늘어난다.</li>
+</ul>
+<h3 id="s7-5">7.5 로봇 action 출력: 숫자 토큰과 action head</h3>
+<p><strong>빠른 저수준 제어는 action head, 느린 상위 계획은 텍스트로 나눈다.</strong></p>
+<figure class="fig" data-budget=""><div class="ctl"><label>관절<output data-o="joints"></output><input max="14" min="1" name="joints" step="1" type="range" value="7"></label><label>관절값당 토큰<output data-o="per"></output><input max="8" min="1" name="per" step="1" type="range" value="5"></label><label>제어 주기<output data-o="hz"></output><input max="100" min="5" name="hz" step="5" type="range" value="50"></label></div>
+<dl aria-live="polite" class="kv"><div><dt>주기마다 필요한 토큰</dt><dd data-b-t=""></dd></div><div><dt>주기 길이</dt><dd data-b-p=""></dd></div><div><dt>토큰당 허용 시간</dt><dd data-b-e=""></dd></div></dl></figure><p>Action head를 고르는 이유:</p>
+<ol>
+<li>속도: 관절값 하나가 <code>0.123</code>처럼 약 5토큰이면 7개 관절에 35토큰 이상이다. 50Hz면 토큰당 약 0.57ms 안에 생성해야 한다.</li>
+<li>정밀도: bbox 실험처럼 숫자 토큰의 정확도는 학습 데이터 분포에 크게 좌우된다.</li>
+<li>형식: 관절값은 원래 연속값인데, 숫자 문자열로 바꾸면 한 자리 오류가 큰 값 차이로 이어질 수 있다.</li>
+</ol>
+<p>숫자 토큰도 사람이 읽을 수 있고 모델을 고치지 않아도 되므로, 느린 상위 계획("이 물체를 집어라", 목표 지점)에는 쓸 만하다.</p>
+</div></section>
+<section class="sec"><div class="rail"><div class="rail-in"><h2 id="s8">8. 아키텍처 진단표</h2><nav aria-label="아키텍처 진단표 소제목" class="sub"><a href="#s8-x1">LLM</a><a href="#s8-x2">VLM</a></nav></div></div><div class="body"><h3 id="s8-x1">LLM</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>구조적 사실</th>
+<th>그래서 되는 것</th>
+<th>그래서 안 되는 것</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>토큰 간 정보 교환은 token mixer에서만 일어남</td>
+<td>단서를 마지막 위치로 운반해 MLP 지식을 꺼냄</td>
+<td>Attention을 빼면 마지막 토큰이 같은 질문을 구분 못 함</td>
+</tr>
+<tr>
+<td>MLP는 토큰마다 독립, SwiGLU의 곱셈 gate</td>
+<td>가져온 특징과 원래 특징을 조합</td>
+<td>재료가 운반되지 않으면 조합 불가</td>
+</tr>
+<tr>
+<td>본선은 덧셈만 하는 skip connection</td>
+<td>깊어도 학습 가능, 부품별 기여 분해</td>
+<td>학습된 모델에서 하나만 끊어도 붕괴</td>
+</tr>
+<tr>
+<td>임베딩은 토큰마다 고정된 벡터 하나</td>
+<td>단어의 의미와 연관성 표현</td>
+<td>순서, 관계, 부정어의 대상 표현 불가</td>
+</tr>
+<tr>
+<td>Causal mask</td>
+<td>KV cache</td>
+<td>뒤 내용으로 앞을 고치지 못함, 메모리가 길이에 비례</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="s8-x2">VLM</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>구조적 사실</th>
+<th>그래서 되는 것</th>
+<th>그래서 안 되는 것</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>이미지 = 28px 격자 토큰</td>
+<td>해상도로 정확도와 비용 조절</td>
+<td>토큰이 면적에 비례, prefill은 더 빠르게 증가</td>
+</tr>
+<tr>
+<td>이미지 토큰이 LLM 안에서 제자리의 단어로 읽히게 됨</td>
+<td>OCR, 물체 이름</td>
+<td>위치는 단어가 아니며 오차가 토큰 1~2개</td>
+</tr>
+<tr>
+<td>좌표를 숫자 토큰 문자열로 말함</td>
+<td>학습 분포 안에서 높은 IoU</td>
+<td>분포 밖, 작은 물체, 상대 위치에 약함</td>
+</tr>
+<tr>
+<td>질문 단어 토큰이 중간 층에서 대상을 봄</td>
+<td>질의 기반 시각화와 토큰 선택</td>
+<td>마지막 토큰과 sink의 attention은 위치를 가리키지 않음</td>
+</tr>
+<tr>
+<td>사진 정보는 가운데에 몰림</td>
+<td>가운데 물체는 외곽 75%를 버려도 유지</td>
+<td>가장자리 물체는 무너짐</td>
+</tr>
+</tbody>
+</table></div>
+</div></section>
+<section class="sec"><div class="rail"><div class="rail-in"><h2 id="s9">9. 쪽지시험 (답 포함)</h2><nav aria-label="쪽지시험 (답 포함) 소제목" class="sub"><a href="#s9-x1">LLM</a><a href="#s9-x2">VLM</a><a href="#s9-x3">로봇 응용</a></nav></div></div><div class="body"><div class="qa-tools"><p>세모(▶)나 문제를 누르면 답이 펼쳐진다.</p><button id="toggleAll" type="button">답 모두 펼치기</button></div>
+<h3 id="s9-x1">LLM</h3>
+<details class="quiz"><summary><span class="qn">Q1</span><span class="qt">Q, K, V는 각각 무엇이고 attention 출력은 어떤 순서로 계산되나?</span></summary>
+<div class="ans"><p><strong>답:</strong> Q는 내가 찾는 것, K는 내가 가진 것, V는 선택되면 넘겨줄 내용이다. Q, K, V 투영 → 위치 회전(RoPE) → <code>q·k/√d</code> → causal mask → softmax → V 가중 평균 → 출력 투영 순서로 계산한다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q2</span><span class="qt">마지막 토큰이 같은 두 질문에서 attention을 끄면 왜 Δlogit이 0인가?</span></summary>
+<div class="ans"><p><strong>답:</strong> 토큰 사이로 정보를 옮기는 연산이 attention뿐이라, 마지막 토큰의 출력이 자기 자신으로만 결정되기 때문이다. 앞 내용을 통째로 바꿔도 결과가 같다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q3</span><span class="qt">GPT-2의 MLP + PE에서 Δ가 약 1.0인데도 질문 내용이 들어가지 않았다고 말할 수 있는 근거는?</span></summary>
+<div class="ans"><p><strong>답:</strong> Filler 대조군이다. 질문을 <code>" the the ... Galaxy"</code>로 바꾸고 길이만 맞춰도 출력 차이가 0이다. Δ는 마지막 토큰의 위치 차이에서만 나온 것이다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q4</span><span class="qt">학습된 위치 임베딩이 attention을 대신할 수 없는 이유는?</span></summary>
+<div class="ans"><p><strong>답:</strong> <code>토큰_i 임베딩 + 위치_i 벡터</code>에 다른 토큰의 내용이 없고, MLP도 토큰별로 독립이라 내용이 들어올 경로가 없기 때문이다. 학습량이 아니라 구조의 문제다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q5</span><span class="qt">절대 PE와 RoPE는 어디에 들어가고, 끄면 왜 결과가 다른가?</span></summary>
+<div class="ans"><p><strong>답:</strong> 절대 PE는 입력 벡터에 더해져 모든 층으로 흐르므로, 빼면 첫 층부터 분포가 바뀌어 크게 무너진다. RoPE는 attention의 Q, K 회전으로만 작용하므로, 꺼도 내용 매칭은 남아 상대적으로 덜 무너진다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q6</span><span class="qt">"MLP는 저장소, attention은 운반 경로"를 뒷받침하는 실험은?</span></summary>
+<div class="ans"><p><strong>답:</strong> Knockout이다. South·Korea 토큰의 전달을 막으면 p(Seoul)이 0.977에서 0.006으로, Seoul 뉴런 활성 유지율이 15%로 떨어진다. 대조군 토큰을 막으면 0.933, 97%로 거의 유지된다. 재료가 오지 않으면 MLP가 답을 조합하지 못한다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q7</span><span class="qt">Skip connection이 필요한 이유 3가지는? 학습된 모델에서 하나만 끊어도 왜 무너지나?</span></summary>
+<div class="ans"><p><strong>답:</strong> gradient 전달, identity 기본 동작으로 수정량만 학습, 층들이 공유하는 공간과 기여 분해가 이유다. 이후 층이 본선에 이전 내용이 그대로 있다고 가정하고 학습되었기 때문에, 하나만 끊어도 무너진다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q8</span><span class="qt">층별로 벡터를 보는 이유는? Logit lens에서 왜 top1보다 정답의 rank 곡선을 보나?</span></summary>
+<div class="ans"><p><strong>답:</strong> 정보가 어느 깊이에서 생기는지 알아야 어디를 고칠지 정할 수 있기 때문이다. 중간 표현은 아직 출력 어휘로 정렬되지 않아 top1이 이상하게 나오는 것이 정상이므로, 정답 토큰의 순위 변화가 더 믿을 만하다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q9</span><span class="qt">토큰 구성이 같고 순서만 다른 두 문장에서, layer 0 mean-pool로 "기능을 가진 쪽"을 맞히는 정확도가 왜 정확히 0.50인가?</span></summary>
+<div class="ans"><p><strong>답:</strong> 평균을 내면 두 문장이 같은 벡터가 되는데 정답은 서로 다르다. 같은 입력에 다른 정답이 붙으면 어떤 classifier도 찍기 이상을 할 수 없다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q10</span><span class="qt">PCA로 벡터의 유사도를 판단하는 것이 왜 적절하지 않은가? 무엇을 쓰나?</span></summary>
+<div class="ans"><p><strong>답:</strong> PCA는 차원을 줄여 보는 시각화 도구로, 2차원으로 줄이며 많은 정보를 버린다. 유사도는 원래 차원에서 cosine 등으로 재고, 담긴 정보를 확인하려면 linear probe를 쓴다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q11</span><span class="qt">KV cache가 가능한 이유와 BERT에 맞지 않는 이유는?</span></summary>
+<div class="ans"><p><strong>답:</strong> Causal mask 때문에 과거 토큰은 미래 토큰을 보지 않아, 새 토큰이 와도 과거 hidden state와 K, V가 변하지 않는다. BERT는 양방향이라 새 토큰이 과거 토큰의 hidden state까지 바꿔 저장한 값을 재사용할 수 없다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q12</span><span class="qt">KV cache를 "자주 나오는 값을 저장하는 기법"이라고 설명하면 무엇이 틀렸나? Q는 왜 저장하지 않나?</span></summary>
+<div class="ans"><p><strong>답:</strong> 빈도와 무관하다. 한 시퀀스 안에서 지나간 토큰의 K와 V를 재계산하지 않으려고 전부 보관하는 것이다. 과거 토큰의 출력은 계산이 끝나 Q를 다시 쓸 일이 없어 저장하지 않는다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q13</span><span class="qt">프롬프트 4토큰에 이어 토큰 2개를 더 입력해 3단계를 처리한다. cache 유무별 모델이 처리하는 토큰 수와 <code>q·k</code> 횟수는?</span></summary>
+<div class="ans"><p><strong>답:</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>처리 토큰 수</th>
+<th><code>q·k</code> 횟수</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>cache 없음</td>
+<td>4+5+6 = 15</td>
+<td>10+15+21 = 46</td>
+</tr>
+<tr>
+<td>cache 있음</td>
+<td>4+1+1 = 6</td>
+<td>10+5+6 = 21</td>
+</tr>
+</tbody>
+</table></div>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q14</span><span class="qt">12층, KV head 8개, <code>head_dim</code> 64, float32 모델의 토큰당 KV cache 크기와 10,000토큰의 메모리는?</span></summary>
+<div class="ans"><p><strong>답:</strong> <code>2 × 12 × 8 × 64 × 4B = 49,152B = 48KB</code>, 10,000토큰이면 약 469MB다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q15</span><span class="qt">KV cache가 있어도 첫 토큰은 왜 빨라지지 않나?</span></summary>
+<div class="ans"><p><strong>답:</strong> 처음에는 저장된 값이 없어 프롬프트 전체를 처리해야 하기 때문이다. 이 prefill 단계가 cache를 채운다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q16</span><span class="qt">Attention sink란 무엇이고 왜 생기나?</span></summary>
+<div class="ans"><p><strong>답:</strong> 내용과 상관없이 attention을 많이 받는 토큰이다. Softmax 합이 반드시 1이어야 해서, 볼 것이 없을 때 남는 가중치가 모인다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q17</span><span class="qt">Gated DeltaNet은 full attention과 비교해 무엇을 얻고 무엇을 잃을 수 있나?</span></summary>
+<div class="ans"><p><strong>답:</strong> 메모리와 step 비용이 길이와 무관해진다. 대신 과거를 고정 크기로 압축해 먼 과거를 정확히 찾아오는 능력이 약해질 수 있어, 일부 층에 full attention을 남긴다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q18</span><span class="qt">Markov policy, memoryless policy, history-conditioned policy, POMDP를 구분하라.</span></summary>
+<div class="ans"><p><strong>답:</strong> Markov policy는 현재 상태로 결정하고, memoryless policy는 기억 없이 현재 관측으로 결정하며, history-conditioned policy는 과거 관측까지 참고한다. POMDP는 정책이 아니라 상태 일부만 보이는 문제의 종류다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q19</span><span class="qt">Attention이 혁신이었던 가장 큰 이유는? MLP-Mixer와 무엇이 다른가?</span></summary>
+<div class="ans"><p><strong>답:</strong> 내용에 따라 정보 경로가 입력마다 바뀐다. MLP-Mixer의 경로는 위치 기준으로 고정되어 있어, 문장마다 관계의 위치가 달라지는 언어에는 잘 맞지 않는다.</p>
+</div></details>
+<h3 id="s9-x2">VLM</h3>
+<details class="quiz"><summary><span class="qn">Q20</span><span class="qt">28px 토큰 모델에서 672×672 이미지의 patch 수와 LLM 토큰 수는? patch 하나의 숫자 개수는?</span></summary>
+<div class="ans"><p><strong>답:</strong> Patch는 48×48 = 2,304개, 토큰은 24×24 = 576개다. Patch 하나는 2프레임 × 3채널 × 14 × 14 = 1,176개의 숫자다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q21</span><span class="qt">단어에는 사전이 있는데 이미지 토큰은 어떻게 LLM에 들어가나?</span></summary>
+<div class="ans"><p><strong>답:</strong> 사전 조회 없이 ViT와 adapter가 계산한 벡터를 <code>&#x3C;|image_pad|></code> 자리에 넣는다. LLM 본체는 벡터만 받으므로 크기만 같으면 처리할 수 있다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q22</span><span class="qt">"Adapter가 이미지를 단어로 번역한다"는 말은 왜 부정확한가?</span></summary>
+<div class="ans"><p><strong>답:</strong> Adapter 출력은 어떤 단어와도 가깝지 않고(cosine이 무작위 수준), 크기를 맞춰 LLM이 읽을 형식으로 쓸 뿐이다. 단어로 읽히는 변화는 LLM의 층을 지나며 일어난다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q23</span><span class="qt">이미지 패치 위에 <code>stop</code>이 표시된 logit lens 지도는 모델이 단어를 붙였다는 뜻인가?</span></summary>
+<div class="ans"><p><strong>답:</strong> 아니다. 중간 벡터를 <code>lm_head</code>로 읽어 본 측정 결과이며, 모델 안의 벡터는 연속값 그대로다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q24</span><span class="qt">무작위 adapter, 토큰 순서 섞기, 평균 하나로 바꾸기, 이미지 제거의 결과와 의미는?</span></summary>
+<div class="ans"><p><strong>답:</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>조건</th>
+<th>결과</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>무작위 adapter</td>
+<td>없는 물체를 지어냄</td>
+<td>LLM이 adapter의 형식만 읽을 수 있음</td>
+</tr>
+<tr>
+<td>순서 섞기</td>
+<td>대체로 맞힘</td>
+<td>토큰이 각자 내용을 들고 있음</td>
+</tr>
+<tr>
+<td>평균 하나</td>
+<td>요지는 맞지만 글자를 못 읽음</td>
+<td>요지는 퍼져 있고 세부는 특정 토큰에 있음</td>
+</tr>
+<tr>
+<td>이미지 제거</td>
+<td>이미지가 없다고 답함 (3B)</td>
+<td>읽을 수 없는 벡터가 있을 때의 환각과 대비됨</td>
+</tr>
+</tbody>
+</table></div>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q25</span><span class="qt">위치 정보가 들어가는 두 경로는? ViT 뒤에서 섞으면 왜 위치 질문이 버티나?</span></summary>
+<div class="ans"><p><strong>답:</strong> M-RoPE의 회전각과 ViT가 벡터 내용에 새긴 대략적 위치다. ViT 뒤에서 섞어도 각 벡터가 이미 위치 정보를 들고 있어 버틴다. ViT 앞에서 섞으면 그림 자체가 바뀌어 찍는 수준으로 무너진다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q26</span><span class="qt">이미지 토큰은 뒤에 오는 질문을 볼 수 있나? 질문 토큰은 이미지를 볼 수 있나?</span></summary>
+<div class="ans"><p><strong>답:</strong> Causal mask 때문에 이미지 토큰은 뒤의 질문을 볼 수 없고, 질문 토큰은 앞의 이미지를 볼 수 있다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q27</span><span class="qt">토큰보다 작은 글자를 어떻게 읽나? OCR이 잘 되는 이유 4가지는?</span></summary>
+<div class="ans"><p><strong>답:</strong> 2×2 merge 전에 ViT가 14px 단위 세부를 벡터 채널에 담아서 한 토큰에 글자 여러 개의 모양이 들어간다. 이유는 출력이 곧 LLM 토큰이라는 점, 풍부한 학습 데이터, 언어 prior의 보정, 원본 해상도 입력이다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q28</span><span class="qt">COCO 사진의 물체는 잘 찾는 모델이 단순한 도형은 왜 못 찾나?</span></summary>
+<div class="ans"><p><strong>답:</strong> 눈이 못 봐서가 아니라 좌표를 숫자 토큰으로 말하는 방법이 학습 데이터 분포에 묶여 있기 때문이다. 도형 장면은 그 분포 밖에 있다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q29</span><span class="qt">원인이 학습 데이터인 localization 문제를 해상도만 올려 해결할 수 있나?</span></summary>
+<div class="ans"><p><strong>답:</strong> 해결되지 않는다. 해상도는 세부가 부족한 문제(작은 글자, 작은 물체)에 효과가 있지만, 좌표를 말하는 방법을 배우지 못한 문제는 그대로 남는다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q30</span><span class="qt">질문 단어 토큰과 마지막 토큰의 attention은 어떻게 다른가?</span></summary>
+<div class="ans"><p><strong>답:</strong> 질문 단어 토큰은 중간 층에서 대상 위치를 본다. 마지막 토큰은 모서리나 배경의 고정 토큰으로 많이 가서, "모델이 본 곳"으로 해석하면 틀린다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q31</span><span class="qt">해상도를 가로세로 2배로 키우면 토큰과 prefill은 어떻게 변하나? 토큰 수와 시간의 스케일은?</span></summary>
+<div class="ans"><p><strong>답:</strong> 토큰은 4배, prefill은 4배에서 16배 사이로 는다. MLP는 n, attention은 n²에 비례하는 다항식 스케일이다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q32</span><span class="qt">외곽 토큰 75%를 버려도 되는 전제는? 언제 실패하나?</span></summary>
+<div class="ans"><p><strong>답:</strong> 사진 정보가 가운데에 몰린다는 center bias가 전제다. 물체가 가장자리에 있으면 실패하고, 로봇 손목 카메라처럼 분포가 다른 영상에서는 가정 자체가 성립하지 않는다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q33</span><span class="qt">전체 forward 후 attention으로 토큰을 고르는 방식과 FastV의 차이는?</span></summary>
+<div class="ans"><p><strong>답:</strong> 전체 forward를 먼저 돌리면 시간이 절약되지 않는다. FastV는 앞쪽 층의 attention으로 토큰을 버리고 나머지 층만 줄여서 돌리므로 실제로 빨라진다.</p>
+</div></details>
+<h3 id="s9-x3">로봇 응용</h3>
+<details class="quiz"><summary><span class="qn">Q34</span><span class="qt">카메라 2대 × 프레임 4장이면 토큰과 attention 비용은 몇 배가 되나?</span></summary>
+<div class="ans"><p><strong>답:</strong> 토큰은 8배, attention 비용은 최대 64배다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q35</span><span class="qt">제어 주기를 높이려면 언어를 빼는 것이 핵심인가?</span></summary>
+<div class="ans"><p><strong>답:</strong> 아니다. 언어 토큰은 적고 이미지 토큰이 비용의 주범이다. 핵심은 매 주기마다 많은 이미지 토큰을 큰 LLM에 통과시키지 않는 것으로, 모델 주기 분리, FiLM, 결과 cache, action chunking, 토큰 줄이기 등이 있다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q36</span><span class="qt">로봇 정책은 왜 이미지를 LLM에 넣나? 반드시 필요한가?</span></summary>
+<div class="ans"><p><strong>답:</strong> 언어 지시와의 결합, 사전학습 지식 활용, 질문에 따라 볼 곳을 바꾸는 attention을 얻기 위해서다. 필수는 아니며, Diffusion Policy나 ACT처럼 바로 행동을 내는 정책도 많다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q37</span><span class="qt">정답이 왼쪽 돌기와 오른쪽 돌기 둘일 때 단순 회귀의 문제는? Flow matching은 어떻게 다른가?</span></summary>
+<div class="ans"><p><strong>답:</strong> 단순 회귀는 둘을 평균 내어 장애물로 돌진할 수 있다. Flow matching은 노이즈에서 속도장을 따라 이동하며, 출발 노이즈에 따라 한쪽 동작에 도착한다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q38</span><span class="qt">Flow matching의 학습에서 직선 위의 점 <code>x_t</code>는 무엇이고 무엇을 맞히나?</span></summary>
+<div class="ans"><p><strong>답:</strong> <code>x_t = (1-t)x0 + t·x1</code>로 만든 학습용 중간 지점이다. 이 점에서 속도 <code>x1 - x0</code>를 맞히도록 학습한다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q39</span><span class="qt">미리 정의한 동작으로 action 공간을 좁힐 때의 핵심과 단점은?</span></summary>
+<div class="ans"><p><strong>답:</strong> 먼저 동작을 고른 뒤 그 안에서만 평균이나 세부 조정을 한다(BeT 등). 정의 밖의 동작을 하기 어렵고, 관절이 많으면 조합이 크게 늘어나는 것이 단점이다.</p>
+</div></details>
+<details class="quiz"><summary><span class="qn">Q40</span><span class="qt">7관절 연속 제어를 50Hz로 돌릴 때 숫자 토큰 방식과 action head 중 무엇을 고르나?</span></summary>
+<div class="ans"><p><strong>답:</strong> Action head다. 관절값당 약 5토큰이면 35토큰 이상을 20ms 안에 생성해야 해서 토큰당 약 0.57ms가 필요하고, 정밀도도 학습 분포에 좌우된다. 숫자 토큰은 느린 상위 계획에 더 적합하다.</p>
+</div></details>
+</div></section>
+
+<script>(() => {
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const fmt = new Intl.NumberFormat('ko-KR');
+  const fix = (v, n) => new Intl.NumberFormat('ko-KR', { minimumFractionDigits: n, maximumFractionDigits: n }).format(v);
+  const seg = (el, cb) => {
+    const btns = $$('button', el);
+    const pick = b => { btns.forEach(x => x.setAttribute('aria-pressed', x === b)); cb(b.dataset.v); };
+    btns.forEach(b => b.addEventListener('click', () => pick(b)));
+    return { value: () => btns.find(b => b.getAttribute('aria-pressed') === 'true').dataset.v };
+  };
+  const setBar = (i, frac) => { i.style.transform = `scaleX(${frac})`; };
+  const rankX = r => 100 * (1 - Math.min(Math.log10(r), 5) / 5);
+
+  // 테마
+  const themeBtn = $('[data-theme-btn]');
+  const label = () => { themeBtn.textContent = document.documentElement.dataset.theme === 'light' ? '다크 모드' : '라이트 모드'; };
+  themeBtn.addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+    document.documentElement.dataset.theme = next;
+    $('meta[name="theme-color"]').content = next === 'light' ? '#f4f5f7' : '#15171c';
+    try { localStorage.setItem('llm-vlm-theme', next); } catch (e) {}
+    label();
+  });
+  label();
+
+  // 첫 화면 행렬
+  const mx = $('[data-matrix]'), mxo = $('[data-matrix-out]'), mxBase = mxo.innerHTML;
+  $$('button', mx).forEach(btn => {
+    const show = () => {
+      mx.dataset.row = btn.dataset.r;
+      const n = +btn.dataset.r + 1;
+      mxo.textContent = `${btn.textContent}: 자기 자신과 과거를 합쳐 ${n}개 토큰만 본다.`;
+    };
+    ['click', 'mouseenter', 'focus'].forEach(e => btn.addEventListener(e, show));
+  });
+  const clearMx = () => { delete mx.dataset.row; mxo.innerHTML = mxBase; };
+  mx.addEventListener('mouseleave', clearMx);
+  mx.addEventListener('focusout', e => { if (!mx.contains(e.relatedTarget)) clearMx(); });
+
+  // 왼쪽 칸 현재 위치
+  const links = new Map($$('.sub a').map(a => [a.getAttribute('href').slice(1), a]));
+  if (links.size && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => es.forEach(e => {
+      if (!e.isIntersecting) return;
+      const a = links.get(e.target.id);
+      $$('a', a.parentNode).forEach(x => x.classList.toggle('on', x === a));
+    }), { rootMargin: '0px 0px -75% 0px' });
+    links.forEach((_, id) => io.observe(document.getElementById(id)));
+  }
+
+  // 실험대 (§3.3)
+  const D = {
+    1: { c: '① 임베딩만', p: '0.000', r: [86669, 101713, 39413], d: '0.0000', w: '①과 ②의 Δ가 0인 것은 구조적으로 보장된다. 토큰끼리 섞는 연산이 attention뿐이기 때문이다.' },
+    2: { c: '② MLP만 (attention=0)', p: '0.000', r: [98710, 52213, 8970], d: '0.0000', w: '②가 실패한 이유는 지식이 없어서가 아니라 단서가 마지막 위치로 운반되지 않아서다.' },
+    4: { c: '④ attention, 위치 끔', p: '0.555', r: [1, 77, 6], d: '4.7578', w: '순서를 몰라도 단어들을 끌어모을 수 있어 버틴다. 단, 순서가 중요한 어려운 질문은 크게 약해진다.' },
+    3: { c: '③ 전체', p: '0.977', r: [1, 1, 1], d: '10.5000', w: '세 질문 모두 정답이 rank 1이다.' },
+  };
+  const b = $('[data-board]');
+  const sw = k => $(`[data-sw="${k}"]`, b);
+  const bench = $('.bench', b), ms = $$('[data-m]', b), vs = $$('[data-v]', b);
+  const renderBoard = () => {
+    const att = sw('att').checked, mlp = sw('mlp').checked, pos = sw('pos').checked;
+    sw('pos').disabled = !att;
+    $('[data-pos-label]', b).classList.toggle('off', !att);
+    bench.classList.toggle('no-att', !att);
+    bench.classList.toggle('no-mlp', !mlp);
+    bench.classList.toggle('no-pos', !att || !pos);
+    const key = !att ? (mlp ? 2 : 1) : (!mlp ? null : (pos ? 3 : 4));
+    const row = key && D[key];
+    b.classList.toggle('none', !row);
+    $('[data-cond]', b).textContent = row ? row.c : 'MLP만 끈 조합';
+    $('[data-p]', b).textContent = row ? row.p : '측정 없음';
+    $('[data-d]', b).textContent = row ? row.d : '측정 없음';
+    $('[data-why]', b).textContent = row ? row.w : '노트의 실험은 이 조합을 측정하지 않았다. Attention을 끄거나 MLP를 다시 켜 보자.';
+    ms.forEach((m, i) => {
+      m.style.transform = `translateX(${row ? rankX(row.r[i]) : 0}%)`;
+      vs[i].textContent = row ? fmt.format(row.r[i]) : '–';
+    });
+  };
+  b.addEventListener('change', renderBoard);
+  renderBoard();
+
+  // RoPE (§3.4)
+  const rope = $('[data-rope]');
+  const TH = 15;
+  const ri = $('[name="rope-i"]', rope), rj = $('[name="rope-j"]', rope);
+  const renderRope = () => {
+    const i = +ri.value, j = +rj.value;
+    $('[data-o="i"]', rope).textContent = i;
+    $('[data-o="j"]', rope).textContent = j;
+    $('[data-vi]', rope).setAttribute('transform', `rotate(${-i * TH} 130 130)`);
+    $('[data-vj]', rope).setAttribute('transform', `rotate(${-j * TH} 130 130)`);
+    const dist = Math.abs(j - i);
+    $('[data-dist]', rope).textContent = `${dist}θ`;
+    $('[data-cos]', rope).textContent = fix(Math.cos(dist * TH * Math.PI / 180), 3);
+  };
+  [ri, rj].forEach(x => x.addEventListener('input', renderRope));
+  $('[data-rope-shift]', rope).addEventListener('click', () => {
+    if (+ri.value >= +ri.max || +rj.value >= +rj.max) { const m = Math.min(+ri.value, +rj.value); ri.value = +ri.value - m; rj.value = +rj.value - m; }
+    else { ri.value = +ri.value + 1; rj.value = +rj.value + 1; }
+    renderRope();
+  });
+  renderRope();
+
+  // Skip 끊기 (§3.5)
+  const sk = $('[data-skip]');
+  const SK = { 0: 1, 1: 101310, 14: 52501, 26: 4295 };
+  const skCells = $$('.cells i', sk);
+  const renderSkip = v => {
+    skCells.forEach((c, i) => c.classList.toggle('cut', i + 1 === +v));
+    $('[data-sk-m]', sk).style.transform = `translateX(${rankX(SK[v])}%)`;
+    $('[data-sk-v]', sk).textContent = fmt.format(SK[v]);
+    $('[data-sk-c]', sk).textContent = +v ? `layer ${v}의 skip을 끊었다.` : '끊은 층이 없다. p=0.977';
+  };
+  seg($('.seg', sk), renderSkip);
+  renderSkip(0);
+
+  // Knockout (§3.5)
+  const ko = $('[data-ko]');
+  const KO = {
+    none: { p: .977, m: 8.09, a: 2.66, k: 100 },
+    ctl: { p: .933, m: 7.83, a: 1.46, k: 97 },
+    sk: { p: .006, m: .09, a: -.49, k: 15 },
+  };
+  const sign = v => (v >= 0 ? '+' : '') + fix(v, 2);
+  const renderKo = v => {
+    const r = KO[v];
+    $('[data-ko-p]', ko).textContent = fix(r.p, 3);
+    setBar($('[data-ko-pb]', ko), r.p);
+    $('[data-ko-k]', ko).textContent = `${r.k}%`;
+    setBar($('[data-ko-kb]', ko), r.k / 100);
+    $('[data-ko-m]', ko).textContent = sign(r.m);
+    setBar($('[data-ko-mb]', ko), r.m / 9);
+    $('[data-ko-a]', ko).textContent = sign(r.a);
+    setBar($('[data-ko-ab]', ko), r.a / 9);
+  };
+  seg($('.seg', ko), renderKo);
+  renderKo('none');
+
+  // KV cache (§3.9)
+  const kv = $('[data-kv]');
+  const TOK = ['The', 'capital', 'of', 'South', 'Korea'];
+  const STEP = { 1: 3, 2: 4, 3: 5 };
+  let kvStep = 1, kvCache = 'off';
+  const kvCells = $$('.c', kv);
+  const stepCost = (s, cache) => (cache === 'on' && s > 1) ? STEP[s] : STEP[s] * (STEP[s] + 1) / 2;
+  const stepTok = (s, cache) => (cache === 'on' && s > 1) ? 1 : STEP[s];
+  const renderKv = () => {
+    const n = STEP[kvStep], on = kvCache === 'on';
+    kvCells.forEach(c => {
+      const r = +c.dataset.r, q = +c.dataset.q;
+      c.className = 'c';
+      if (r >= n || q > r) return;
+      c.classList.add(on && kvStep > 1 && r < n - 1 ? 'old' : 'new');
+    });
+    let sumC = 0, sumT = 0;
+    for (let s = 1; s <= kvStep; s++) { sumC += stepCost(s, kvCache); sumT += stepTok(s, kvCache); }
+    const input = on && kvStep > 1 ? TOK[n - 1] : TOK.slice(0, n).join(' ');
+    $('[data-kv-in]', kv).textContent = input;
+    $('[data-kv-c]', kv).textContent = stepCost(kvStep, kvCache);
+    $('[data-kv-sc]', kv).textContent = sumC;
+    $('[data-kv-st]', kv).textContent = sumT;
+  };
+  const kvSegs = $$('.seg', kv);
+  seg(kvSegs[0], v => { kvCache = v; renderKv(); });
+  seg(kvSegs[1], v => { kvStep = +v; renderKv(); });
+  renderKv();
+
+  // KV 메모리 계산기 (§3.9)
+  const mem = $('[data-mem]');
+  const F = n => $(`[name="${n}"]`, mem);
+  const renderMem = () => {
+    const vals = ['layers', 'kv', 'dim', 'bytes', 'tokens'].map(n => Math.max(0, Number(F(n).value) || 0));
+    const [l, k, d, by, t] = vals;
+    const per = 2 * l * k * d * by;
+    $('[data-mem-f]', mem).textContent = `2 × ${l} × ${k} × ${d} × ${by}B = ${fmt.format(per)}B`;
+    $('[data-mem-p]', mem).textContent = `${fix(per / 1024, per % 1024 ? 1 : 0)}KB`;
+    $('[data-mem-t]', mem).textContent = `${fix(per * t / 1024 ** 3, 2)}GB`;
+  };
+  $$('input, select', mem).forEach(x => x.addEventListener('input', renderMem));
+  $$('[data-preset]', mem).forEach(btn => btn.addEventListener('click', () => { F('layers').value = 28; F('dim').value = 128; F('bytes').value = 2; F('kv').value = btn.dataset.preset; renderMem(); }));
+  renderMem();
+
+  // 패치와 토큰 (§6.2)
+  const pt = $('[data-patch]');
+  const renderPatch = v => {
+    $('[data-pt-14]', pt).style.opacity = v === '14' ? 1 : 0;
+    $('[data-pt-28]', pt).style.opacity = v === '28' ? 1 : 0;
+    $('[data-pt-one]', pt).setAttribute('width', v === '14' ? 14 : 28);
+    $('[data-pt-one]', pt).setAttribute('height', v === '14' ? 14 : 28);
+    $('[data-pt-s]', pt).textContent = v === '14' ? '14×14px patch, 32×24 = 768개. Patch 하나는 숫자 1,176개다.' : 'LLM 토큰 하나는 28×28px, 16×12 = 192개. 이웃 patch 4개를 이어 붙인 뒤 adapter로 3584차원이 된다.';
+  };
+  seg($('.seg', pt), renderPatch);
+  renderPatch('14');
+
+  // 토큰 수와 비용 (§6.11)
+  const cost = $('[data-cost]');
+  const renderCost = () => {
+    const s = +$('[name="scale"]', cost).value, ms_ = +$('[name="ms"]', cost).value;
+    $('[data-o="scale"]', cost).textContent = `${s}배`;
+    $('[data-o="ms"]', cost).textContent = `${ms_}ms`;
+    $('[data-c-t]', cost).textContent = `${fmt.format(192 * s * s)}개 (${s * s}배)`;
+    $('[data-c-p]', cost).textContent = `${s * s}배~${s ** 4}배`;
+    $('[data-c-h]', cost).textContent = `${fix(1000 / ms_, 1)}Hz`;
+  };
+  $$('input', cost).forEach(x => x.addEventListener('input', renderCost));
+  renderCost();
+
+  // 토큰 버리기 (§6.12)
+  const dr = $('[data-drop]');
+  const cells = $$('.gridm i', dr);
+  const OBJ = { center: [27, 28, 35, 36], edge: [24, 25, 32, 33] };
+  const OUTER = [18, 19, 20, 21, 26, 27, 28, 29, 34, 35, 36, 37, 42, 43, 44, 45];
+  const RND = [1, 6, 9, 14, 17, 22, 25, 28, 31, 35, 40, 44, 49, 53, 58, 62];
+  const ATT = { center: OUTER, edge: [8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27, 32, 33, 34, 35] };
+  const SAY = {
+    outer: { center: '가운데 물체는 외곽 75%를 버려도 p(yes)가 거의 유지된다.', edge: '물체가 가장자리에 있으면 외곽 버리기가 무너진다. 데이터에 대한 가정이 깨진 것이다.' },
+    att: { center: '질문 attention으로 고르면 25%만 남겨도 거의 유지된다.', edge: '질문 attention으로 고르면 물체가 가장자리에 있어도 거의 유지된다.' },
+    rnd: { center: '무작위 25%도 꽤 버틴다. 물체가 여러 토큰에 걸쳐 있어 일부가 남기 때문이다.', edge: '무작위 25%도 꽤 버틴다. 물체가 여러 토큰에 걸쳐 있어 일부가 남기 때문이다.' },
+  };
+  let how = 'outer', where = 'center';
+  const renderDrop = () => {
+    const keep = how === 'outer' ? OUTER : how === 'att' ? ATT[where] : RND;
+    cells.forEach((c, i) => { c.className = (keep.includes(i) ? 'k ' : '') + (OBJ[where].includes(i) ? 'o' : ''); });
+    $('[data-d-s]', dr).textContent = SAY[how][where];
+  };
+  const drSegs = $$('.seg', dr);
+  seg(drSegs[0], v => { how = v; renderDrop(); });
+  seg(drSegs[1], v => { where = v; renderDrop(); });
+  renderDrop();
+
+  // 카메라 (§7.3)
+  const cam = $('[data-cam]');
+  const renderCam = () => {
+    const c = +$('[name="cams"]', cam).value, f = +$('[name="frames"]', cam).value, m = c * f;
+    $('[data-o="cams"]', cam).textContent = `${c}대`;
+    $('[data-o="frames"]', cam).textContent = `${f}장`;
+    $('[data-cam-t]', cam).textContent = `${m}배`;
+    $('[data-cam-a]', cam).textContent = `최대 ${fmt.format(m * m)}배`;
+  };
+  $$('input', cam).forEach(x => x.addEventListener('input', renderCam));
+  renderCam();
+
+  // Flow matching (§7.4)
+  const fm = $('[data-fm]');
+  const X0 = { a: [40, 70], b: [40, 190] };
+  const X1 = { a: [440, 50], b: [440, 210] };
+  let fmN = 'a';
+  const renderFm = () => {
+    const t = +$('[name="t"]', fm).value / 100;
+    const p0 = X0[fmN], p1 = X1[fmN];
+    const x = (1 - t) * p0[0] + t * p1[0], y = (1 - t) * p0[1] + t * p1[1];
+    $('[data-fm-l]', fm).setAttribute('d', `M${p0[0]} ${p0[1]}L${p1[0]} ${p1[1]}`);
+    $('[data-fm-p]', fm).setAttribute('transform', `translate(${x} ${y})`);
+    const ux = p1[0] - p0[0], uy = p1[1] - p0[1], k = 60 / Math.hypot(ux, uy);
+    $('[data-fm-v]', fm).setAttribute('d', `M0 0L${ux * k} ${uy * k}`);
+    $('[data-o="t"]', fm).textContent = fix(t, 2);
+    $('[data-fm-s]', fm).textContent = fmN === 'a' ? '이 노이즈에서 출발하면 위쪽 돌기에 도착한다.' : '이 노이즈에서 출발하면 아래쪽 돌기에 도착한다.';
+  };
+  seg($('.seg', fm), v => { fmN = v; renderFm(); });
+  $('[name="t"]', fm).addEventListener('input', renderFm);
+  renderFm();
+
+  // 숫자 토큰 예산 (§7.5)
+  const bud = $('[data-budget]');
+  const renderBud = () => {
+    const j = +$('[name="joints"]', bud).value, p = +$('[name="per"]', bud).value, hz = +$('[name="hz"]', bud).value;
+    $('[data-o="joints"]', bud).textContent = `${j}개`;
+    $('[data-o="per"]', bud).textContent = `${p}토큰`;
+    $('[data-o="hz"]', bud).textContent = `${hz}Hz`;
+    const tok = j * p, per = 1000 / hz;
+    $('[data-b-t]', bud).textContent = `${tok}토큰`;
+    $('[data-b-p]', bud).textContent = `${fix(per, 0)}ms`;
+    $('[data-b-e]', bud).textContent = `${fix(per / tok, 2)}ms`;
+  };
+  $$('input', bud).forEach(x => x.addEventListener('input', renderBud));
+  renderBud();
+
+  // 쪽지시험
+  const toggle = $('#toggleAll');
+  const all = $$('details.quiz');
+  const sync = () => { toggle.textContent = all.some(d => !d.open) ? '답 모두 펼치기' : '답 모두 접기'; };
+  toggle.addEventListener('click', () => { const open = all.some(d => !d.open); all.forEach(d => { d.open = open; }); sync(); });
+  all.forEach(d => d.addEventListener('toggle', sync));
+})();
+</script>
+</div>
+<div class="notes-editor" hidden data-path="content/study/concept-notes-on-llms-and-vlms/index.ko.md" data-notes data-pagefind-ignore data-astro-cid-krmc5xkp><button type="button" class="ne-open" data-astro-cid-krmc5xkp>내 생각 쓰기</button><form class="ne-form" hidden data-astro-cid-krmc5xkp><textarea rows="8" aria-label="내 생각 (markdown)" placeholder="markdown 으로 쓰기" data-astro-cid-krmc5xkp></textarea><div class="ne-actions" data-astro-cid-krmc5xkp><button type="submit" data-astro-cid-krmc5xkp>저장</button><button type="button" class="ne-delete" data-astro-cid-krmc5xkp>지우기</button><button type="button" class="ne-cancel" data-astro-cid-krmc5xkp>취소</button><span class="ne-status" role="status" data-astro-cid-krmc5xkp></span></div></form></div><div class="post-admin" hidden data-dir="content/study/concept-notes-on-llms-and-vlms" data-lang="ko" data-incoming="[]" data-relations="[{&quot;from&quot;:&quot;content/study/concept-notes-on-llms-and-vlms&quot;,&quot;target&quot;:&quot;understanding-transformers-from-start-to-finish&quot;,&quot;label&quot;:&quot;관련&quot;,&quot;title&quot;:&quot;트랜스포머 이해하기: 처음부터 끝까지&quot;}]" data-pagefind-ignore data-astro-cid-krmc5xkp></div></div><nav class="toc" aria-labelledby="toc-h" data-pagefind-ignore data-astro-cid-krmc5xkp><h2 id="toc-h" data-astro-cid-krmc5xkp>목차</h2><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#s1" data-astro-cid-krmc5xkp>1. 전체 흐름</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s2" data-astro-cid-krmc5xkp>2. 헷갈리기 쉬운 개념</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s3" data-astro-cid-krmc5xkp>3. LLM</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-1" data-astro-cid-krmc5xkp>3.1 모델 구조 (Qwen2.5-7B 예시)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-2" data-astro-cid-krmc5xkp>3.2 토크나이저와 임베딩</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-3" data-astro-cid-krmc5xkp>3.3 Attention과 위치를 끄면</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-4" data-astro-cid-krmc5xkp>3.4 위치 정보 방식</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-5" data-astro-cid-krmc5xkp>3.5 Block 해부</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-6" data-astro-cid-krmc5xkp>3.6 층을 지나며</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-7" data-astro-cid-krmc5xkp>3.7 Linear probe</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-8" data-astro-cid-krmc5xkp>3.8 Causal mask</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-9" data-astro-cid-krmc5xkp>3.9 KV cache</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-10" data-astro-cid-krmc5xkp>3.10 Hybrid 구조 (Qwen3.5의 Gated DeltaNet)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s3-11" data-astro-cid-krmc5xkp>3.11 어텐션은 왜 혁신이었나</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s4" data-astro-cid-krmc5xkp>4. RL 용어</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s5" data-astro-cid-krmc5xkp>5. 벡터를 비교하는 방법</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s6" data-astro-cid-krmc5xkp>6. VLM</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-1" data-astro-cid-krmc5xkp>6.1 용어</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-2" data-astro-cid-krmc5xkp>6.2 이미지가 토큰이 되기까지 (Qwen2.5-VL-7B 예시)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-3" data-astro-cid-krmc5xkp>6.3 이미지에는 사전이 없다</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-4" data-astro-cid-krmc5xkp>6.4 Adapter</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-5" data-astro-cid-krmc5xkp>6.5 위치 정보</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-6" data-astro-cid-krmc5xkp>6.6 이미지 안에서 attention</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-7" data-astro-cid-krmc5xkp>6.7 이미지 토큰에 logit lens</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-8" data-astro-cid-krmc5xkp>6.8 OCR이 잘 되는 이유</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-9" data-astro-cid-krmc5xkp>6.9 Localization이 약한 이유</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-10" data-astro-cid-krmc5xkp>6.10 Attention 지도</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-11" data-astro-cid-krmc5xkp>6.11 토큰 수와 비용</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s6-12" data-astro-cid-krmc5xkp>6.12 이미지 토큰 버리기</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s7" data-astro-cid-krmc5xkp>7. VLM에서 로봇으로</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s7-1" data-astro-cid-krmc5xkp>7.1 왜 LLM을 거치나</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s7-2" data-astro-cid-krmc5xkp>7.2 언어와 이미지의 결합을 낮추면 빨라지나</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s7-3" data-astro-cid-krmc5xkp>7.3 카메라를 여러 대 쓰면</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s7-4" data-astro-cid-krmc5xkp>7.4 Flow matching</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s7-5" data-astro-cid-krmc5xkp>7.5 로봇 action 출력: 숫자 토큰과 action head</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s8" data-astro-cid-krmc5xkp>8. 아키텍처 진단표</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s8-x1" data-astro-cid-krmc5xkp>LLM</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s8-x2" data-astro-cid-krmc5xkp>VLM</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s9" data-astro-cid-krmc5xkp>9. 쪽지시험 (답 포함)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s9-x1" data-astro-cid-krmc5xkp>LLM</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s9-x2" data-astro-cid-krmc5xkp>VLM</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#s9-x3" data-astro-cid-krmc5xkp>로봇 응용</a></li></ol></nav></div></article><aside class="after wrap" data-pagefind-ignore data-astro-cid-krmc5xkp><section aria-labelledby="links-h" data-astro-cid-krmc5xkp><h2 id="links-h" data-astro-cid-krmc5xkp>연결된 글</h2><ul class="links" data-astro-cid-krmc5xkp><li data-type="study" data-astro-cid-krmc5xkp><span class="rel" data-astro-cid-krmc5xkp>관련</span><a href="/ko/study/understanding-transformers-from-start-to-finish/" data-astro-cid-krmc5xkp>트랜스포머 이해하기: 처음부터 끝까지</a></li></ul></section><section aria-labelledby="related-h" data-astro-cid-krmc5xkp><h2 id="related-h" data-astro-cid-krmc5xkp>같은 태그의 글</h2><article class="row" data-type="clip" data-astro-cid-gc2g3jd6><div class="meta" data-astro-cid-gc2g3jd6><span class="type" data-astro-cid-gc2g3jd6>클립</span><time datetime="2026-10-29" data-astro-cid-gc2g3jd6>2026년 10월 29일</time><span class="pending" data-astro-cid-gc2g3jd6>AI 정리, 검수 전</span></div><div class="body" data-astro-cid-gc2g3jd6><h3 class="title" data-astro-cid-gc2g3jd6="true"><a href="/ko/clips/breaking-down-cosmos-3-architecture-and/" data-astro-cid-gc2g3jd6>COSMOS-3 뜯어보기: 아키텍처와 Mixture of Transformers 정리</a></h3><p class="summary" data-astro-cid-gc2g3jd6>COSMOS-3의 Reasoner/Generator 분리 구조, MoT 기반 멀티모달 학습, 디퓨전 생성과 월드 액션 모델, 로봇 조작용 통합 액션 스페이스를 정리한다.</p><ul class="tags" data-astro-cid-gc2g3jd6><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/method/architecture/diffusion/" title="method/architecture/diffusion" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>아키텍처</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>디퓨전</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/method/world-model/" title="method/world-model" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>월드 모델</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/domain/robotics/manipulation/" title="domain/robotics/manipulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>로보틱스</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>로봇 조작</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/domain/multimodal/" title="domain/multimodal" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>멀티모달</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/method/architecture/mixture-of-transformers/" title="method/architecture/mixture-of-transformers" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>아키텍처</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>트랜스포머 혼합(MoT)</span></a></li></ul></div></article></section></aside></main><footer class="wrap" data-astro-cid-hkbrpulz><p class="site-footer" data-astro-cid-hkbrpulz>Tech Blog</p></footer><dialog class="search" aria-label="글 검색" data-unavailable="검색 색인은 사이트를 빌드할 때 만들어집니다. npm run build 후 npm run preview 에서 확인하세요." data-astro-cid-ac66eqjo><div class="search-head" data-astro-cid-ac66eqjo><h2 data-astro-cid-ac66eqjo>글 검색</h2><button type="button" class="close" data-search-close data-astro-cid-ac66eqjo>닫기</button></div><div id="pagefind" class="search-body" data-astro-cid-ac66eqjo></div></dialog><script type="module">var e=document.querySelector(`dialog.search`),t=e.querySelector(`#pagefind`),n=!1;async function r(){if(!n){n=!0;try{let e=document.createElement(`link`);e.rel=`stylesheet`,e.href=`/pagefind/pagefind-ui.css`,document.head.append(e),await new Promise((e,t)=>{let n=document.createElement(`script`);n.src=`/pagefind/pagefind-ui.js`,n.onload=()=>e(),n.onerror=()=>t(Error(`pagefind missing`)),document.head.append(n)}),new PagefindUI({element:t,showSubResults:!0,showImages:!1,autofocus:!0})}catch{t.textContent=e.dataset.unavailable??``}}}function i(){e.showModal(),r(),t.querySelector(`input`)?.focus()}document.querySelectorAll(`[data-search-open]`).forEach(e=>e.addEventListener(`click`,i)),e.querySelector(`[data-search-close]`).addEventListener(`click`,()=>e.close()),e.addEventListener(`click`,t=>{t.target===e&&e.close()}),document.addEventListener(`keydown`,t=>{let n=t.target.tagName;e.open||n===`INPUT`||n===`TEXTAREA`||(t.key===`/`||(t.metaKey||t.ctrlKey)&&t.key.toLowerCase()===`k`)&&(t.preventDefault(),i())});</script></body></html><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_0_lang.C9cTWiA5.js"></script><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_1_lang.BhCYdHk-.js"></script>
