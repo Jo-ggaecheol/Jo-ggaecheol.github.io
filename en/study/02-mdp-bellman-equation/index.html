@@ -1,0 +1,1137 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-hkbrpulz><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>02. MDP &amp; Bellman Equation | Tech Blog</title><meta name="description" content="A reinforcement-learning study note that builds from Markov chains to MRPs and MDPs, covering value functions, Bellman expectation/optimality equations, discounting, reward design, and contraction-based convergence."><meta property="og:title" content="02. MDP &amp; Bellman Equation"><meta property="og:description" content="A reinforcement-learning study note that builds from Markov chains to MRPs and MDPs, covering value functions, Bellman expectation/optimality equations, discounting, reward design, and contraction-based convergence."><meta name="theme-color" content="#f4f6f9" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#0e131b" media="(prefers-color-scheme: dark)"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate" hreflang="ko" href="/ko/study/02-mdp-bellman-equation/"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap"><script>
+      // 깜빡임 방지: 렌더 전에 테마 결정 (저장값 > 시스템 설정)
+      (() => {
+        let saved = null;
+        try {
+          saved = localStorage.getItem('theme');
+        } catch {}
+        const dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      })();
+    </script><link rel="stylesheet" href="/_astro/Base.BJamWqg3.css"><style>.tagpath[data-astro-cid-jjfiepte]{font-size:var(--step--1);color:var(--ink-3);flex-wrap:wrap;align-items:baseline;gap:0 .3em;line-height:1.6;text-decoration:none;display:inline-flex}.leaf[data-astro-cid-jjfiepte]{color:var(--ink-2);font-weight:500}.sep[data-astro-cid-jjfiepte]{opacity:.55}.tagpath[data-astro-cid-jjfiepte]:hover .leaf[data-astro-cid-jjfiepte]{color:var(--ink);text-underline-offset:.2em;text-decoration:underline}.row[data-astro-cid-gc2g3jd6]{border-top:1px solid var(--rule);grid-template-columns:8.5rem 1fr;gap:.25rem 1.5rem;padding-block:1.6rem;display:grid}.meta[data-astro-cid-gc2g3jd6]{font-size:var(--step--1);color:var(--ink-3);font-variant-numeric:tabular-nums;flex-direction:column;gap:.15rem;padding-top:.3rem;display:flex}.type[data-astro-cid-gc2g3jd6]{color:var(--type);align-items:center;gap:.45rem;font-weight:600;display:inline-flex}.type[data-astro-cid-gc2g3jd6]:before{content:"";background:var(--type);border-radius:2px;width:.5rem;height:.5rem}.pending[data-astro-cid-gc2g3jd6]{color:var(--ink-3);align-self:flex-start;font-size:.75rem}.draft[data-astro-cid-gc2g3jd6]{border:1px dashed var(--rule-strong);border-radius:4px;align-self:flex-start;margin-top:.3rem;padding:0 .4rem;font-size:.75rem}.title[data-astro-cid-gc2g3jd6]{font-size:var(--step-2);margin:0;font-weight:600;line-height:1.35}.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]{background-image:linear-gradient(var(--type), var(--type));background-position:0 100%;background-repeat:no-repeat;background-size:0 2px;text-decoration:none;transition:background-size .2s}.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]:hover,.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]:focus-visible{background-size:100% 2px}.summary[data-astro-cid-gc2g3jd6]{max-width:62ch;color:var(--ink-2);margin:.45rem 0 0}.tags[data-astro-cid-gc2g3jd6]{flex-wrap:wrap;gap:.1rem 1.1rem;margin:.6rem 0 0;padding:0;list-style:none;display:flex}@media (width<=640px){.row[data-astro-cid-gc2g3jd6]{grid-template-columns:1fr;padding-block:1.25rem}.meta[data-astro-cid-gc2g3jd6]{flex-flow:wrap;gap:.75rem;padding-top:0}.draft[data-astro-cid-gc2g3jd6]{margin-top:0}.title[data-astro-cid-gc2g3jd6]{font-size:var(--step-1)}}
+</style><link rel="stylesheet" href="/_astro/_slug_.y0bcMRw3.css"></head><body data-astro-cid-hkbrpulz><a class="skip" href="#main" data-astro-cid-hkbrpulz>Skip to content</a><header class="site-header wrap" data-astro-cid-nen7h5rs><a class="wordmark" href="/en/" translate="no" data-astro-cid-nen7h5rs>Tech Blog</a><nav class="nav" aria-label="Main" data-astro-cid-nen7h5rs><ul data-astro-cid-nen7h5rs><li data-type="paper" data-astro-cid-nen7h5rs><a href="/en/papers/" data-astro-cid-nen7h5rs>Papers</a></li><li data-type="study" data-astro-cid-nen7h5rs><a href="/en/study/" aria-current="page" data-astro-cid-nen7h5rs>Study</a></li><li data-type="dev" data-astro-cid-nen7h5rs><a href="/en/dev/" data-astro-cid-nen7h5rs>Dev</a></li><li data-type="clip" data-astro-cid-nen7h5rs><a href="/en/clips/" data-astro-cid-nen7h5rs>Clips</a></li><li data-astro-cid-nen7h5rs><a href="/en/graph/" data-astro-cid-nen7h5rs>Graph</a></li><li data-astro-cid-nen7h5rs><a href="/en/tags/" data-astro-cid-nen7h5rs>Tags</a></li></ul></nav><div class="tools" data-astro-cid-nen7h5rs><button class="icon-btn" type="button" data-search-open aria-label="Search" aria-keyshortcuts="/" data-astro-cid-nen7h5rs><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8" data-astro-cid-nen7h5rs></circle><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-astro-cid-nen7h5rs></path></svg></button><a class="lang" href="/ko/study/02-mdp-bellman-equation/" hreflang="ko" aria-label="Read in Korean" data-astro-cid-nen7h5rs>한국어</a><button class="icon-btn" type="button" data-theme-toggle data-label-light="Switch to light mode" data-label-dark="Switch to dark mode" aria-label="Switch to dark mode" data-astro-cid-nen7h5rs><svg class="sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8" data-astro-cid-nen7h5rs></circle><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-astro-cid-nen7h5rs></path></svg><svg class="moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><path d="M19.5 14.6A7.8 7.8 0 0 1 9.4 4.5a7.8 7.8 0 1 0 10.1 10.1Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" data-astro-cid-nen7h5rs></path></svg></button></div></header><script type="module">var e=document.querySelector(`[data-theme-toggle]`),t=document.documentElement,n=()=>{let n=t.dataset.theme===`dark`;document.querySelectorAll(`meta[name="theme-color"]`).forEach(e=>{e.setAttribute(`content`,n?`#0e131b`:`#f4f6f9`),e.removeAttribute(`media`)}),e.setAttribute(`aria-label`,(n?e.dataset.labelLight:e.dataset.labelDark)??``),e.setAttribute(`aria-pressed`,String(n))};n(),e.addEventListener(`click`,()=>{t.dataset.theme=t.dataset.theme===`dark`?`light`:`dark`;try{localStorage.setItem(`theme`,t.dataset.theme)}catch{}n()});</script><main id="main" data-astro-cid-hkbrpulz><article class="post wrap" data-type="study" data-pagefind-body data-astro-cid-krmc5xkp><header class="head" data-astro-cid-krmc5xkp><div class="meta" data-astro-cid-krmc5xkp><a class="type" href="/en/study/" data-pagefind-ignore data-astro-cid-krmc5xkp>Study</a><time datetime="2026-11-09" data-astro-cid-krmc5xkp>Nov 9, 2026</time></div><h1 data-astro-cid-krmc5xkp>02. MDP &amp; Bellman Equation</h1><p class="summary" data-astro-cid-krmc5xkp>A reinforcement-learning study note that builds from Markov chains to MRPs and MDPs, covering value functions, Bellman expectation/optimality equations, discounting, reward design, and contraction-based convergence.</p><dl class="source" data-astro-cid-krmc5xkp><dt data-astro-cid-krmc5xkp>Files</dt><dd data-astro-cid-krmc5xkp><a href="/files/study/02-mdp-bellman-equation/rl_02.md" rel="noopener" data-astro-cid-krmc5xkp>Markdown source</a></dd></dl><ul class="tags" data-pagefind-ignore data-astro-cid-krmc5xkp><li data-astro-cid-krmc5xkp><a class="tagpath" href="/en/tags/method/reinforcement-learning/" title="method/reinforcement-learning" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Method</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Reinforcement Learning</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/en/tags/domain/machine-learning/" title="domain/machine-learning" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Field</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Machine Learning</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/en/tags/domain/robotics/" title="domain/robotics" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Field</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Robotics</span></a></li></ul><div class="tags-editor" hidden data-dir="content/study/02-mdp-bellman-equation" data-pagefind-ignore data-astro-cid-krmc5xkp></div></header><div class="columns" data-astro-cid-krmc5xkp><div class="prose" data-astro-cid-krmc5xkp><p class="note" data-astro-cid-krmc5xkp>Machine-translated from the Korean original.</p><details class="toc-inline" data-pagefind-ignore data-astro-cid-krmc5xkp><summary data-astro-cid-krmc5xkp>Contents</summary><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#s1" data-astro-cid-krmc5xkp>01 The Big Picture: Building Layer by Layer</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s2" data-astro-cid-krmc5xkp>02 Markov chain</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-1" data-astro-cid-krmc5xkp>Example: Robot 2-state chain</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-2" data-astro-cid-krmc5xkp>When does it exist, is unique, and converge (finite states)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-3" data-astro-cid-krmc5xkp>Isn&#39;t reality non-time-homogeneous?</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s3" data-astro-cid-krmc5xkp>03 🤖 Markov is a property of state representation</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s4" data-astro-cid-krmc5xkp>04 Episodes and Terminal States</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s5" data-astro-cid-krmc5xkp>05 MRP: Return, Discount Rate, and Value Function</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-4" data-astro-cid-krmc5xkp>Discount Rate γ: How Far into the Future to Look</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-5" data-astro-cid-krmc5xkp>Value Function and Bellman Equation</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-6" data-astro-cid-krmc5xkp>The Big Picture: From Future Rewards to Present Decisions</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s6" data-astro-cid-krmc5xkp>06 Reward Design: Shaping and Hacking</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-7" data-astro-cid-krmc5xkp>Reward shaping: Adding guidance rewards</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-8" data-astro-cid-krmc5xkp>Reward hacking: Maximizing the number, not the intent</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-9" data-astro-cid-krmc5xkp>Infinite reward, exponential reward?</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s7" data-astro-cid-krmc5xkp>07 MDP: Policy, V π , Q π</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-10" data-astro-cid-krmc5xkp>Fixing a Policy Turns an MDP into an MRP</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-11" data-astro-cid-krmc5xkp>V π and Q π</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-12" data-astro-cid-krmc5xkp>Numerical Example: Adding Actions to the Corridor</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s8" data-astro-cid-krmc5xkp>08 Optimality: V*, Q*, Bellman optimality</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-13" data-astro-cid-krmc5xkp>Notation summary</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-14" data-astro-cid-krmc5xkp>Example: Commute (reward = −minutes)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-15" data-astro-cid-krmc5xkp>Bellman optimality equation</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-16" data-astro-cid-krmc5xkp>Why can&#39;t we solve it with a single matrix operation?</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s9" data-astro-cid-krmc5xkp>09 Contraction: Why Repetition Always Converges</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-17" data-astro-cid-krmc5xkp>Proof</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-18" data-astro-cid-krmc5xkp>Algorithm</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s10" data-astro-cid-krmc5xkp>10 🤖 From a Robot&#39;s Perspective: Continuous Spaces, POMDPs, Control Cycles, and γ</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-19" data-astro-cid-krmc5xkp>Continuous States and Actions</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-20" data-astro-cid-krmc5xkp>POMDP: Sensors Don&#39;t Reveal the Full State</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-21" data-astro-cid-krmc5xkp>Control Cycle and γ</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s11" data-astro-cid-krmc5xkp>11 Overall Summary &amp;#x26; Connection to the Next Section</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#quiz" data-astro-cid-krmc5xkp>? Check Questions</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#qa" data-astro-cid-krmc5xkp>Q&amp;#x26;A Questions &amp;#x26; Answers</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#check" data-astro-cid-krmc5xkp>✓ Concepts That Were Confusing</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#refs" data-astro-cid-krmc5xkp>📚 Further Reading</a></li></ol></details><style>
+.rawhtml { --fg: var(--ink); --text: var(--ink); --muted: var(--ink-3); --line: var(--rule); --border: var(--rule) }
+.rawhtml :is(h2, h3) > span:first-child:not(:only-child) { margin-right: 0.5em }
+.rawhtml { --acc: #2f6bd8; --acc-soft: #e2ebfb; --warm: #c9701c; --warm-soft: #fbecd9; --green: #23875a; --green-soft: #dcf1e6; --red: #c24141; --red-soft: #f9e0e0; --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100 }
+@media (prefers-color-scheme: dark) {
+:root:not([data-theme="light"]) .rawhtml { --acc: #6d9cf0; --acc-soft: #1f2d48; --warm: #e7a15a; --warm-soft: #3a2b1a; --green: #5cc493; --green-soft: #183527; --red: #e57777; --red-soft: #3d1f22; --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500 }
+}
+.rawhtml h2 .num { font-family: var(--font-mono); font-size: .95rem; color: var(--acc); background: var(--acc-soft); border-radius: 6px; padding: 2px 8px }
+.rawhtml .lead { color: var(--muted); margin: 0 }
+.rawhtml .meta { color: var(--muted); font-size: .9rem; margin-top: 12px }
+.rawhtml nav.toc { margin: 32px 0 0; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px }
+.rawhtml nav.toc ol { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 4px 16px }
+.rawhtml nav.toc a { text-decoration: none; color: var(--fg); font-size: .95rem }
+.rawhtml nav.toc a:hover { color: var(--acc) }
+.rawhtml nav.toc .n { font-family: var(--font-mono); color: var(--muted); margin-right: 8px; font-size: .85rem }
+.rawhtml figure { position: relative; margin: 24px 0; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px }
+.rawhtml figure svg { display: block; width: 100%; height: auto }
+.rawhtml figcaption { color: var(--muted); font-size: .88rem; margin-top: 12px }
+.rawhtml figcaption b { color: var(--fg) }
+.rawhtml .table-wrap { overflow-x: auto }
+.rawhtml .callout { border-left: 4px solid var(--acc); background: var(--acc-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0 }
+.rawhtml .callout.warm { border-color: var(--warm); background: var(--warm-soft) }
+.rawhtml .callout.green { border-color: var(--green); background: var(--green-soft) }
+.rawhtml .robot { border: 1px dashed var(--line); border-radius: 10px; padding: 12px 16px; margin: 16px 0; background: var(--surface) }
+.rawhtml .robot > b:first-child { color: var(--green) }
+.rawhtml .formula { font-family: var(--font-mono); font-size: 1.02rem; text-align: center; padding: 16px 8px; margin: 16px 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; white-space: nowrap; line-height: 1.9 }
+.rawhtml .formula .lbl { display: block; font-family: var(--font-sans); font-size: .82rem; color: var(--muted) }
+.rawhtml .hl-a { color: var(--acc); font-weight: 600 }
+.rawhtml .hl-w { color: var(--warm); font-weight: 600 }
+.rawhtml svg text { font-family: var(--font-sans); font-size: 13px; fill: var(--fg) }
+.rawhtml svg .mut { fill: var(--muted); font-size: 12px }
+.rawhtml svg .small { font-size: 11px }
+.rawhtml svg .bold { font-weight: 700 }
+.rawhtml svg .mono { font-family: var(--font-mono) }
+.rawhtml .s-box { fill: var(--surface); stroke: var(--line); stroke-width: 1.5 }
+.rawhtml .s-acc { fill: var(--acc-soft); stroke: var(--acc); stroke-width: 1.5 }
+.rawhtml .s-warm { fill: var(--warm-soft); stroke: var(--warm); stroke-width: 1.5 }
+.rawhtml .s-green { fill: var(--green-soft); stroke: var(--green); stroke-width: 1.5 }
+.rawhtml .s-red { fill: var(--red-soft); stroke: var(--red); stroke-width: 1.5 }
+.rawhtml .s-frame { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 5 4 }
+.rawhtml .s-line { fill: none; stroke: var(--muted); stroke-width: 1.5 }
+.rawhtml .s-accline { fill: none; stroke: var(--acc); stroke-width: 2 }
+.rawhtml .s-warmline { fill: none; stroke: var(--warm); stroke-width: 2 }
+.rawhtml .s-ahead { fill: var(--muted) }
+.rawhtml .s-ahead-acc { fill: var(--acc) }
+.rawhtml .s-ahead-warm { fill: var(--warm) }
+.rawhtml .grid { stroke: var(--line); stroke-width: 1 }
+.rawhtml .axis { stroke: var(--muted); stroke-width: 1 }
+.rawhtml .control { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; font-size: .92rem }
+.rawhtml .control input[type="range"] { flex: 1; min-width: 140px; accent-color: var(--acc) }
+.rawhtml .control output { font-family: var(--font-mono); min-width: 3em }
+.rawhtml .control label { display: inline-flex; align-items: center; gap: 6px }
+.rawhtml .btn { font: inherit; font-size: .86rem; padding: 5px 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--fg) }
+.rawhtml .btn:hover { border-color: var(--acc) }
+.rawhtml .readout { font-family: var(--font-mono); font-size: .82rem; color: var(--muted); margin-top: 8px; overflow-x: auto; white-space: nowrap }
+.rawhtml .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .86rem; margin: 0 0 8px }
+.rawhtml .legend span { display: inline-flex; align-items: center; gap: 6px }
+.rawhtml .legend i { width: 18px; height: 3px; border-radius: 2px; display: inline-block }
+.rawhtml .legend i.dash { background: repeating-linear-gradient(90deg, var(--muted) 0 4px, transparent 4px 7px) !important }
+.rawhtml .tip { position: absolute; pointer-events: none; display: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: .8rem; line-height: 1.5; box-shadow: 0 4px 14px rgba(0,0,0,.12); white-space: nowrap; z-index: 2 }
+.rawhtml .tip .k { display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle }
+.rawhtml .tip b { font-family: var(--font-mono); font-weight: 600 }
+.rawhtml .areas { display: grid; grid-template-columns: 1fr 1fr; gap: 16px }
+.rawhtml .qa-tools { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap }
+.rawhtml .qa-tools button { font: inherit; font-size: .88rem; padding: 6px 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--fg) }
+.rawhtml details.qa, .rawhtml details.quiz { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; margin: 12px 0; padding: 0 }
+.rawhtml details.qa summary, .rawhtml details.quiz summary { cursor: pointer; padding: 16px 20px; list-style: none; display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: baseline }
+.rawhtml details.qa summary::-webkit-details-marker, .rawhtml details.quiz summary::-webkit-details-marker { display: none }
+.rawhtml details .qn { font-family: var(--font-mono); font-weight: 600; color: var(--warm); background: var(--warm-soft); border-radius: 6px; padding: 1px 8px; font-size: .9rem }
+.rawhtml details.quiz .qn { color: var(--acc); background: var(--acc-soft) }
+.rawhtml details .qt { font-weight: 500 }
+.rawhtml details .stage { display: block; color: var(--muted); font-size: .8rem; font-weight: 400 }
+.rawhtml details .ans { padding: 0 20px 16px 20px; border-top: 1px solid var(--line) }
+.rawhtml details .ans ul { padding-left: 20px }
+.rawhtml .hint { font-size: .85rem; color: var(--muted) }
+.rawhtml .checklist { list-style: none; padding: 0 }
+.rawhtml .checklist li { padding: 10px 14px 10px 40px; position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; margin: 8px 0 }
+.rawhtml .checklist li::before { content: "✓"; position: absolute; left: 14px; top: 10px; color: var(--green); font-weight: 700 }
+.rawhtml .checklist .ref { color: var(--muted); font-size: .85rem }
+.rawhtml .refs li { margin: 4px 0 }
+@media (max-width: 560px) {
+.rawhtml figure { padding: 12px }
+.rawhtml .areas { grid-template-columns: 1fr }
+}
+</style>
+<div class="rawhtml">
+<svg aria-hidden="true" height="0" style="position:absolute" width="0">
+<defs>
+<marker id="ah" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="9" refY="5" viewBox="0 0 10 10"><path class="s-ahead" d="M0,0 L10,5 L0,10 z"></path></marker>
+<marker id="ah-acc" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="9" refY="5" viewBox="0 0 10 10"><path class="s-ahead-acc" d="M0,0 L10,5 L0,10 z"></path></marker>
+<marker id="ah-warm" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="9" refY="5" viewBox="0 0 10 10"><path class="s-ahead-warm" d="M0,0 L10,5 L0,10 z"></path></marker>
+</defs>
+</svg>
+<section>
+<h2 id="s1"><span class="num">01</span>The Big Picture: Building Layer by Layer</h2>
+<p>Section 02 follows a flow of stacking components one by one. Each layer contains the previous layer as-is.</p>
+<figure>
+<svg aria-label="Adding rewards and discount rates to a Markov chain yields an MRP; adding actions and policies yields an MDP; adding max yields an optimality problem" role="img" viewBox="0 0 720 200">
+<rect class="s-box" height="100" rx="12" width="150" x="10" y="40"></rect>
+<text class="bold" text-anchor="middle" x="85" y="72">Markov chain</text>
+<text class="mono small" text-anchor="middle" x="85" y="96">(S, P)</text>
+<text class="mut small" text-anchor="middle" x="85" y="122">States flow on their own</text>
+<rect class="s-acc" height="100" rx="12" width="150" x="195" y="40"></rect>
+<text class="bold" text-anchor="middle" x="270" y="72">MRP</text>
+<text class="mono small" text-anchor="middle" x="270" y="96">(S, P, R, γ)</text>
+<text class="mut small" text-anchor="middle" x="270" y="122">Scores are added to the flow</text>
+<rect class="s-warm" height="100" rx="12" width="150" x="380" y="40"></rect>
+<text class="bold" text-anchor="middle" x="455" y="72">MDP</text>
+<text class="mono small" text-anchor="middle" x="455" y="96">(S, A, p, R, γ)</text>
+<text class="mut small" text-anchor="middle" x="455" y="122">I control the flow</text>
+<rect class="s-green" height="100" rx="12" width="145" x="565" y="40"></rect>
+<text class="bold" text-anchor="middle" x="637" y="72">Optimality</text>
+<text class="mono small" text-anchor="middle" x="637" y="96">V*, Q*, π*</text>
+<text class="mut small" text-anchor="middle" x="637" y="122">Controlling it best</text>
+<line class="s-line" marker-end="url(#ah)" x1="162" x2="192" y1="90" y2="90"></line>
+<line class="s-line" marker-end="url(#ah)" x1="347" x2="377" y1="90" y2="90"></line>
+<line class="s-line" marker-end="url(#ah)" x1="532" x2="562" y1="90" y2="90"></line>
+<text class="small" style="fill:var(--acc)" text-anchor="middle" x="177" y="30">+R, γ</text>
+<text class="small" style="fill:var(--warm)" text-anchor="middle" x="362" y="30">+A, π</text>
+<text class="small" style="fill:var(--green)" text-anchor="middle" x="547" y="30">+max</text>
+<text class="small" text-anchor="middle" x="85" y="170">Where does μ* stay?</text>
+<text class="small" text-anchor="middle" x="270" y="170">How good is a state, V?</text>
+<text class="small" text-anchor="middle" x="455" y="170">V<tspan baseline-shift="super" font-size="9">π</tspan>, Q<tspan baseline-shift="super" font-size="9">π</tspan>: How good is this policy?</text>
+<text class="small" text-anchor="middle" x="637" y="170">What is the best policy?</text>
+<text class="mut small" text-anchor="middle" x="360" y="195">bandit (01) = the simplest case with 1 state and P = [1]</text>
+</svg>
+<figcaption><b>Figure 1.</b> The map for Section 02. The bottom line lists the questions asked at each layer. Fixing a policy reduces an MDP back to an MRP (Chapter 7).</figcaption>
+</figure>
+</section>
+<section>
+<h2 id="s2"><span class="num">02</span>Markov chain</h2>
+<div class="formula">P( S<sub>t+1</sub> = s' | S<sub>t</sub>, S<sub>t−1</sub>, …, S<sub>0</sub> ) = P( S<sub>t+1</sub> = s' | S<sub>t</sub> )
+<span class="lbl">Markov property: Given the present, the past provides no additional help in predicting the future (all relevant past information is already contained in the present)</span></div>
+<p>If transition probabilities are time-independent (<b>time-homogeneous</b>, "yesterday's rules = today's rules"), they can be written as a single matrix P<sub>ss'</sub>, where each row sums to 1. The fixed part is the <b>rule P</b>, while the state distribution μ<sub>t</sub> can continue to change.</p>
+<h3 id="sec-1">Example: Robot 2-state chain</h3>
+<div class="table-wrap"><table>
+<tbody><tr><th>Current \ Next</th><th>Work (W)</th><th>Charge (C)</th></tr>
+<tr><td><b>Work (W)</b></td><td>0.9</td><td>0.1</td></tr>
+<tr><td><b>Charge (C)</b></td><td>0.5</td><td>0.5</td></tr>
+</tbody></table></div>
+<div class="formula">μ<sub>t+1</sub> = μ<sub>t</sub> P  ⇒  μ<sub>t</sub> = μ<sub>0</sub> P<sup>t</sup>,    μ* = μ* P
+<span class="lbl">Temporal evolution of the distribution · Stationary distribution = a distribution that remains unchanged after one more transition (left eigenvector with eigenvalue 1)</span></div>
+<p>In the stationary distribution, <b>inflow = outflow</b>. In this example, 0.1·μ<sub>W</sub> = 0.5·μ<sub>C</sub> → <b>μ* = (5/6, 1/6)</b>. The robot spends 83% of its time working in the long run.</p>
+<figure>
+<div class="legend">
+<span><i style="background:var(--s1)"></i>μ<sub>t</sub>(W), starting from W</span>
+<span><i style="background:var(--s2)"></i>μ<sub>t</sub>(W), starting from C</span>
+<span><i class="dash"></i>Stationary distribution μ*(W)</span>
+</div>
+<svg aria-label="Left: transition diagram for the two states Work and Charge; Right: curves showing the probability of being in the Work state converging to the stationary distribution from two starting points" id="chainSvg" role="img" viewBox="0 0 720 260"></svg>
+<div class="control">
+<label for="chA">P(W→C)</label>
+<input id="chA" max="1" min="0" step="0.01" type="range" value="0.1">
+<output id="chAOut">0.10</output>
+</div>
+<div class="control">
+<label for="chB">P(C→W)</label>
+<input id="chB" max="1" min="0" step="0.01" type="range" value="0.5">
+<output id="chBOut">0.50</output>
+</div>
+<div class="control">
+<button class="btn" data-ch="0.1,0.5" type="button">Textbook example</button>
+<button class="btn" data-ch="0.1,0.1" type="button">Sticky chain (Exercise 1)</button>
+<button class="btn" data-ch="1,1" type="button">Periodic chain</button>
+<button class="btn" data-ch="0,0.5" type="button">Absorbing state</button>
+</div>
+<div class="readout" id="chRead"></div>
+<figcaption><b>Figure 2.</b> Despite different starting points, both curves converge to the same μ*. The speed of convergence is determined by the second eigenvalue |λ<sub>2</sub>| = |1 − P(W→C) − P(C→W)|. <b>Try clicking "Periodic chain"</b>: although a stationary distribution (½, ½) exists, the curves oscillate forever. An "Absorbing state" means one cannot leave W, so μ* becomes (1, 0).</figcaption>
+</figure>
+<h3 id="sec-2">When does it exist, is unique, and converge (finite states)</h3>
+<div class="table-wrap"><table>
+<tbody><tr><th>Condition</th><th>Meaning</th><th>Guarantee</th></tr>
+<tr><td><b>irreducible</b></td><td>All states are mutually reachable</td><td>Unique stationary distribution</td></tr>
+<tr><td><b>+ aperiodic</b></td><td>Returns do not occur only at exact periodic intervals</td><td>μ<sub>t</sub> → μ* from any μ<sub>0</sub></td></tr>
+</tbody></table></div>
+<ul>
+<li>If both hold, the chain is <b>ergodic</b>: "time average = distribution average". You can estimate μ* by following a single trajectory for a long time. This is the basis for why MC/TD methods can estimate expectations from trajectories.</li>
+<li>Flows do not need to be equal for every pair (detailed balance is a stronger condition). A chain that only cycles 1→2→3→1 also has a stationary distribution of (⅓, ⅓, ⅓).</li>
+</ul>
+<h3 id="sec-3">Isn't reality non-time-homogeneous?</h3>
+<div class="table-wrap"><table>
+<tbody><tr><th>Reality</th><th>Model</th></tr>
+<tr><td>The rules themselves change over time</td><td>Time-inhomogeneous chain P<sub>t</sub>, nonstationary MDP</td></tr>
+<tr><td>Dwell times are irregular</td><td>Semi-Markov, continuous-time Markov chain</td></tr>
+<tr><td>Sensors reveal only part of the state</td><td>POMDP (<a href="#s10">Chapter 10</a>)</td></tr>
+<tr><td>Hidden parameters (friction, mass)</td><td>Hidden-parameter MDP, meta-RL</td></tr>
+</tbody></table></div>
+<div class="callout">Non-stationarity is usually due to <b>variables missing from the state</b>. If you include motor temperature, battery level, and wear in the state, it becomes "same state implies same rules" again.</div>
+</section>
+<section>
+<h2 id="s3"><span class="num">03</span>🤖 Markov is a property of state representation</h2>
+<figure>
+<svg aria-label="Left: A single photo showing only the ball&#x27;s position does not reveal whether it is going up or down. Right: Knowing both position and velocity allows predicting the next position" role="img" viewBox="0 0 720 230">
+<text class="bold" text-anchor="middle" x="180" y="24">State = Position only (one photo)</text>
+<rect class="s-frame" height="150" rx="10" width="240" x="60" y="40"></rect>
+<path d="M80 180 Q180 20 280 180" fill="none" stroke="var(--line)" stroke-dasharray="4 4" stroke-width="1.5"></path>
+<circle class="s-warm" cx="150" cy="95" r="12"></circle>
+<path class="s-warmline" d="M150 80 L150 55" marker-end="url(#ah-warm)"></path>
+<path class="s-warmline" d="M150 110 L150 135" marker-end="url(#ah-warm)"></path>
+<text class="bold" style="fill:var(--warm)" x="170" y="62">?</text>
+<text class="bold" style="fill:var(--warm)" x="170" y="136">?</text>
+<text class="small" text-anchor="middle" x="180" y="212">Going up? Going down? → Previous photo helps</text>
+<text class="small bold" style="fill:var(--red)" text-anchor="middle" x="180" y="228">Not Markov</text>
+<line stroke="var(--line)" stroke-dasharray="4 4" x1="360" x2="360" y1="20" y2="225"></line>
+<text class="bold" text-anchor="middle" x="540" y="24">State = (Position, Velocity)</text>
+<rect class="s-frame" height="150" rx="10" width="240" x="420" y="40"></rect>
+<path d="M440 180 Q540 20 640 180" fill="none" stroke="var(--line)" stroke-dasharray="4 4" stroke-width="1.5"></path>
+<circle class="s-green" cx="510" cy="95" r="12"></circle>
+<path d="M522 88 L560 62" fill="none" marker-end="url(#ah)" stroke="var(--green)" stroke-width="2"></path>
+<text class="mono small" style="fill:var(--green)" x="566" y="62">v</text>
+<circle cx="575" cy="80" fill="none" r="8" stroke="var(--green)" stroke-dasharray="3 3"></circle>
+<text class="small" text-anchor="middle" x="540" y="212">Next position is determined → Previous photo adds no information</text>
+<text class="small bold" style="fill:var(--green)" text-anchor="middle" x="540" y="228">Markov</text>
+</svg>
+<figcaption><b>Figure 3.</b> In the same world, whether it is Markov or not depends on <b>how you define the state</b>. That is why state design is part of formulating an RL problem.</figcaption>
+</figure>
+<ul>
+<li>Robot arm: Joint angles θ alone are not Markov, but (θ, θ̇) is Markov under second-order dynamics (F = ma).</li>
+<li>Principle: State = <b>sufficient statistic</b> of the past needed to predict the future. By appending the past to the state (state augmentation), anything can be made Markov.</li>
+<li>This is why DQN stacks 4 Atari frames and why robot policies receive observation history. If sensors reveal only part of the state, it becomes a POMDP (<a href="#s10">Chapter 10</a>).</li>
+</ul>
+</section>
+<section>
+<h2 id="s4"><span class="num">04</span>Episodes and Terminal States</h2>
+<p><b>Episode</b>: A single trajectory from the initial state S<sub>0</sub> ~ μ<sub>0</sub> until reaching a terminal state (time T, random variable). Once finished, reset and start the next episode. If there is termination, it is an <b>episodic task</b>; if not, it is a <b>continuing task</b>(making the sum finite with γ &#x3C; 1).</p>
+<figure>
+<svg aria-label="Timeline of an object lifting episode. It proceeds through reset, approach, grasp, and lift to either terminate successfully or fail by dropping, or is truncated at step 200 due to time limit" role="img" viewBox="0 0 720 250">
+<text class="bold" x="20" y="24">Example: One object lifting episode (20Hz, 1 step = 0.05s)</text>
+<line class="axis" x1="40" x2="690" y1="110" y2="110"></line>
+<rect class="s-box" height="44" rx="8" width="90" x="40" y="88"></rect>
+<text class="small bold" text-anchor="middle" x="85" y="108">Reset</text>
+<text class="small mut" text-anchor="middle" x="85" y="124">Random object placement μ₀</text>
+<rect class="s-acc" height="44" rx="8" width="90" x="140" y="88"></rect>
+<text class="small" text-anchor="middle" x="185" y="114">Approach</text>
+<rect class="s-acc" height="44" rx="8" width="90" x="240" y="88"></rect>
+<text class="small" text-anchor="middle" x="285" y="114">Grasp</text>
+<rect class="s-acc" height="44" rx="8" width="110" x="340" y="88"></rect>
+<text class="small" text-anchor="middle" x="395" y="114">Lift</text>
+<rect class="s-green" height="44" rx="8" width="120" x="470" y="88"></rect>
+<text class="small bold" text-anchor="middle" x="530" y="108">Success termination</text>
+<text class="small mut" text-anchor="middle" x="530" y="124">z ≥ 30cm, t = 87</text>
+<path d="M590 100 C640 70 640 140 592 120" fill="none" marker-end="url(#ah)" stroke="var(--green)" stroke-width="1.5"></path>
+<text class="small" style="fill:var(--green)" text-anchor="middle" x="530" y="74">Absorbing state: itself, reward 0</text>
+<path class="s-line" d="M395 134 L395 170" marker-end="url(#ah)"></path>
+<rect class="s-red" height="36" rx="8" width="130" x="330" y="172"></rect>
+<text class="small" text-anchor="middle" x="395" y="194">Failure termination: drop</text>
+<line stroke="var(--warm)" stroke-dasharray="6 4" stroke-width="2" x1="700" x2="700" y1="60" y2="210"></line>
+<text class="small" style="fill:var(--warm)" text-anchor="end" x="700" y="228">t = 200: truncation (time limit, not termination)</text>
+<text class="small mut" x="40" y="60">S₀, A₀, R₁, S₁, A₁, R₂, …, S_T</text>
+</svg>
+<figcaption><b>Figure 4.</b> Termination is <b>defined</b> by the task designer: success, failure. "Height does not change" is not termination. Holding still is also an ordinary state where movement is still possible. An absorbing state is a mathematical device that views the post-termination state as "going only to itself with reward 0," allowing episodic and continuing tasks to be handled with the same infinite sum formula.</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<tbody><tr><th>Term</th><th>In this task</th></tr>
+<tr><td>step</td><td>One control cycle</td></tr>
+<tr><td>state</td><td>Joint angles/velocities, gripper, object pose</td></tr>
+<tr><td>action</td><td>Joint target values or torques</td></tr>
+<tr><td>terminal</td><td>Success (z ≥ 30cm), Failure (drop, collision, joint limits)</td></tr>
+<tr><td>truncation</td><td>Forced cut because it couldn't finish within 200 steps</td></tr>
+</tbody></table></div>
+<div class="callout warm"><b>truncation ≠ termination.</b> This is why gymnasium provides <code>terminated</code>/<code>truncated</code> separately. Setting the value of a state cut off by time limit to 0 breaks learning (revisited in 05, 07).</div>
+<p>A bandit can be viewed as "one pull = an episode of length 1." The state returns to itself with <b>probability 1</b>, and randomness exists only in the reward.</p>
+</section>
+<section>
+<h2 id="s5"><span class="num">05</span>MRP: Return, Discount Rate, and Value Function</h2>
+<div class="formula">G<sub>t</sub> = R<sub>t+1</sub> + γR<sub>t+2</sub> + γ²R<sub>t+3</sub> + ⋯ = Σ<sub>k</sub> γ<sup>k</sup> R<sub>t+k+1</sub>,    <span class="hl-a">G<sub>t</sub> = R<sub>t+1</sub> + γ G<sub>t+1</sub></span>
+<span class="lbl">MRP = (S, P, R, γ) · Return is the discounted sum of future rewards · The Bellman equation emerges from this <span class="hl-a">recursive structure</span></span></div>
+<h3 id="sec-4">Discount Rate γ: How Far into the Future to Look</h3>
+<figure>
+<svg aria-label="Bar chart showing the weight gamma to the power of k applied to rewards k steps in the future. The decay is slower as gamma increases" id="discSvg" role="img" viewBox="0 0 720 220"></svg>
+<div class="control">
+<label for="discG">γ</label>
+<input id="discG" max="0.99" min="0" step="0.01" type="range" value="0.9">
+<output id="discGOut">0.90</output>
+</div>
+<div class="readout" id="discRead"></div>
+<figcaption><b>Figure 5.</b> The weight γ<sup>k</sup> for rewards k steps in the future. It decays smoothly rather than cutting off abruptly. The dashed line indicates the effective horizon 1/(1−γ). If γ = 0, only the immediate reward is considered (bandit).</figcaption>
+</figure>
+<p>Reasons for using γ &#x3C; 1: ① Ensures |G| ≤ R<sub>max</sub>/(1−γ) remains finite even in infinite-horizon tasks ② The distant future is uncertain ③ Creates pressure to "finish quickly" (see Exercise 3).</p>
+<h3 id="sec-5">Value Function and Bellman Equation</h3>
+<div class="formula">V(s) = E[ G<sub>t</sub> | S<sub>t</sub> = s ] = <span class="hl-w">R(s)</span> + γ Σ<sub>s'</sub> P<sub>ss'</sub> <span class="hl-a">V(s')</span>
+<span class="lbl">Current value = <span class="hl-w">immediate reward</span> + γ × <span class="hl-a">average value of the next state</span> · The Markov property is used to establish that E[G<sub>t+1</sub> | S<sub>t+1</sub> = s'] = V(s')</span></div>
+<div class="formula">V = R + γPV  ⇒  <b>V = (I − γP)<sup>−1</sup> R</b>
+<span class="lbl">Always invertible because the magnitude of all eigenvalues of γP is at most γ · Cost O(n³); use iteration for large state spaces (Chapter 9)</span></div>
+<p><b>Numerical Example</b>: Applying work reward 1, charging reward 0, and γ = 0.9 to the chain in Figure 2 yields V<sub>W</sub> ≈ 8.59 and V<sub>C</sub> ≈ 7.03. Even while charging, the value is not zero because it reflects the expected future return from returning to work. <b>V is an evaluation that includes the future.</b> It is also consistent with the connection to the stationary distribution: multiplying the average reward per step μ*<sub>W</sub> = 5/6 by a horizon of 10 steps gives a value near 8.3.</p>
+<h3 id="sec-6">The Big Picture: From Future Rewards to Present Decisions</h3>
+<pre><code>① Evaluation : Pull future rewards back to form the current state score V(s)      ← MRP (Current)
+② Selection : Compare the "score of the state reached after each action"          ← Q(s,a) in MDP (Chapter 7)
+③ Improvement : Update the policy to choose the better option                  ← 03 DP
+   ↺ If the policy changes, the scores change → Back to ① = GPI</code></pre>
+<figure>
+<svg aria-label="Terrain where the reward from goal G propagates backward across five corridor cells, causing value bars to rise toward the goal. Q values for left and right actions are shown below each cell" id="corSvg" role="img" viewBox="0 0 720 280"></svg>
+<div class="control">
+<label for="corG">γ</label>
+<input id="corG" max="0.99" min="0.1" step="0.01" type="range" value="0.9">
+<output id="corGOut">0.90</output>
+</div>
+<div class="control">
+<label for="corP">Policy π(→)</label>
+<input id="corP" max="1" min="0" step="0.05" type="range" value="1">
+<output id="corPOut">1.00</output>
+<button class="btn" data-cor="1" type="button">Always →</button>
+<button class="btn" data-cor="0.5" type="button">Random</button>
+</div>
+<figcaption><b>Figure 6.</b> Corridor S0–S3, with +1 reward upon reaching G and 0 otherwise. The bars show V<sup>π</sup> = (I − γP<sup>π</sup>)<sup>−1</sup>R<sup>π</sup>, computed directly in the browser. The reward given only at G <b>propagates backward</b>, creating a terrain that slopes upward toward the goal. This means you only need to choose the uphill direction at each cell: the long-term planning problem becomes a one-step choice problem. <b>Try lowering γ</b>: the goal is barely felt from far away. <b>Try switching to random</b>: the terrain flattens, but Q(→) > Q(←) remains true for every cell (Chapter 7 policy improvement).</figcaption>
+</figure>
+<div class="callout warm">The right-hand side <b>R + γV(s')</b> is the target in 05 TD. It is the same "target" mentioned in 01, but this time it <b>includes its own estimate V(s')</b> (bootstrapping). The discussion of instability in 05 and 06 begins here.</div>
+</section>
+<section>
+<h2 id="s6"><span class="num">06</span>Reward Design: Shaping and Hacking</h2>
+<h3 id="sec-7">Reward shaping: Adding guidance rewards</h3>
+<p>If the reward is "success +1, otherwise 0" (sparse), a random robot will see only zeros forever and learn nothing. We add hint rewards at intermediate stages.</p>
+<div class="table-wrap"><table>
+<tbody><tr><th>Stage</th><th>Hint Reward</th></tr>
+<tr><td>Hand approaches object</td><td>+ (distance reduction)</td></tr>
+<tr><td>Grasp success</td><td>+0.5</td></tr>
+<tr><td>Object height increases</td><td>+ (amount of rise)</td></tr>
+<tr><td>Reaches 30cm</td><td>+10 (actual goal)</td></tr>
+</tbody></table></div>
+<div class="formula">F(s, s') = γΦ(s') − Φ(s)  ⇒  G' = G − Φ(s<sub>0</sub>)
+<span class="lbl">potential-based shaping (Ng et al., 1999): telescoping cancellation leaves only a constant → policy ranking is invariant</span></div>
+<h3 id="sec-8">Reward hacking: Maximizing the number, not the intent</h3>
+<figure>
+<svg aria-label="If you give height reward every step and terminate on success, the cumulative reward of the policy that succeeds and ends becomes flat, while the cumulative reward of the policy hovering at 29 centimeters keeps increasing and eventually overtakes it" role="img" viewBox="0 0 720 260">
+<text class="bold" x="40" y="22">Reward = height z per step + terminate after +10 on success</text>
+<line class="axis" x1="60" x2="680" y1="220" y2="220"></line>
+<line class="axis" x1="60" x2="60" y1="40" y2="220"></line>
+<text class="mut small" text-anchor="end" x="680" y="240">step →</text>
+<text class="mut small" text-anchor="end" x="54" y="44">Cumulative</text>
+<text class="mut small" text-anchor="end" x="54" y="58">Reward</text>
+<path d="M60 220 C100 218 180 200 240 186 L680 186" fill="none" stroke="var(--s1)" stroke-width="2.2"></path>
+<circle cx="240" cy="186" fill="var(--s1)" r="4"></circle>
+<text class="small" style="fill:var(--s1)" x="420" y="206">Success → Terminate (reward 0 thereafter)</text>
+<path d="M60 220 C100 218 170 206 225 194 L680 50" fill="none" stroke="var(--s2)" stroke-width="2.2"></path>
+<text class="small" style="fill:var(--s2)" x="560" y="140">Hovering at 29cm</text>
+<text class="small" style="fill:var(--s2)" x="560" y="156">(avoiding termination)</text>
+<line stroke="var(--warm)" stroke-dasharray="5 4" x1="680" x2="680" y1="40" y2="220"></line>
+<text class="small" style="fill:var(--warm)" text-anchor="end" x="674" y="36">Time limit</text>
+<circle cx="250" cy="186" fill="none" r="5" stroke="var(--fg)"></circle>
+<text class="small" text-anchor="end" x="244" y="172">Overtakes immediately</text>
+</svg>
+<figcaption><b>Figure 7.</b> From the agent's perspective, <b>hovering yields a higher total reward</b>. This is reward hacking. It arises not from learning failure but from <b>successful optimization</b>. To fix it, apply a per-step time penalty and give height via potential-based shaping (then hovering only accumulates γΦ(s') − Φ(s) ≈ 0).</figcaption>
+</figure>
+<ul>
+<li><b>Object uprighting</b>: If z is measured as the object's center-of-mass height, simply standing a long object up increases it.</li>
+<li><b>CoastRunners</b> (OpenAI, 2016): The boat circled the item respawn zone instead of finishing.</li>
+<li><b>Simulator bug</b>: Bouncing due to physics engine collision errors counts as "forward progress."</li>
+<li><b>RLHF</b>: Exploits the reward model's preferences (long answers, flattery) (10).</li>
+</ul>
+<div class="callout green">Keep rewards simple, termination/failure conditions clear, and <b>always verify learned behavior via video</b>. Looking only at return numbers is misleading.</div>
+<h3 id="sec-9">Infinite reward, exponential reward?</h3>
+<div class="table-wrap"><table>
+<tbody><tr><th>Attempt</th><th>Problem</th></tr>
+<tr><td><b>Success reward ∞</b></td><td>If success probability is not 0, V = ∞ for all policies → <b>policies cannot be compared</b>. Numerically inf/NaN</td></tr>
+<tr><td><b>Very large finite value</b></td><td>Multiplying the entire reward by c leaves the optimal policy unchanged. What matters is the <b>ratio</b>. If too large, shaping is buried and it becomes equivalent to sparse; return variance increases causing instability → in practice, use reward scaling / clipping (DQN [−1, 1])</td></tr>
+<tr><td><b>exp(z)</b></td><td>Signal near the floor is nearly 0 so early learning fails, and per-step reward near the top becomes large, worsening hovering hacking</td></tr>
+<tr><td style="white-space:nowrap"><b>exp(−‖error‖²/σ)</b></td><td><b>Good exponential</b>. Bounded in (0, 1], equals 1 at the goal. Standard in walking robot velocity tracking rewards, etc.</td></tr>
+</tbody></table></div>
+</section>
+<section>
+<h2 id="s7"><span class="num">07</span><span>MDP: Policy, V<sup>π</sup>, Q<sup>π</sup></span></h2>
+<div class="formula">MDP = (S, A, p, R, γ),   p(s' | s, a),   π(a | s) = P(A<sub>t</sub> = a | S<sub>t</sub> = s)
+<span class="lbl">Now the next state and reward depend on the <b>action</b> · The policy can be stochastic or deterministic (a = π(s))</span></div>
+<h3 id="sec-10">Fixing a Policy Turns an MDP into an MRP</h3>
+<div class="formula">P<sup>π</sup>(s' | s) = Σ<sub>a</sub> π(a|s) p(s'|s,a),   R<sup>π</sup>(s) = Σ<sub>a</sub> π(a|s) R(s,a)<br>⇒  V<sup>π</sup> = (I − γP<sup>π</sup>)<sup>−1</sup> R<sup>π</sup></div>
+<ul>
+<li>The state and dynamics p are <b>determined by the environment</b>. What we choose is the policy. <b>Choosing a policy = choosing which Markov chain to create.</b> A good policy creates a chain that stays in high-reward states for longer.</li>
+<li>"Convergence" has two meanings: ① Convergence of learning (policy stops changing → chain fixed → learning curve flattens) ② Convergence of the distribution under a fixed policy (μ<sub>t</sub> → d<sup>π</sup>). A flat curve does not guarantee optimality.</li>
+</ul>
+<h3 id="sec-11">V<sup>π</sup> and Q<sup>π</sup></h3>
+<div class="table-wrap"><table>
+<tbody><tr><th></th><th>Question</th><th>Analogy</th></tr>
+<tr><td><b>V<sup>π</sup>(s)</b> = E<sub>π</sub>[G<sub>t</sub> | S<sub>t</sub>=s]</td><td>How much will I earn from this state if I follow π going forward</td><td>The score of this <b>square</b></td></tr>
+<tr><td><b>Q<sup>π</sup>(s,a)</b> = E<sub>π</sub>[G<sub>t</sub> | S<sub>t</sub>=s, A<sub>t</sub>=a]</td><td>If I <b>take action a first</b> from this state and then follow π</td><td>The score for <b>exiting this square through this door</b></td></tr>
+</tbody></table></div>
+<p>If you only have V, you need p(s'|s,a) to compare actions. Q directly holds scores for each action, so it can be chosen <b>without a model</b> → Q-learning (05), DQN (07).</p>
+<div class="formula">V<sup>π</sup>(s) = <span class="hl-a">Σ<sub>a</sub> π(a|s)</span> Q<sup>π</sup>(s,a),    Q<sup>π</sup>(s,a) = R(s,a) + γ <span class="hl-w">Σ<sub>s'</sub> p(s'|s,a)</span> V<sup>π</sup>(s')
+<span class="lbl">Substituting into each other yields the Bellman expectation equation · The <span class="hl-a">average over my choices</span> and the <span class="hl-w">average over environmental randomness</span> alternate</span></div>
+<figure>
+<svg aria-label="backup diagram. Left expectation averages from state via policy, and from action via environment. Right optimality uses max at state, and averages from action via environment" role="img" viewBox="0 0 720 270">
+<defs>
+<g id="tree">
+<circle class="s-acc" cx="0" cy="0" r="14"></circle>
+<line class="s-line" x1="-8" x2="-70" y1="12" y2="72"></line>
+<line class="s-line" x1="0" x2="0" y1="14" y2="72"></line>
+<line class="s-line" x1="8" x2="70" y1="12" y2="72"></line>
+<circle cx="-75" cy="80" fill="var(--fg)" r="8"></circle>
+<circle cx="0" cy="80" fill="var(--fg)" r="8"></circle>
+<circle cx="75" cy="80" fill="var(--fg)" r="8"></circle>
+<line class="s-line" x1="-78" x2="-105" y1="88" y2="150"></line>
+<line class="s-line" x1="-72" x2="-45" y1="88" y2="150"></line>
+<line class="s-line" x1="-3" x2="-20" y1="88" y2="150"></line>
+<line class="s-line" x1="3" x2="20" y1="88" y2="150"></line>
+<line class="s-line" x1="72" x2="50" y1="88" y2="150"></line>
+<line class="s-line" x1="78" x2="105" y1="88" y2="150"></line>
+<circle class="s-acc" cx="-105" cy="160" r="11"></circle>
+<circle class="s-acc" cx="-45" cy="160" r="11"></circle>
+<circle class="s-acc" cx="-20" cy="160" r="11"></circle>
+<circle class="s-acc" cx="20" cy="160" r="11"></circle>
+<circle class="s-acc" cx="50" cy="160" r="11"></circle>
+<circle class="s-acc" cx="105" cy="160" r="11"></circle>
+</g>
+</defs>
+<text class="bold" text-anchor="middle" x="180" y="22">Expectation: V<tspan baseline-shift="super" font-size="9">π</tspan></text>
+<use href="#tree" x="180" y="60"></use>
+<path d="M120 115 Q180 140 240 115" fill="none" stroke="var(--acc)" stroke-width="2"></path>
+<text class="small" style="fill:var(--acc)" x="270" y="110">Σ π(a|s) average</text>
+<text class="small mut" x="270" y="126">Part I choose</text>
+<path d="M60 195 Q180 225 300 195" fill="none" stroke="var(--warm)" stroke-width="2"></path>
+<text class="small" style="fill:var(--warm)" text-anchor="middle" x="180" y="250">Σ p(s'|s,a) average · Part determined by environment</text>
+<text class="mono small" x="196" y="64">s</text>
+<text class="mono small mut" x="100" y="150">a</text>
+<line stroke="var(--line)" stroke-dasharray="4 4" x1="360" x2="360" y1="20" y2="260"></line>
+<text class="bold" text-anchor="middle" x="540" y="22">Optimality: V*</text>
+<use href="#tree" x="540" y="60"></use>
+<path d="M480 115 Q540 140 600 115" fill="none" stroke="var(--green)" stroke-width="3"></path>
+<text class="small bold" style="fill:var(--green)" x="630" y="110">max<tspan baseline-shift="sub" font-size="9">a</tspan></text>
+<text class="small mut" x="630" y="126">Best instead of average</text>
+<path d="M420 195 Q540 225 660 195" fill="none" stroke="var(--warm)" stroke-width="2"></path>
+<text class="small" style="fill:var(--warm)" text-anchor="middle" x="540" y="250">Σ p(s'|s,a) average · Unchanged</text>
+</svg>
+<figcaption><b>Figure 8.</b> Backup diagram with one step expanded. Large circles are states, black dots are (state, action). What changes in Optimality (Chapter 8) is <b>only the part I choose</b>. Environmental randomness cannot be controlled by me, so it remains an average.</figcaption>
+</figure>
+<h3 id="sec-12">Numerical Example: Adding Actions to the Corridor</h3>
+<p>If we set the policy to "random" in Figure 6, we get the following values (γ = 0.9, ← from S0 is staying put).</p>
+<div class="table-wrap"><table>
+<tbody><tr><th></th><th>S0</th><th>S1</th><th>S2</th><th>S3</th></tr>
+<tr><td><b>V<sup>π</sup></b></td><td>0.275</td><td>0.336</td><td>0.472</td><td>0.712</td></tr>
+<tr><td>Q<sup>π</sup>(s, ←)</td><td>0.247</td><td>0.247</td><td>0.302</td><td>0.425</td></tr>
+<tr><td>Q<sup>π</sup>(s, →)</td><td><b>0.302</b></td><td><b>0.425</b></td><td><b>0.641</b></td><td><b>1.000</b></td></tr>
+</tbody></table></div>
+<div class="callout green">Looking only at the Q of a <b>random policy (coin flip)</b>, → is larger in every square. Changing to "choose the action with higher Q" immediately yields "always →" = optimal policy. This is <b>policy improvement</b>. The guarantee that it always improves or stays the same (policy improvement theorem) is proven in 03.</div>
+<div class="formula">A<sup>π</sup>(s,a) = Q<sup>π</sup>(s,a) − V<sup>π</sup>(s)
+<span class="lbl">advantage: How much better this action is than usual · At S1, A(→) = +0.089, A(←) = −0.089 · Used in 08 policy gradient and PPO's GAE</span></div>
+<ul>
+<li><b>PPO</b> (Schulman et al., 2017): Increases the probability of actions with positive advantage and decreases it for negative ones, but clips the new/old policy probability ratio to [1−ε, 1+ε] to prevent large changes at once. Standard for robot locomotion and RLHF (09).</li>
+<li><b>POMDP</b>: MDP where you only see observations instead of the true state (<a href="#s10">Chapter 10</a>).</li>
+</ul>
+<div class="robot"><b>🤖 Robotics Connection</b> · p(s'|s,a) is the physical law, and the simulator is exactly this p. π(a|s) is a policy neural network that outputs the distribution of joint commands (Gaussian). V<sup>π</sup>(s) answers "how likely is success given this posture and grasp state," while Q<sup>π</sup>(s,a) compares options like "pulling up now vs. opening the gripper." Because actions are continuous, we cannot compute an entire Q table and select the maximum → 08, 09.</div>
+</section>
+<section>
+<h2 id="s8"><span class="num">08</span>Optimality: V*, Q*, Bellman optimality</h2>
+<div class="formula">V*(s) = max<sub>π</sub> V<sup>π</sup>(s),   Q*(s,a) = max<sub>π</sub> Q<sup>π</sup>(s,a),   <span class="hl-a">π*(s) = argmax<sub>a</sub> Q*(s,a)</span>
+<span class="lbl">In a finite MDP, there always exists a deterministic policy π* that is simultaneously optimal in every state · <span class="hl-a">Knowing only Q*, you can choose by looking just one step ahead</span></span></div>
+<h3 id="sec-13">Notation summary</h3>
+<div class="table-wrap"><table>
+<tbody><tr><th>Symbol</th><th>Pronunciation</th><th>Meaning</th></tr>
+<tr><td><b>Q<sup>π</sup></b></td><td>Q pi</td><td>The <b>true</b> score when following policy π (current habit)</td></tr>
+<tr><td><b>Q*</b></td><td>Q star</td><td>The <b>true</b> score when acting <b>optimally</b> thereafter (= Q<sup>π*</sup>)</td></tr>
+<tr><td><b>Q</b></td><td>Q</td><td>The <b>estimate</b> held by the algorithm (table, neural network)</td></tr>
+<tr><td>Q′</td><td>Q prime</td><td>Separate notation. Q(s′, a′) of the next state or DQN target network</td></tr>
+</tbody></table></div>
+<p>Always Q<sup>π</sup>(s,a) ≤ Q*(s,a). Q without a superscript usually means "the current estimate being learned".</p>
+<h3 id="sec-14">Example: Commute (reward = −minutes)</h3>
+<figure>
+<svg aria-label="From home, take the highway for 10 minutes to a fork where you can go downtown for 20 minutes or detour for 8 minutes to reach work, or take the national road directly for 25 minutes. The habit is downtown at the fork; the optimal is highway and detour" role="img" viewBox="0 0 720 240">
+<circle class="s-acc" cx="80" cy="110" r="28"></circle>
+<text class="bold" text-anchor="middle" x="80" y="115">Home A</text>
+<circle class="s-acc" cx="340" cy="70" r="28"></circle>
+<text class="bold" text-anchor="middle" x="340" y="75">B</text>
+<text class="mut small" text-anchor="middle" x="340" y="30">Fork</text>
+<rect class="s-green" height="60" rx="12" width="110" x="580" y="80"></rect>
+<text class="bold" text-anchor="middle" x="635" y="115">Work</text>
+<path class="s-accline" d="M106 98 L312 76" marker-end="url(#ah-acc)"></path>
+<text class="small" text-anchor="middle" x="205" y="74">Highway 10 min</text>
+<path class="s-warmline" d="M366 58 C450 30 540 50 588 82" marker-end="url(#ah-warm)" stroke-dasharray="6 4"></path>
+<text class="small" style="fill:var(--warm)" text-anchor="middle" x="470" y="34">Downtown 20 min (habit π)</text>
+<path d="M368 80 C450 95 520 100 578 104" fill="none" marker-end="url(#ah)" stroke="var(--green)" stroke-width="3"></path>
+<text class="small" style="fill:var(--green)" text-anchor="middle" x="470" y="116">Detour 8 min (best)</text>
+<path class="s-line" d="M100 132 C250 210 480 200 590 136" marker-end="url(#ah)"></path>
+<text class="small" text-anchor="middle" x="340" y="206">National road 25 min (direct)</text>
+<text class="small mono" x="20" y="232">Q^π(A,highway) = −30 &#x3C; Q^π(A,national) = −25  →  Habit-based: National road</text>
+<text class="small mono" style="fill:var(--green)" text-anchor="end" x="700" y="232">Q*(A,highway) = −18 → Correct: Highway</text>
+</svg>
+<figcaption><b>Figure 9.</b> Q<sup>π</sup> is contaminated by <b>subsequent bad habits</b>, leading to misjudgment even at the first choice. Q* assumes "optimal thereafter," so taking argmax at each point yields global optimality. Still, Q<sup>π</sup> is useful: At B, Q<sup>π</sup>(detour) = −8 > Q<sup>π</sup>(downtown) = −20 → habit correction → re-evaluation leads to highway at A too → if it no longer changes, that is Q*.</figcaption>
+</figure>
+<h3 id="sec-15">Bellman optimality equation</h3>
+<div class="table-wrap"><table>
+<tbody><tr><th></th><th>Expectation (following π)</th><th>Optimality (best)</th></tr>
+<tr><td>V ↔ Q</td><td>V<sup>π</sup>(s) = <b>Σ<sub>a</sub> π(a|s)</b> Q<sup>π</sup>(s,a)</td><td>V*(s) = <b>max<sub>a</sub></b> Q*(s,a)</td></tr>
+<tr><td>Q ↔ V</td><td>Q<sup>π</sup> = R + γ Σ p V<sup>π</sup></td><td>Q* = R + γ Σ p V* (same)</td></tr>
+</tbody></table></div>
+<div class="formula">V*(s) = <span class="hl-a">max<sub>a</sub></span> [ R(s,a) + γ Σ<sub>s'</sub> p(s'|s,a) V*(s') ]<br>Q*(s,a) = R(s,a) + γ Σ<sub>s'</sub> p(s'|s,a) <span class="hl-a">max<sub>a'</sub></span> Q*(s',a')
+<span class="lbl">The right-hand side of the second equation, R + γ max Q(s',·), is the <b>Q-learning target</b> foreshadowed in 01</span></div>
+<div class="table-wrap"><table>
+<tbody><tr><th>Algorithm</th><th>target</th><th>Source</th></tr>
+<tr><td>bandit</td><td><code>R</code></td><td>γ = 0, 1 state</td></tr>
+<tr><td>TD(0)</td><td><code>R + γV(s')</code></td><td>Bellman expectation</td></tr>
+<tr><td>Q-learning</td><td><code>R + γ max Q(s',·)</code></td><td><b>Bellman optimality</b></td></tr>
+</tbody></table></div>
+<p><b>Principle of Optimality</b>: The latter part of an optimal path is itself optimal. If the shortest path from Seoul to Busan passes through Daejeon, the segment from Daejeon to Busan within it must also be the shortest. Hence "current best = this move + best at destination".</p>
+<h3 id="sec-16">Why can't we solve it with a single matrix operation?</h3>
+<p>max is nonlinear. Which action is best depends on V*, and V* in turn depends on which action is best. So we solve by <b>iteration</b>: value iteration, policy iteration (03), LP.</p>
+<p><b>Verification</b>: Corridor V* = (0.729, 0.81, 0.9, 1). At S1, max(0.9 × 0.729 = 0.656, 0.9 × 0.9 = 0.81) = 0.81 ✓. The random policy's V<sup>π</sup>(S1) = 0.336 is an average, not a maximum, so it does not satisfy this equation. It serves as a criterion to filter out non-optimal policies.</p>
+<div class="robot"><b>🤖 Robotics connection</b> · The continuous time/continuous state version is the <b>HJB equation</b> of optimal control. For linear systems + quadratic cost, V* falls neatly into a quadratic form → <b>LQR</b> (03). And <b>optimal is "optimal with respect to the given reward"</b>. If you make hovering beneficial (Figure 7), the optimal policy is exactly hovering.</div>
+</section>
+<section>
+<h2 id="s9"><span class="num">09</span>Contraction: Why Repetition Always Converges</h2>
+<div class="formula">(T*V)(s) = max<sub>a</sub> [ R(s,a) + γ Σ<sub>s'</sub> p(s'|s,a) V(s') ],   V* = T*V*,   V<sup>π</sup> = T<sup>π</sup>V<sup>π</sup>
+<span class="lbl">Bellman operator = a "machine" that takes a score table and outputs the updated score table after one step · Bellman equation = the <b>fixed point</b> of the machine</span></div>
+<div class="formula">‖TV − TU‖<sub>∞</sub> ≤ <span class="hl-a">γ</span> ‖V − U‖<sub>∞</sub>,    ‖V‖<sub>∞</sub> = max<sub>s</sub> |V(s)|
+<span class="lbl">Each time the machine is passed through, the distance between two guesses shrinks by a factor of <span class="hl-a">γ or less</span></span></div>
+<h3 id="sec-17">Proof</h3>
+<ul>
+<li><b>T<sup>π</sup></b>: |(T<sup>π</sup>V − T<sup>π</sup>U)(s)| = γ|Σ<sub>s'</sub> P<sup>π</sup><sub>ss'</sub>(V − U)(s')| ≤ γ‖V − U‖<sub>∞</sub>. R cancels out upon subtraction, and since the rows of P are weighted averages, they cannot exceed the maximum value.</li>
+<li><b>T*</b>: Additionally, |max f − max g| ≤ max |f − g|. <b>max is nonlinear but does not break contraction.</b></li>
+</ul>
+<div class="table-wrap"><table>
+<tbody><tr><th>Banach Fixed Point Theorem</th><th>Meaning</th></tr>
+<tr><td><b>Unique fixed point</b></td><td>V<sup>π</sup> and V* are unique (even if Q* has multiple optimal actions, V* is unique)</td></tr>
+<tr><td><b>Converges from any starting point</b></td><td>Whether V<sub>0</sub> is set to 0 or 100</td></tr>
+<tr><td><b>Speed</b></td><td>‖V<sub>k</sub> − V*‖ ≤ γ<sup>k</sup> ‖V<sub>0</sub> − V*‖</td></tr>
+</tbody></table></div>
+<figure>
+<div class="legend">
+<span><i style="background:var(--s1)"></i>Starting from V<sub>0</sub> = 0</span>
+<span><i style="background:var(--s2)"></i>Starting from V<sub>0</sub> = 10</span>
+<span><i class="dash"></i>V* · Theoretical upper bound 10γ<sup>k</sup></span>
+</div>
+<svg aria-label="Value iteration in a corridor. Left: bar charts of state values from two starting points; Right: maximum difference between the two guesses over iterations on a log scale, compared with the theoretical upper bound" id="viSvg" role="img" viewBox="0 0 720 280"></svg>
+<div class="control">
+<button class="btn" id="viStep" type="button">1 iteration</button>
+<button class="btn" id="viStep10" type="button">10 iterations</button>
+<button class="btn" id="viReset" type="button">Reset</button>
+<label for="viG">γ</label>
+<input id="viG" max="0.99" min="0.5" step="0.01" type="range" value="0.9">
+<output id="viGOut">0.90</output>
+</div>
+<div class="readout" id="viRead"></div>
+<figcaption><b>Figure 10.</b> In the corridor, we iterate V ← T*V. <b>Try pressing "1 iteration" four times</b>: starting from 0, the reward of 1 <b>spreads back one state per iteration</b>, reaching V* in just 4 steps. The absurdly optimistic start from 10 is also reduced by a factor of γ each time, converging to the same answer. The difference on the right (solid line) is always below the theoretical upper bound (dashed line). Increasing γ to 0.99 makes convergence much slower.</figcaption>
+</figure>
+<h3 id="sec-18">Algorithm</h3>
+<pre><code>Policy evaluation (linear solution)        Value iteration
+  V = solve(I − γP^π, R^π)            V ← 0
+                                     repeat:
+Policy evaluation (iterative)                for s: V_new(s) = max_a [R(s,a) + γ Σ p(s'|s,a) V(s')]
+  V ← 0                                 if ‖V_new − V‖∞ &#x3C; ε: break
+  repeat: V ← R^π + γ P^π V              V ← V_new
+                                     π(s) = argmax_a [R(s,a) + γ Σ p V]</code></pre>
+<div class="formula">k ≈ ln(1/ε) / (1 − γ)
+<span class="lbl">Number of iterations to reduce error by a factor of ε · γ = 0.9 → ~46 · 0.99 → ~460 · 0.999 → ~4600 · Same number as the effective horizon 1/(1−γ)</span></div>
+<p>The further into the future you look, the slower it gets. It takes that much time for information to spread from the distant future to the present. If γ = 1, contraction is not guaranteed (separate conditions are needed, such as for episodes that must terminate).</p>
+<div class="table-wrap"><table>
+<tbody><tr><th>Section</th><th>Role of contraction</th></tr>
+<tr><td>03 DP</td><td>value iteration = T* repetition, policy evaluation = T<sup>π</sup> repetition. The convergence proof is exactly this</td></tr>
+<tr><td>05 TD, Q-learning</td><td>A version where the operator is <b>approximated with a single sample</b> + incremental update from 01</td></tr>
+<tr><td>06 Function approximation</td><td>In "operator → projection onto approximation space," <b>contraction can be broken</b> → root of the deadly triad</td></tr>
+</tbody></table></div>
+</section>
+<section>
+<h2 id="s10"><span class="num">10</span>🤖 From a Robot's Perspective: Continuous Spaces, POMDPs, Control Cycles, and γ</h2>
+<h3 id="sec-19">Continuous States and Actions</h3>
+<div class="formula">V*(s) = max<sub>a ∈ ℝ<sup>m</sup></sub> [ R(s,a) + γ ∫ p(s'|s,a) V*(s') ds' ]
+<span class="lbl">The formula remains the same; only the sum becomes an integral. Bellman equations and contraction properties still hold. The challenge is computation.</span></div>
+<div class="table-wrap"><table>
+<tbody><tr><th>Problem</th><th>Reason</th><th>Solution</th></tr>
+<tr><td>Cannot store in a table</td><td>7-axis arm = 14 dimensions; with 10 bins per axis, that's 10¹⁴ cells (curse of dimensionality)</td><td>Function approximation (06)</td></tr>
+<tr><td>No revisiting the same state</td><td>Continuous space</td><td>Generalization: "similar states have similar values" (06)</td></tr>
+<tr><td>max<sub>a</sub> is infeasible</td><td>Infinite actions</td><td>Actor neural network replaces max (08, 09)</td></tr>
+<tr><td>Policy outputs a distribution</td><td>Stochastic policy</td><td>Gaussian + tanh squashing (08)</td></tr>
+</tbody></table></div>
+<h3 id="sec-20">POMDP: Sensors Don't Reveal the Full State</h3>
+<p>The agent only sees observation o ~ O(o|s) instead of state s. This includes occlusion by hands, sensor noise, unknown mass/friction, and contact states like slipping.</p>
+<div class="formula">b'(s') ∝ <span class="hl-w">O(o | s')</span> Σ<sub>s</sub> <span class="hl-a">p(s' | s, a)</span> b(s)
+<span class="lbl">Belief state b(s) = P(s | observations and actions so far) · <span class="hl-a">Predict via dynamics</span> → <span class="hl-w">Correct via observation</span> · The Kalman filter is the exact solution for linear-Gaussian cases.</span></div>
+<p>If we treat b as the state, it becomes an MDP again (belief MDP). However, since the distribution itself is the state, solving it exactly is difficult. A memoryless policy can perform better with a stochastic policy than with a deterministic one (a phenomenon not present in fully observable MDPs).</p>
+<figure>
+<svg aria-label="Asymmetric actor-critic. The simulator&#x27;s true state goes only to the critic, while the actor receives only sensor observation history to produce actions" role="img" viewBox="0 0 720 230">
+<rect class="s-warm" height="70" rx="12" width="150" x="20" y="80"></rect>
+<text class="bold" text-anchor="middle" x="95" y="108">Environment / Sim</text>
+<text class="mono small" text-anchor="middle" x="95" y="130">True state s</text>
+<rect class="s-box" height="56" rx="10" width="120" x="230" y="130"></rect>
+<text class="small bold" text-anchor="middle" x="290" y="154">Sensor O(o|s)</text>
+<text class="small mut" text-anchor="middle" x="290" y="172">Occlusion, noise</text>
+<rect class="s-acc" height="56" rx="10" width="140" x="410" y="130"></rect>
+<text class="small bold" text-anchor="middle" x="480" y="154">Actor π(a | o₁…o_t)</text>
+<text class="small mut" text-anchor="middle" x="480" y="172">Observation history = belief</text>
+<rect class="s-green" height="56" rx="10" width="140" x="410" y="30"></rect>
+<text class="small bold" text-anchor="middle" x="480" y="54">Critic V(s)</text>
+<text class="small mut" text-anchor="middle" x="480" y="72">Used only during training</text>
+<path class="s-line" d="M172 130 C200 150 210 158 228 158" marker-end="url(#ah)"></path>
+<path class="s-line" d="M352 158 L408 158" marker-end="url(#ah)"></path>
+<path d="M172 100 C260 60 340 58 408 58" fill="none" marker-end="url(#ah)" stroke="var(--green)" stroke-dasharray="6 4" stroke-width="2"></path>
+<text class="small" style="fill:var(--green)" text-anchor="middle" x="290" y="50">True state (only available in sim)</text>
+<path class="s-accline" d="M552 158 C640 158 650 215 400 215 C200 215 110 200 95 152" marker-end="url(#ah-acc)"></path>
+<text class="small" style="fill:var(--acc)" x="620" y="205">Action a</text>
+<path class="s-line" d="M480 88 L480 128" marker-end="url(#ah)" stroke-dasharray="3 3"></path>
+<text class="small mut" x="488" y="112">Learning signal</text>
+<text class="small mut" x="650" y="60">On real robots,</text>
+<text class="small mut" x="650" y="76">only actor is deployed</text>
+</svg>
+<figcaption><b>Figure 11.</b> Asymmetric actor-critic / teacher–student. In the simulator, where the true state is known, it is provided to the critic (or teacher), while the actor deployed on the real robot receives only observations. This is standard for sim-to-real locomotion (09).</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<tbody><tr><th>Practical Solution</th><th>Idea</th></tr>
+<tr><td>Accumulate history</td><td>Last k observations + previous action (DQN frame, Chapter 4)</td></tr>
+<tr><td>Recurrent neural network</td><td>LSTM / GRU / Transformer = learned belief</td></tr>
+<tr><td>Estimator + Policy</td><td>Input EKF estimates to the policy (classical robotics)</td></tr>
+<tr><td>Asymmetric actor-critic</td><td>Figure 11</td></tr>
+</tbody></table></div>
+<h3 id="sec-21">Control Cycle and γ</h3>
+<div class="formula">H<sub>초</sub> ≈ Δt / (1 − γ),    γ<sub>new</sub> = γ<sub>old</sub><sup>Δt<sub>new</sub> / Δt<sub>old</sub></sup>
+<span class="lbl">1 step in MDP = control cycle Δt · γ ultimately determines "how many seconds ahead to look" · Changing the cycle requires changing γ as well.</span></div>
+<figure>
+<div class="legend">
+<span><i style="background:var(--s1)"></i>Current setting</span>
+<span><i style="background:var(--s2)"></i>New cycle + same γ (incorrect)</span>
+<span><i class="dash"></i>New cycle + converted γ</span>
+</div>
+<svg aria-label="Future reward weighting curve on the time (seconds) axis. Increasing the control cycle while keeping gamma unchanged shortens the horizon; converting gamma makes it overlap with the original curve" id="rateSvg" role="img" viewBox="0 0 720 230"></svg>
+<div class="control">
+<label for="rHz">Current Cycle (Hz)</label>
+<input id="rHz" max="500" min="10" step="5" type="range" value="50">
+<output id="rHzOut">50</output>
+</div>
+<div class="control">
+<label for="rG">γ</label>
+<input id="rG" max="0.999" min="0.9" step="0.001" type="range" value="0.99">
+<output id="rGOut">0.990</output>
+</div>
+<div class="control">
+<label for="rHz2">New Cycle (Hz)</label>
+<input id="rHz2" max="500" min="10" step="5" type="range" value="200">
+<output id="rHz2Out">200</output>
+</div>
+<div class="readout" id="rateRead"></div>
+<figcaption><b>Figure 12.</b> The x-axis is in <b>seconds</b>, not steps. At 50Hz with γ = 0.99, the horizon is 2 seconds. Increasing to 200Hz while keeping γ unchanged limits visibility to only 0.5 seconds (orange). Changing γ to 0.99<sup>1/4</sup> ≈ 0.9975 makes it exactly overlap with the original curve (dashed line).</figcaption>
+</figure>
+<ul>
+<li>Faster cycles increase steps in the same time, making <b>credit assignment harder</b>, and γ → 1 slows convergence (Chapter 9).</li>
+<li>In practice, use a <b>hierarchical structure</b>: RL policy at ~50Hz for joint targets, with PD controllers below at ~1kHz for torque. Frame skipping in game RL is based on the same idea.</li>
+</ul>
+</section>
+<section>
+<h2 id="s11"><span class="num">11</span>Overall Summary &#x26; Connection to the Next Section</h2>
+<pre><code>Markov chain ──(+R, γ)──→ MRP ──(+A, π)──→ MDP ──(max)──→ Optimality
+  P, μ*                 V = (I−γP)⁻¹R     V^π, Q^π          V*, Q*, π* = argmax Q*
+  Markov property        Linear, solved at once   Fixed policy = MRP     Nonlinear → Iterative
+                                                               ↓
+                                  contraction: converges to a unique solution (γ^k)
+                                                               ↓
+                                  🤖 Continuous(→06, 08), POMDP(→belief), Δt and γ</code></pre>
+<div class="table-wrap"><table>
+<tbody><tr><th>Equation</th><th>Form</th><th>Solving Method</th><th>Subsequent Algorithms</th></tr>
+<tr><td>Bellman expectation</td><td>Linear (average)</td><td>Inverse matrix / T<sup>π</sup> iteration</td><td>policy evaluation (03), TD (05)</td></tr>
+<tr><td>Bellman optimality</td><td>Nonlinear (max)</td><td>T* iteration</td><td>value iteration (03), Q-learning (05), DQN (07)</td></tr>
+</tbody></table></div>
+<p><b>Three Key Takeaways</b></p>
+<ol>
+<li><b>Bellman equation = current value = reward + γ × next value.</b> It compresses the distant future into a score for the current state, turning long-term planning into single-step choices.</li>
+<li><b>If the policy is fixed, an MDP becomes an MRP (linear)</b>; choosing the best action introduces max, making it nonlinear. However, both are γ-contractions, so iterating leads to a unique solution.</li>
+<li><b>Markov is a property of state representation</b>. State design, reward design, and the choice of γ and control cycle are all part of problem definition.</li>
+</ol>
+<div class="callout">→ <b>03 Dynamic Programming</b>: Assuming p is known, we actually solve it using policy iteration / value iteration. Bellman ↔ HJB, LQR.</div>
+</section>
+<section>
+<h2 id="quiz"><span class="num">?</span>Check Questions</h2>
+<p class="hint">Try to recall the answer first, then expand.</p>
+<details class="quiz">
+<summary><span class="qn">Question 1</span><span class="qt">In the chain from Figure 2, if the charging→working probability is changed from 0.5 to 0.1, what are μ* and |λ<sub>2</sub>|?</span></summary>
+<div class="ans"><p>μ* = (½, ½), λ<sub>2</sub> = 0.8. The chain becomes "sticky," staying in one state for a long time, so the mixing speed slows down (the "sticky chain" button in Figure 2). Estimating the long-term average with short trajectories results in large errors.</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">Question 2</span><span class="qt">If the state of an autonomous vehicle is defined as "one current camera image," is it Markov?</span></summary>
+<div class="ans"><p>No. Speed and occluded objects cannot be known. You need to add multiple frames, speed/IMU data, or a belief representation like an RNN.</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">Question 3</span><span class="qt">In the 5-state chain example, if γ = 0, what are V<sub>W</sub> and V<sub>C</sub>? In the lifting task, if "success +1, others 0, γ = 1," what problem arises?</span></summary>
+<div class="ans"><p>V = R = (1, 0). The value of charging leading to future work disappears. For the second part: since G = 1 regardless of when success occurs, there is no incentive to act quickly. If γ &#x3C; 1, the value of success at step k is γ<sup>k</sup>, so finishing earlier is better (or use a per-step time penalty).</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">Question 4</span><span class="qt">If the policy is deterministic, what is the relationship between V<sup>π</sup>(s) and Q<sup>π</sup>(s, π(s))? If only V is learned, what else is needed to choose actions?</span></summary>
+<div class="ans"><p>They are equal. With only V, you need the environment model p(s'|s,a) (planning: 03, 10). Without a model, you learn Q directly (05, 07).</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">Question 5</span><span class="qt">In the corridor with γ = 1, what are V* and the optimal policy? If Q*(s, a₁) = Q*(s, a₂), is the optimal policy unique?</span></summary>
+<div class="ans"><p>V* = 1 in all cells. A policy that wanders before arriving also becomes optimal, removing the incentive to go quickly. Second part: there can be multiple optimal policies (including mixed stochastic policies), but V* is unique (Chapter 9).</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">Question 6</span><span class="qt">In Figure 10, why does V<sub>0</sub> = 0 terminate exactly after 4 iterations?</span></summary>
+<div class="ans"><p>The transitions are deterministic and the path length is finite with a maximum of 4. k iterations = the optimal value up to k steps ahead is calculated exactly. With stochastic transitions or cycles, it converges asymptotically.</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">Question 7</span><span class="qt">If a policy working well at 100Hz with γ = 0.98 is lowered to 25Hz, what should γ be? In lifting with unknown mass, which is more advantageous: a policy looking only at current observations or one looking at 1 second of history?</span></summary>
+<div class="ans"><p>γ = 0.98⁴ ≈ 0.922; the horizon is 0.5 seconds for both (verify with Figure 12). History side: you can infer mass by how much the object rises with the same force (acting as a belief). This is the idea behind meta-RL and RMA.</p></div>
+</details>
+</section>
+<section>
+<h2 id="qa"><span class="num">Q&#x26;A</span>Questions &#x26; Answers</h2>
+<div class="qa-tools">
+<p class="hint">Questions I asked myself while studying. Try to recall the answer first, then expand.</p>
+<button id="toggleAll" type="button">Expand All</button>
+</div>
+<details class="qa">
+<summary><span class="qn">Q1</span><span class="qt">Does "transition probabilities are time-independent" mean that the transition probability from yesterday to today is the same?<span class="stage">02 · Markov chain</span></span></summary>
+<div class="ans"><ul>
+<li>Yes. P(S<sub>t+1</sub>=s'|S<sub>t</sub>=s) does not depend on t. If you start from the same state, the next state is always drawn according to the same rules.</li>
+<li>Note: This does not mean "the state distribution μ<sub>t</sub> is the same every day." <b>The rule P is fixed</b>, but the distribution can continue to change. → <a href="#s2">Figure 2</a></li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q2</span><span class="qt">This seems like an idealized assumption; the real physical world probably doesn't work that way. Are there models that reflect this?<span class="stage">02 · Markov chain</span></span></summary>
+<div class="ans"><ul>
+<li>Yes. Time-inhomogeneous chains (P<sub>t</sub>), nonstationary MDP, semi-Markov, continuous-time Markov chain, POMDP, hidden-parameter MDP / meta-RL.</li>
+<li>Key perspective: Non-stationarity is usually due to <b>variables missing from the state</b>. If you include motor temperature, battery level, or wear in the state, it becomes time-homogeneous again. You can also include time t in the state.</li>
+<li>🤖 In practice, we deal with this using domain randomization (policies robust to multiple P), online adaptation, and inputting observation history instead of an exact model.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q3</span><span class="qt">Does "temporal evolution of the distribution" mean that any Markov chain converges? Does it imply there are convergence conditions?<span class="stage">02 · Markov chain</span></span></summary>
+<div class="ans"><ul>
+<li>Temporal evolution simply means the fact that the distribution changes at each step via μ<sub>t+1</sub> = μ<sub>t</sub>P. <b>Convergence requires separate conditions</b>.</li>
+<li>Finite state: If it is irreducible + aperiodic, it converges to a unique μ* from any μ<sub>0</sub>.</li>
+<li>Counterexamples ① Periodic P = [[0,1],[1,0]]: Oscillates forever. ② Two absorbing states: It converges, but the destination depends on the starting point. → Buttons in <a href="#s2">Figure 2</a></li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q4</span><span class="qt">Since a stationary distribution doesn't change even after another transition, does that mean the outflow and inflow are equal?<span class="stage">02 · Stationary Distribution</span></span></summary>
+<div class="ans"><ul>
+<li>Yes (global balance). For every state, total inflow = total outflow. It is μ* = μ*P written out for each state.</li>
+<li>They don't need to be equal for every pair (detailed balance is a stronger condition). A cyclic chain 1→2→3→1 also has a uniform stationary distribution.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q5</span><span class="qt">The explanation that "Markov is a property of state representation" is difficult. Please explain it more simply.<span class="stage">03 · Markov Property</span></span></summary>
+<div class="ans"><ul>
+<li>A single photo of a thrown ball (position only) doesn't tell you if it's going up or down. Previous photos help → Not Markov.</li>
+<li>If you capture (position, velocity), previous photos provide no additional information → Markov. → <a href="#s3">Figure 3</a></li>
+<li>It's the same world, but depending on the state definition, it can be Markov or not. That's why <b>state design is part of RL problem formulation</b>. If information is lacking, attach past observations (frame stacking, RNN).</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q6</span><span class="qt">RL is learning to create a policy. Is that policy essentially finding the states and transition probabilities of a Markov chain? Does reward convergence mean the chain structure no longer changes?<span class="stage">07 · MDP Preview</span></span></summary>
+<div class="ans"><ul>
+<li>Half correct. States and dynamics p(s'|s,a) are <b>determined by the environment</b> (model-based RL estimates these).</li>
+<li>Once a policy is set, a chain P<sup>π</sup>(s'|s) = Σ<sub>a</sub> π(a|s)p(s'|s,a) is formed. <b>Policy selection = choosing the chain to be created.</b> A good policy creates a chain that stays in high-reward states for longer.</li>
+<li>Convergence has two meanings: ① Convergence of learning (policy fixed → chain fixed → curve flattens) ② Convergence of distribution under a fixed policy (μ<sub>t</sub> → d<sup>π</sup>). Even if the curve is flat, optimality is not guaranteed.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q7</span><span class="qt">What is the exact definition of an episode?<span class="stage">04 · Episode</span></span></summary>
+<div class="ans"><ul>
+<li>A single trajectory from initial state S<sub>0</sub> ~ μ<sub>0</sub> until reaching a terminal (absorbing) state (time T, random variable). It resets after finishing.</li>
+<li>If there is termination, it's an episodic task; if not, it's a continuing task (γ &#x3C; 1).</li>
+<li>Pitfall: Being cut off by a time limit (<b>truncation</b>) is not termination. Distinction between terminated/truncated in gymnasium. If truncated, do not set V(s<sub>T</sub>) to 0.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q8</span><span class="qt">So a bandit has one state and returns to itself probabilistically?<span class="stage">04 · Episode</span></span></summary>
+<div class="ans"><ul>
+<li>One state is correct. However, it <b>always returns to itself with probability 1</b> (P = [1]). There is no randomness in the transition.</li>
+<li>Randomness exists only in the reward. Actions only change the reward, not the next state. It can be viewed as "one pull = an episode of length 1."</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q9</span><span class="qt">Does one episode end when it completes a task and reaches the completion (absorbing) state? When a robot lifts an object, if the height doesn't change, is that an absorbing state and thus the end?<span class="stage">04 · Episode</span></span></summary>
+<div class="ans"><ul>
+<li>The big picture is correct: Reset → Attempt → Termination condition = 1 episode. → <a href="#s4">Figure 4</a></li>
+<li>Correction: "Height not changing" is not termination. Holding it still is still an ordinary state where movement is possible. <b>Termination is defined by the designer</b>: Success (z ≥ 30cm), Failure (dropping, collision).</li>
+<li>An absorbing state is a mathematical device (only goes to itself after termination, reward 0). Time limits are truncation.</li>
+<li>Pitfall: If there is z reward every step + termination on success, hovering just below the goal might be beneficial (reward hacking). → <a href="#s6">Figure 7</a></li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q10</span><span class="qt">What are reward shaping and reward hacking?<span class="stage">06 · Reward Design</span></span></summary>
+<div class="ans"><ul>
+<li><b>Shaping</b>: Adding intermediate rewards (approach, grasp, height) to guide the path because sparse rewards alone don't allow learning. If it diverges from the goal, the optimal policy changes. A safe form is potential-based F = γΦ(s') − Φ(s) (policy ranking invariant).</li>
+<li><b>Hacking</b>: Agents maximize numbers, not intentions. Examples: Hovering at 29cm, standing up objects, spinning boats in CoastRunners, simulation physics bugs, RLHF sycophancy.</li>
+<li>Countermeasures: Keep rewards simple, clarify termination conditions, verify learned behavior with video.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q11</span><span class="qt">Does the discount rate determine how far into the future (steps) to consider?<span class="stage">05 · Discount Rate</span></span></summary>
+<div class="ans"><ul>
+<li>Yes. However, it doesn't cut off sharply but decreases smoothly by γ<sup>k</sup>. If γ = 0.9, it's 0.35 after 10 steps and 0.1 after 22 steps. It roughly looks ahead to 1/(1−γ) steps. → <a href="#s5">Figure 5</a></li>
+<li>Half-life = ln 0.5 / ln γ (0.9 → 6.6 steps, 0.99 → 69 steps).</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q12</span><span class="qt">Does the reward obtained in the future get reflected in the current state? Is it about changing the policy? Or is it about deciding which action to take? Please explain with a large-scale example.<span class="stage">05 · Big Picture</span></span></summary>
+<div class="ans"><ul>
+<li>All three are correct, and there is an order. ① <b>Evaluation</b>: Pull future rewards into V(s) (Bellman). ② <b>Selection</b>: Compare the scores of states reachable by each action (Q). ③ <b>Improvement</b>: Modify the policy accordingly → back to ① (GPI).</li>
+<li>Corridor example: +1 upon reaching G, γ = 0.9, "always right" → V = 0.729, 0.81, 0.9, 1. The reward propagates backward, creating an uphill terrain. At S1, left (0.729) vs. right (0.9) → choose right. → <a href="#s5">Figure 6</a></li>
+<li>If γ = 0.5, the values are 0.125, 0.25, 0.5, 1 → from far away, the goal is barely felt.</li>
+<li>🤖 A robot compresses the future "reach 30cm +10" into V(s) and simply chooses the direction where the score increases at each moment.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q13</span><span class="qt">What if we give an infinite score upon reaching 30cm, or give a reward exponentially based on height?<span class="stage">06 · Reward Design</span></span></summary>
+<div class="ans"><ul>
+<li><b>Infinite</b>: As long as the probability of success is not 0, V = ∞ for all policies → incomparable. Numerically results in inf/NaN.</li>
+<li><b>Very large finite value</b>: Scaling the entire reward by a factor c does not change the optimal policy. What matters is the ratio. If it's too large, shaping gets buried and variance increases, leading to instability → use reward scaling, clipping.</li>
+<li><b>exp(z)</b>: The signal near the bottom is weak, slowing early learning, and "hovering" hacking becomes severe near the peak.</li>
+<li><b>Good exponential</b>: Error kernel exp(−‖error‖²/σ) ∈ (0, 1]. Standard in walking robot velocity tracking rewards, etc.</li>
+<li>Preventing hovering: Terminate + bonus on success, time penalty per step, potential-based shaping.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q14</span><span class="qt">What are PPO and POMDP? (Terms only)<span class="stage">07 · Terminology</span></span></summary>
+<div class="ans"><ul>
+<li><b>PPO</b> (Proximal Policy Optimization, 2017): A policy gradient family method. It increases the probability of actions with positive advantage and decreases it for negative advantage, but clips the probability ratio to [1−ε, 1+ε] to prevent changes from being too large at once. Standard in robot locomotion and RLHF (09).</li>
+<li><b>POMDP</b>: An MDP where you only see observations o ~ O(o|s) instead of the true state. Camera occlusion, sensor noise, invisible mass/friction. If replaced with belief state b(s), it becomes an MDP again. In practice, use history, RNN. → <a href="#s10">Figure 11</a></li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q15</span><span class="qt">You said "if you know Q*, you know everything." What do Q and Q* (Q prime?) each mean? With a large-scale example.<span class="stage">08 · Optimality</span></span></summary>
+<div class="ans"><ul>
+<li>Notation: Q* is "Q <b>star</b>" = optimal. Q′ (prime) is a separate notation referring to the Q of the next state or the target network.</li>
+<li>Q<sup>π</sup>(s,a): Take action a now, then follow <b>current habits</b>. Q*(s,a): Take action a now, then act <b>optimally</b>.</li>
+<li>Commute: Habit π always takes the city route (20 min) at intersection B. At A, highway (10 min) vs. national road (25 min). Q<sup>π</sup>(highway) = −30 &#x3C; Q<sup>π</sup>(national road) = −25, so the national road looks better, but Q*(highway) = −18 is the correct answer. → <a href="#s8">Figure 9</a></li>
+<li>Q<sup>π</sup> can lead to misjudging even the first choice due to subsequent habits. Since Q* assumes optimal future actions, just taking argmax is sufficient.</li>
+<li>If you correct B's habit using Q<sup>π</sup> (detour −8 > city −20) and re-evaluate, A's judgment also changes → Q*.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q16</span><span class="qt">So the meaning of the symbols Q and Q* is the difference between "normal score" vs. "score when taking optimal actions"?<span class="stage">08 · Optimality</span></span></summary>
+<div class="ans"><ul>
+<li>Correct. It is accurate to distinguish them into three: <b>Q<sup>π</sup></b> = the true score when following policy π, <b>Q*</b> = the true score when acting optimally (= Q<sup>π*</sup>), <b>Q</b> = the algorithm's estimate (table, neural network).</li>
+<li>Always Q<sup>π</sup> ≤ Q*. In papers/code, Q without a superscript usually refers to "the current learning estimate." The Q(a) in 01 was also an estimate of q*(a).</li>
+</ul></div>
+</details>
+</section>
+<section>
+<h2 id="check"><span class="num">✓</span>Concepts That Were Confusing</h2>
+<ul class="checklist">
+<li><b>Time Homogeneity</b>: Transition rule P is fixed. The distribution μ<sub>t</sub> may change. <span class="ref">Q1</span></li>
+<li><b>Non-stationarity = Missing State Variables</b>: Including temperature, wear, and time in the state restores homogeneity. <span class="ref">Q2</span></li>
+<li><b>Convergence is Conditional</b>: Requires irreducibility + aperiodicity. Periodic chains oscillate; reducible chains depend on the starting point. <span class="ref">Q3</span></li>
+<li><b>Stationary Distribution = Flow Balance</b>: Inflow equals outflow. <span class="ref">Q4</span></li>
+<li><b>Markov is a Property of State Representation</b>: A single photo vs. (position, velocity). <span class="ref">Q5</span></li>
+<li><b>Policy Selection = Chain Selection</b>: Dynamics are the environment's; the policy is mine. P<sup>π</sup> = Σ π p. <span class="ref">Q6</span></li>
+<li><b>Episodes and Termination</b>: Termination is defined by the designer. Truncation ≠ termination. No change in height does not imply termination. <span class="ref">Q7 · Q9</span></li>
+<li><b>Bandit Transitions Stay Put with Probability 1</b>: Randomness exists only in rewards. <span class="ref">Q8</span></li>
+<li><b>Shaping vs. Hacking</b>: Guiding the path vs. exploiting numerical loopholes. Potential-based shaping is safe. <span class="ref">Q10</span></li>
+<li><b>γ = Soft Horizon</b>: Weights γ<sup>k</sup>, horizon ≈ 1/(1−γ). <span class="ref">Q11</span></li>
+<li><b>Evaluation → Selection → Improvement</b>: Future rewards propagate to V, are selected via Q, and the policy is updated. <span class="ref">Q12</span></li>
+<li><b>Rewards: Ratio and Shape Matter More Than Magnitude</b>: Infinity is not allowed; use a bounded kernel exp(−error²). <span class="ref">Q13</span></li>
+<li><b>Q<sup>π</sup> / Q* / Q</b>: True score of the current habit / True optimal score / My estimate. Q′ is separate. <span class="ref">Q15 · Q16</span></li>
+</ul>
+</section>
+<section>
+<h2 id="refs"><span class="num">📚</span>Further Reading</h2>
+<ul class="refs">
+<li>Sutton &#x26; Barto, <i>Reinforcement Learning: An Introduction</i> (2nd ed.), Ch. 3 (Finite MDPs), Ch. 4.1–4.4 (Preview)</li>
+<li>David Silver, UCL RL Lecture 2: Markov Decision Processes</li>
+<li>Puterman, <i>Markov Decision Processes: Discrete Stochastic Dynamic Programming</i> (1994): The standard textbook on MDP theory</li>
+<li>Bertsekas, <i>Dynamic Programming and Optimal Control</i>, Vol. 1: DP and optimal control, contraction</li>
+<li>Levin &#x26; Peres, <i>Markov Chains and Mixing Times</i> (2nd ed., 2017): Stationary distributions and convergence rates</li>
+<li>Ng, Harada, Russell, "Policy Invariance under Reward Transformations" (ICML 1999): Potential-based shaping</li>
+<li>Amodei et al., "Concrete Problems in AI Safety" (2016): Reward hacking</li>
+<li>Kaelbling, Littman, Cassandra, "Planning and Acting in Partially Observable Stochastic Domains" (1998): POMDP</li>
+<li>Pardo et al., "Time Limits in Reinforcement Learning" (ICML 2018): Truncation vs. termination</li>
+<li>Pinto et al., "Asymmetric Actor Critic for Image-Based Robot Learning" (RSS 2018)</li>
+<li>Kumar et al., "RMA: Rapid Motor Adaptation for Legged Robots" (RSS 2021)</li>
+</ul>
+</section>
+<script>
+(function () {
+  const NS = 'http://www.w3.org/2000/svg';
+  function el(parent, tag, attrs, text) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text !== undefined) e.textContent = text;
+    parent.appendChild(e);
+    return e;
+  }
+  function clear(svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); }
+  const pathOf = pts => pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  const f2 = x => x.toFixed(2), f3 = x => x.toFixed(3);
+
+  // ---------- Figure 2: two-state chain ----------
+  const chSvg = document.getElementById('chainSvg');
+  const chA = document.getElementById('chA'), chB = document.getElementById('chB');
+  const chAOut = document.getElementById('chAOut'), chBOut = document.getElementById('chBOut');
+  const chRead = document.getElementById('chRead');
+  function drawChain() {
+    const a = +chA.value, b = +chB.value;
+    chAOut.textContent = f2(a); chBOut.textContent = f2(b);
+    clear(chSvg);
+    // diagram
+    el(chSvg, 'circle', { cx: 70, cy: 130, r: 34, class: 's-acc' });
+    el(chSvg, 'text', { x: 70, y: 135, 'text-anchor': 'middle', class: 'bold' }, '작업 W');
+    el(chSvg, 'circle', { cx: 230, cy: 130, r: 34, class: 's-warm' });
+    el(chSvg, 'text', { x: 230, y: 135, 'text-anchor': 'middle', class: 'bold' }, '충전 C');
+    el(chSvg, 'path', { d: 'M100 112 C130 85 170 85 200 112', class: 's-line', 'marker-end': 'url(#ah)' });
+    el(chSvg, 'text', { x: 150, y: 82, 'text-anchor': 'middle', class: 'mono small' }, f2(a));
+    el(chSvg, 'path', { d: 'M200 148 C170 175 130 175 100 148', class: 's-line', 'marker-end': 'url(#ah)' });
+    el(chSvg, 'text', { x: 150, y: 190, 'text-anchor': 'middle', class: 'mono small' }, f2(b));
+    el(chSvg, 'path', { d: 'M48 104 C20 60 70 50 66 94', class: 's-line', 'marker-end': 'url(#ah)' });
+    el(chSvg, 'text', { x: 30, y: 58, class: 'mono small' }, f2(1 - a));
+    el(chSvg, 'path', { d: 'M252 104 C280 60 230 50 234 94', class: 's-line', 'marker-end': 'url(#ah)' });
+    el(chSvg, 'text', { x: 250, y: 58, class: 'mono small' }, f2(1 - b));
+    el(chSvg, 'text', { x: 150, y: 240, 'text-anchor': 'middle', class: 'mut small' }, '화살표 = 전이 확률');
+    // plot
+    const X0 = 330, X1 = 700, Y0 = 20, Y1 = 220, N = 30;
+    const xOf = t => X0 + (X1 - X0) * t / N, yOf = v => Y1 - (Y1 - Y0) * v;
+    el(chSvg, 'line', { x1: X0, y1: Y1, x2: X1, y2: Y1, class: 'axis' });
+    el(chSvg, 'line', { x1: X0, y1: Y0, x2: X0, y2: Y1, class: 'axis' });
+    [0, 0.5, 1].forEach(v => {
+      el(chSvg, 'line', { x1: X0, y1: yOf(v), x2: X1, y2: yOf(v), class: 'grid' });
+      el(chSvg, 'text', { x: X0 - 6, y: yOf(v) + 4, 'text-anchor': 'end', class: 'mut small mono' }, v.toFixed(1));
+    });
+    [0, 10, 20, 30].forEach(t => el(chSvg, 'text', { x: xOf(t), y: Y1 + 16, 'text-anchor': 'middle', class: 'mut small mono' }, t));
+    el(chSvg, 'text', { x: X1, y: Y1 + 32, 'text-anchor': 'end', class: 'mut small' }, 't →');
+    el(chSvg, 'text', { x: X0 + 6, y: Y0 - 4, class: 'mut small' }, 'μ_t(W)');
+    const muStar = a + b > 0 ? b / (a + b) : null;
+    if (muStar !== null) el(chSvg, 'line', { x1: X0, y1: yOf(muStar), x2: X1, y2: yOf(muStar), stroke: 'var(--muted)', 'stroke-dasharray': '5 4' });
+    [[1, 'var(--s1)'], [0, 'var(--s2)']].forEach(([m0, col]) => {
+      let m = m0; const pts = [[xOf(0), yOf(m)]];
+      for (let t = 1; t <= N; t++) { m = m * (1 - a) + (1 - m) * b; pts.push([xOf(t), yOf(m)]); }
+      el(chSvg, 'path', { d: pathOf(pts), fill: 'none', stroke: col, 'stroke-width': 2 });
+      pts.forEach(p => el(chSvg, 'circle', { cx: p[0], cy: p[1], r: 2.2, fill: col }));
+    });
+    const lam = 1 - a - b;
+    let txt = 'μ* = ' + (muStar === null ? '유일하지 않음 (아무 전이도 없음)' : '(' + f3(muStar) + ', ' + f3(1 - muStar) + ')');
+    txt += ' · λ₂ = ' + f2(lam) + ' · ';
+    if (Math.abs(lam) >= 0.999) txt += Math.abs(a + b) < 1e-9 ? '전이 없음: 출발점에 그대로' : '주기적: 수렴하지 않고 진동';
+    else if (a === 0 || b === 0) txt += '흡수 상태 있음 (irreducible 아님)';
+    else txt += '오차가 스텝마다 ×' + f2(Math.abs(lam)) + ' · 1% 이내까지 ~' + Math.ceil(Math.log(0.01) / Math.log(Math.max(Math.abs(lam), 1e-9))) + '스텝';
+    chRead.textContent = txt;
+  }
+  chA.addEventListener('input', drawChain); chB.addEventListener('input', drawChain);
+  document.querySelectorAll('[data-ch]').forEach(btn => btn.addEventListener('click', () => {
+    const [a, b] = btn.dataset.ch.split(',').map(Number); chA.value = a; chB.value = b; drawChain();
+  }));
+  drawChain();
+
+  // ---------- Figure 5: discount weights ----------
+  const dSvg = document.getElementById('discSvg'), dG = document.getElementById('discG');
+  const dGOut = document.getElementById('discGOut'), dRead = document.getElementById('discRead');
+  function drawDisc() {
+    const g = +dG.value; dGOut.textContent = f2(g);
+    clear(dSvg);
+    const K = 60, X0 = 50, X1 = 700, Y0 = 20, Y1 = 180, bw = (X1 - X0) / (K + 1);
+    el(dSvg, 'line', { x1: X0, y1: Y1, x2: X1, y2: Y1, class: 'axis' });
+    [0, 0.5, 1].forEach(v => {
+      el(dSvg, 'line', { x1: X0, y1: Y1 - (Y1 - Y0) * v, x2: X1, y2: Y1 - (Y1 - Y0) * v, class: 'grid' });
+      el(dSvg, 'text', { x: X0 - 6, y: Y1 - (Y1 - Y0) * v + 4, 'text-anchor': 'end', class: 'mut small mono' }, v.toFixed(1));
+    });
+    for (let k = 0; k <= K; k++) {
+      const w = Math.pow(g, k), h = (Y1 - Y0) * w;
+      el(dSvg, 'rect', { x: X0 + k * bw + 1, y: Y1 - h, width: Math.max(bw - 2, 1), height: h, fill: 'var(--s1)', 'fill-opacity': 0.8, rx: 1 });
+    }
+    [0, 10, 20, 30, 40, 50, 60].forEach(k => el(dSvg, 'text', { x: X0 + k * bw + bw / 2, y: Y1 + 16, 'text-anchor': 'middle', class: 'mut small mono' }, k));
+    el(dSvg, 'text', { x: X1, y: Y1 + 34, 'text-anchor': 'end', class: 'mut small' }, 'k스텝 뒤 →');
+    const H = 1 / (1 - g);
+    if (H <= K + 1) {
+      const hx = X0 + H * bw;
+      el(dSvg, 'line', { x1: hx, y1: Y0, x2: hx, y2: Y1, stroke: 'var(--warm)', 'stroke-dasharray': '5 4', 'stroke-width': 1.5 });
+      el(dSvg, 'text', { x: hx + 6, y: Y0 + 12, class: 'small', style: 'fill:var(--warm)' }, '유효 시야 ' + H.toFixed(1) + '스텝');
+    } else {
+      el(dSvg, 'text', { x: X1, y: Y0 + 12, 'text-anchor': 'end', class: 'small', style: 'fill:var(--warm)' }, '유효 시야 ' + H.toFixed(0) + '스텝 → (화면 밖)');
+    }
+    const half = g > 0 ? Math.log(0.5) / Math.log(g) : 0;
+    dRead.textContent = 'γ¹⁰ = ' + f3(Math.pow(g, 10)) + ' · 반감기 ' + (g > 0 ? half.toFixed(1) : '0') + '스텝 · 유효 시야 1/(1−γ) = ' + H.toFixed(1) + '스텝 · |G| ≤ R_max × ' + H.toFixed(1);
+  }
+  dG.addEventListener('input', drawDisc); drawDisc();
+
+  // ---------- corridor model (shared by Figure 6) ----------
+  function solve(A, b) { // Gaussian elimination with partial pivoting
+    const n = b.length, M = A.map((r, i) => r.concat([b[i]]));
+    for (let c = 0; c < n; c++) {
+      let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+      [M[c], M[p]] = [M[p], M[c]];
+      for (let r = 0; r < n; r++) if (r !== c) {
+        const f = M[r][c] / M[c][c]; for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k];
+      }
+    }
+    return M.map((r, i) => r[n] / r[i]);
+  }
+  function corridorValues(g, pr) {
+    const n = 4, A = [], b = [];
+    for (let s = 0; s < n; s++) {
+      const row = new Array(n).fill(0); row[s] += 1;
+      const l = Math.max(s - 1, 0); row[l] -= g * (1 - pr);
+      let r = 0;
+      if (s < 3) row[s + 1] -= g * pr; else r = pr;
+      A.push(row); b.push(r);
+    }
+    const V = solve(A, b);
+    const Q = V.map((_, s) => ({ L: g * V[Math.max(s - 1, 0)], R: s === 3 ? 1 : g * V[s + 1] }));
+    return { V, Q };
+  }
+
+  // ---------- Figure 6: corridor landscape ----------
+  const cSvg = document.getElementById('corSvg'), cG = document.getElementById('corG'), cP = document.getElementById('corP');
+  const cGOut = document.getElementById('corGOut'), cPOut = document.getElementById('corPOut');
+  function drawCor() {
+    const g = +cG.value, pr = +cP.value; cGOut.textContent = f2(g); cPOut.textContent = f2(pr);
+    clear(cSvg);
+    const { V, Q } = corridorValues(g, pr);
+    const X = [90, 230, 370, 510, 640], Ybase = 190, Hmax = 150;
+    el(cSvg, 'line', { x1: 30, y1: Ybase, x2: 700, y2: Ybase, class: 'axis' });
+    for (let s = 0; s < 4; s++) {
+      const h = Hmax * V[s];
+      el(cSvg, 'rect', { x: X[s] - 40, y: Ybase - h, width: 80, height: h, fill: 'var(--s1)', 'fill-opacity': 0.75, rx: 4 });
+      el(cSvg, 'text', { x: X[s], y: Ybase - h - 8, 'text-anchor': 'middle', class: 'mono small bold' }, f3(V[s]));
+      el(cSvg, 'text', { x: X[s], y: Ybase + 20, 'text-anchor': 'middle', class: 'bold' }, 'S' + s);
+      const better = Q[s].R > Q[s].L + 1e-9 ? 'R' : (Q[s].L > Q[s].R + 1e-9 ? 'L' : '=');
+      el(cSvg, 'text', { x: X[s] - 4, y: Ybase + 42, 'text-anchor': 'end', class: 'mono small', style: better === 'L' ? 'fill:var(--green);font-weight:700' : 'fill:var(--muted)' }, '← ' + f3(Q[s].L));
+      el(cSvg, 'text', { x: X[s] + 4, y: Ybase + 42, 'text-anchor': 'start', class: 'mono small', style: better === 'R' ? 'fill:var(--green);font-weight:700' : 'fill:var(--muted)' }, f3(Q[s].R) + ' →');
+    }
+    el(cSvg, 'rect', { x: X[4] - 40, y: Ybase - Hmax, width: 80, height: Hmax, rx: 6, class: 's-green' });
+    el(cSvg, 'text', { x: X[4], y: Ybase - Hmax / 2, 'text-anchor': 'middle', class: 'bold' }, 'G');
+    el(cSvg, 'text', { x: X[4], y: Ybase - Hmax / 2 + 18, 'text-anchor': 'middle', class: 'small' }, '+1, 종료');
+    el(cSvg, 'text', { x: X[4], y: Ybase + 20, 'text-anchor': 'middle', class: 'mut small' }, '목표');
+    el(cSvg, 'text', { x: 30, y: 24, class: 'small' }, '막대 = V^π(s) · 아래 = Q^π(s, ←) / Q^π(s, →), 큰 쪽이 초록');
+    el(cSvg, 'text', { x: 30, y: 268, class: 'mut small' }, 'S0에서 ←는 벽에 막혀 제자리 · 이동은 결정적');
+  }
+  cG.addEventListener('input', drawCor); cP.addEventListener('input', drawCor);
+  document.querySelectorAll('[data-cor]').forEach(btn => btn.addEventListener('click', () => { cP.value = btn.dataset.cor; drawCor(); }));
+  drawCor();
+
+  // ---------- Figure 10: value iteration ----------
+  const vSvg = document.getElementById('viSvg'), vG = document.getElementById('viG'), vGOut = document.getElementById('viGOut');
+  const vRead = document.getElementById('viRead');
+  let viA, viB, viK, viGap, viStar;
+  function Tstar(V, g) { return V.map((_, s) => Math.max(g * V[Math.max(s - 1, 0)], s === 3 ? 1 : g * V[s + 1])); }
+  function viReset() {
+    const g = +vG.value; vGOut.textContent = f2(g);
+    viA = [0, 0, 0, 0]; viB = [10, 10, 10, 10]; viK = 0;
+    viStar = [Math.pow(g, 3), Math.pow(g, 2), g, 1];
+    viGap = [Math.max(...viA.map((x, i) => Math.abs(x - viB[i])))];
+    drawVi();
+  }
+  function viStep(n) {
+    const g = +vG.value;
+    for (let i = 0; i < n && viK < 120; i++) {
+      viA = Tstar(viA, g); viB = Tstar(viB, g); viK++;
+      viGap.push(Math.max(...viA.map((x, j) => Math.abs(x - viB[j]))));
+    }
+    drawVi();
+  }
+  function drawVi() {
+    const g = +vG.value;
+    clear(vSvg);
+    // left: bars
+    const Yb = 220, top = 50, vmax = 1.2, sc = (Yb - top) / vmax;
+    el(vSvg, 'line', { x1: 30, y1: Yb, x2: 340, y2: Yb, class: 'axis' });
+    el(vSvg, 'text', { x: 30, y: 18, class: 'small bold' }, 'k = ' + viK + ' 번째 반복의 V(s)');
+    for (let s = 0; s < 4; s++) {
+      const cx = 70 + s * 75;
+      const clipB = viB[s] > vmax, hb = Math.min(viB[s], vmax) * sc, ha = Math.max(viA[s] * sc, 0);
+      el(vSvg, 'rect', { x: cx - 26, y: Yb - hb, width: 24, height: hb, fill: 'var(--s2)', 'fill-opacity': 0.8, rx: 2 });
+      el(vSvg, 'rect', { x: cx + 2, y: Yb - ha, width: 24, height: ha, fill: 'var(--s1)', 'fill-opacity': 0.9, rx: 2 });
+      el(vSvg, 'line', { x1: cx - 30, x2: cx + 30, y1: Yb - viStar[s] * sc, y2: Yb - viStar[s] * sc, stroke: 'var(--fg)', 'stroke-dasharray': '3 3' });
+      el(vSvg, 'text', { x: cx, y: Yb + 18, 'text-anchor': 'middle', class: 'bold small' }, 'S' + s);
+      el(vSvg, 'text', { x: cx + 14, y: Yb - ha - 4, 'text-anchor': 'middle', class: 'mono small', style: 'fill:var(--s1)' }, viA[s].toFixed(2));
+      el(vSvg, 'text', { x: cx - 14, y: Yb - hb - 4, 'text-anchor': 'middle', class: 'mono small', style: 'fill:var(--s2)' }, (clipB ? '↑' : '') + viB[s].toFixed(2));
+      if (clipB) el(vSvg, 'path', { d: 'M' + (cx - 26) + ' ' + (Yb - hb + 6) + ' l6 -6 l6 6 l6 -6 l6 6', fill: 'none', stroke: 'var(--surface)', 'stroke-width': 2 });
+    }
+    el(vSvg, 'text', { x: 30, y: Yb + 40, class: 'mut small' }, '세로 0~1.2 (넘는 값은 잘라서 ↑로 표시) · 점선 = V*');
+    // right: gap on log scale
+    const X0 = 400, X1 = 700, Y0 = 30, Y1 = 220, kMax = Math.max(20, viK), lmin = -4, lmax = 1.2;
+    const xOf = k => X0 + (X1 - X0) * k / kMax;
+    const yOf = v => { const l = Math.log10(Math.max(v, 1e-4)); return Y1 - (Y1 - Y0) * (l - lmin) / (lmax - lmin); };
+    el(vSvg, 'line', { x1: X0, y1: Y1, x2: X1, y2: Y1, class: 'axis' });
+    el(vSvg, 'line', { x1: X0, y1: Y0, x2: X0, y2: Y1, class: 'axis' });
+    [10, 1, 0.1, 0.01, 0.001].forEach(v => {
+      el(vSvg, 'line', { x1: X0, y1: yOf(v), x2: X1, y2: yOf(v), class: 'grid' });
+      el(vSvg, 'text', { x: X0 - 6, y: yOf(v) + 4, 'text-anchor': 'end', class: 'mut small mono' }, v);
+    });
+    el(vSvg, 'text', { x: X0, y: 18, class: 'small bold' }, '‖V_A − V_B‖∞ (로그 축)');
+    el(vSvg, 'text', { x: X1, y: Y1 + 18, 'text-anchor': 'end', class: 'mut small' }, '반복 k → (0 ~ ' + kMax + ')');
+    const bound = []; for (let k = 0; k <= kMax; k++) bound.push([xOf(k), yOf(10 * Math.pow(g, k))]);
+    el(vSvg, 'path', { d: pathOf(bound), fill: 'none', stroke: 'var(--muted)', 'stroke-dasharray': '5 4', 'stroke-width': 1.5 });
+    el(vSvg, 'path', { d: pathOf(viGap.map((v, k) => [xOf(k), yOf(v)])), fill: 'none', stroke: 'var(--acc)', 'stroke-width': 2 });
+    viGap.forEach((v, k) => el(vSvg, 'circle', { cx: xOf(k), cy: yOf(v), r: 2.5, fill: 'var(--acc)' }));
+    const errA = Math.max(...viA.map((x, i) => Math.abs(x - viStar[i])));
+    vRead.textContent = 'k = ' + viK + ' · 0에서 시작한 오차 ' + errA.toExponential(1) + ' · 두 추측 차이 ' + viGap[viGap.length - 1].toFixed(3) + ' ≤ 상한 10γ^k = ' + (10 * Math.pow(g, viK)).toFixed(3) + ' · 1%까지 필요한 반복 ≈ ln(100)/(1−γ) = ' + Math.ceil(Math.log(100) / (1 - g));
+  }
+  document.getElementById('viStep').addEventListener('click', () => viStep(1));
+  document.getElementById('viStep10').addEventListener('click', () => viStep(10));
+  document.getElementById('viReset').addEventListener('click', viReset);
+  vG.addEventListener('input', viReset);
+  viReset();
+
+  // ---------- Figure 12: control rate and gamma ----------
+  const rSvg = document.getElementById('rateSvg');
+  const rHz = document.getElementById('rHz'), rG = document.getElementById('rG'), rHz2 = document.getElementById('rHz2');
+  const rRead = document.getElementById('rateRead');
+  function drawRate() {
+    const hz = +rHz.value, g = +rG.value, hz2 = +rHz2.value;
+    document.getElementById('rHzOut').textContent = hz;
+    document.getElementById('rGOut').textContent = g.toFixed(3);
+    document.getElementById('rHz2Out').textContent = hz2;
+    clear(rSvg);
+    const T = 5, X0 = 50, X1 = 700, Y0 = 20, Y1 = 190;
+    const xOf = t => X0 + (X1 - X0) * t / T, yOf = v => Y1 - (Y1 - Y0) * v;
+    el(rSvg, 'line', { x1: X0, y1: Y1, x2: X1, y2: Y1, class: 'axis' });
+    el(rSvg, 'line', { x1: X0, y1: Y0, x2: X0, y2: Y1, class: 'axis' });
+    [0, 0.5, 1].forEach(v => {
+      el(rSvg, 'line', { x1: X0, y1: yOf(v), x2: X1, y2: yOf(v), class: 'grid' });
+      el(rSvg, 'text', { x: X0 - 6, y: yOf(v) + 4, 'text-anchor': 'end', class: 'mut small mono' }, v.toFixed(1));
+    });
+    for (let t = 0; t <= T; t++) el(rSvg, 'text', { x: xOf(t), y: Y1 + 16, 'text-anchor': 'middle', class: 'mut small mono' }, t + 's');
+    el(rSvg, 'text', { x: X1, y: Y1 + 34, 'text-anchor': 'end', class: 'mut small' }, '미래 시간 (초) →');
+    const g2 = Math.pow(g, hz / hz2);
+    function curve(gg, rate, attrs) {
+      const pts = []; for (let i = 0; i <= 200; i++) { const t = T * i / 200; pts.push([xOf(t), yOf(Math.pow(gg, t * rate))]); }
+      el(rSvg, 'path', Object.assign({ d: pathOf(pts), fill: 'none' }, attrs));
+    }
+    curve(g, hz, { stroke: 'var(--s1)', 'stroke-width': 3 });
+    curve(g, hz2, { stroke: 'var(--s2)', 'stroke-width': 2 });
+    curve(g2, hz2, { stroke: 'var(--fg)', 'stroke-width': 1.5, 'stroke-dasharray': '5 4' });
+    const H1 = 1 / (hz * (1 - g)), H2 = 1 / (hz2 * (1 - g));
+    [[H1, 'var(--s1)'], [H2, 'var(--s2)']].forEach(([h, col]) => {
+      if (h <= T) el(rSvg, 'line', { x1: xOf(h), x2: xOf(h), y1: Y0, y2: Y1, stroke: col, 'stroke-dasharray': '2 3' });
+    });
+    rRead.textContent = '지금: ' + hz + 'Hz, γ = ' + g.toFixed(3) + ' → 시야 ' + H1.toFixed(2) + '초 · 새 주기 ' + hz2 + 'Hz에 같은 γ → ' + H2.toFixed(2) + '초 · 같은 시야를 유지하는 γ = γ^(' + hz + '/' + hz2 + ') = ' + g2.toFixed(4);
+  }
+  [rHz, rG, rHz2].forEach(x => x.addEventListener('input', drawRate));
+  drawRate();
+
+  // ---------- Q&A toggle ----------
+  const toggle = document.getElementById('toggleAll');
+  toggle.addEventListener('click', () => {
+    const all = document.querySelectorAll('details.qa');
+    const open = Array.from(all).some(d => !d.open);
+    all.forEach(d => { d.open = open; });
+    toggle.textContent = open ? '모두 접기' : '모두 펼치기';
+  });
+})();
+</script>
+</div>
+<div class="notes-editor" hidden data-path="content/study/02-mdp-bellman-equation/index.ko.md" data-notes data-pagefind-ignore data-astro-cid-krmc5xkp><button type="button" class="ne-open" data-astro-cid-krmc5xkp>내 생각 쓰기</button><form class="ne-form" hidden data-astro-cid-krmc5xkp><textarea rows="8" aria-label="내 생각 (markdown)" placeholder="markdown 으로 쓰기" data-astro-cid-krmc5xkp></textarea><div class="ne-actions" data-astro-cid-krmc5xkp><button type="submit" data-astro-cid-krmc5xkp>저장</button><button type="button" class="ne-delete" data-astro-cid-krmc5xkp>지우기</button><button type="button" class="ne-cancel" data-astro-cid-krmc5xkp>취소</button><span class="ne-status" role="status" data-astro-cid-krmc5xkp></span></div></form></div><div class="post-admin" hidden data-dir="content/study/02-mdp-bellman-equation" data-lang="en" data-incoming="[]" data-relations="[{&quot;from&quot;:&quot;content/study/02-mdp-bellman-equation&quot;,&quot;target&quot;:&quot;01-rl-problem-setup-multi-armed&quot;,&quot;label&quot;:&quot;extends&quot;,&quot;title&quot;:&quot;01. RL Problem Setup &amp; Multi-armed Bandit&quot;}]" data-pagefind-ignore data-astro-cid-krmc5xkp></div></div><nav class="toc" aria-labelledby="toc-h" data-pagefind-ignore data-astro-cid-krmc5xkp><h2 id="toc-h" data-astro-cid-krmc5xkp>Contents</h2><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#s1" data-astro-cid-krmc5xkp>01 The Big Picture: Building Layer by Layer</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s2" data-astro-cid-krmc5xkp>02 Markov chain</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-1" data-astro-cid-krmc5xkp>Example: Robot 2-state chain</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-2" data-astro-cid-krmc5xkp>When does it exist, is unique, and converge (finite states)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-3" data-astro-cid-krmc5xkp>Isn&#39;t reality non-time-homogeneous?</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s3" data-astro-cid-krmc5xkp>03 🤖 Markov is a property of state representation</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s4" data-astro-cid-krmc5xkp>04 Episodes and Terminal States</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s5" data-astro-cid-krmc5xkp>05 MRP: Return, Discount Rate, and Value Function</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-4" data-astro-cid-krmc5xkp>Discount Rate γ: How Far into the Future to Look</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-5" data-astro-cid-krmc5xkp>Value Function and Bellman Equation</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-6" data-astro-cid-krmc5xkp>The Big Picture: From Future Rewards to Present Decisions</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s6" data-astro-cid-krmc5xkp>06 Reward Design: Shaping and Hacking</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-7" data-astro-cid-krmc5xkp>Reward shaping: Adding guidance rewards</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-8" data-astro-cid-krmc5xkp>Reward hacking: Maximizing the number, not the intent</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-9" data-astro-cid-krmc5xkp>Infinite reward, exponential reward?</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s7" data-astro-cid-krmc5xkp>07 MDP: Policy, V π , Q π</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-10" data-astro-cid-krmc5xkp>Fixing a Policy Turns an MDP into an MRP</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-11" data-astro-cid-krmc5xkp>V π and Q π</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-12" data-astro-cid-krmc5xkp>Numerical Example: Adding Actions to the Corridor</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s8" data-astro-cid-krmc5xkp>08 Optimality: V*, Q*, Bellman optimality</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-13" data-astro-cid-krmc5xkp>Notation summary</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-14" data-astro-cid-krmc5xkp>Example: Commute (reward = −minutes)</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-15" data-astro-cid-krmc5xkp>Bellman optimality equation</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-16" data-astro-cid-krmc5xkp>Why can&#39;t we solve it with a single matrix operation?</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s9" data-astro-cid-krmc5xkp>09 Contraction: Why Repetition Always Converges</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-17" data-astro-cid-krmc5xkp>Proof</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-18" data-astro-cid-krmc5xkp>Algorithm</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s10" data-astro-cid-krmc5xkp>10 🤖 From a Robot&#39;s Perspective: Continuous Spaces, POMDPs, Control Cycles, and γ</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-19" data-astro-cid-krmc5xkp>Continuous States and Actions</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-20" data-astro-cid-krmc5xkp>POMDP: Sensors Don&#39;t Reveal the Full State</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-21" data-astro-cid-krmc5xkp>Control Cycle and γ</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s11" data-astro-cid-krmc5xkp>11 Overall Summary &amp;#x26; Connection to the Next Section</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#quiz" data-astro-cid-krmc5xkp>? Check Questions</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#qa" data-astro-cid-krmc5xkp>Q&amp;#x26;A Questions &amp;#x26; Answers</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#check" data-astro-cid-krmc5xkp>✓ Concepts That Were Confusing</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#refs" data-astro-cid-krmc5xkp>📚 Further Reading</a></li></ol></nav></div></article><aside class="after wrap" data-pagefind-ignore data-astro-cid-krmc5xkp><section aria-labelledby="links-h" data-astro-cid-krmc5xkp><h2 id="links-h" data-astro-cid-krmc5xkp>Linked posts</h2><ul class="links" data-astro-cid-krmc5xkp><li data-type="study" data-astro-cid-krmc5xkp><span class="rel" data-astro-cid-krmc5xkp>extends</span><a href="/en/study/01-rl-problem-setup-multi-armed/" data-astro-cid-krmc5xkp>01. RL Problem Setup &amp; Multi-armed Bandit</a></li></ul></section><section aria-labelledby="related-h" data-astro-cid-krmc5xkp><h2 id="related-h" data-astro-cid-krmc5xkp>More on these tags</h2><article class="row" data-type="paper" data-astro-cid-gc2g3jd6><div class="meta" data-astro-cid-gc2g3jd6><span class="type" data-astro-cid-gc2g3jd6>Papers</span><time datetime="2026-10-30" data-astro-cid-gc2g3jd6>Oct 30, 2026</time><span class="pending" data-astro-cid-gc2g3jd6>AI-written, not reviewed</span></div><div class="body" data-astro-cid-gc2g3jd6><h3 class="title" data-astro-cid-gc2g3jd6="true"><a href="/en/papers/pushing-dexterity-and-safety-for-in/" data-astro-cid-gc2g3jd6>Pushing Dexterity and Safety for In-Hand Object Pose Reaching That Works Remarkably Well</a></h3><p class="summary" data-astro-cid-gc2g3jd6>We present a sim-to-real recipe for training in-hand object pose reaching policies on a multi-fingered hand at arbitrary wrist orientations and transferring them zero-shot to the real hand. A learned residual safety filter is added to tune performance-safety trade-offs and substantially reduce object drops, with extensive real-robot evaluation.</p><ul class="tags" data-astro-cid-gc2g3jd6><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/domain/robotics/manipulation/" title="domain/robotics/manipulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Robotics</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Manipulation</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/sim-to-real/" title="method/sim-to-real" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Sim-to-Real</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/reinforcement-learning/" title="method/reinforcement-learning" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Reinforcement Learning</span></a></li></ul></div></article><article class="row" data-type="paper" data-astro-cid-gc2g3jd6><div class="meta" data-astro-cid-gc2g3jd6><span class="type" data-astro-cid-gc2g3jd6>Papers</span><time datetime="2026-10-30" data-astro-cid-gc2g3jd6>Oct 30, 2026</time><span class="pending" data-astro-cid-gc2g3jd6>AI-written, not reviewed</span></div><div class="body" data-astro-cid-gc2g3jd6><h3 class="title" data-astro-cid-gc2g3jd6="true"><a href="/en/papers/sliceit-a-dual-simulator-framework-for/" data-astro-cid-gc2g3jd6>SliceIt! - A Dual Simulator Framework for Learning Robot Food Slicing</a></h3><p class="summary" data-astro-cid-gc2g3jd6>SliceIt! is a real2sim2real framework that calibrates a high-fidelity cutting simulator with real slicing data, learns reinforcement-learning-based compliance control policies in a dual simulation environment, and deploys them to a real robot.</p><ul class="tags" data-astro-cid-gc2g3jd6><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/sim-to-real/" title="method/sim-to-real" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Sim-to-Real</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/reinforcement-learning/" title="method/reinforcement-learning" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Reinforcement Learning</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/control/compliance-control/" title="method/control/compliance-control" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Control</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Compliance Control</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/simulation/physics-simulation/" title="method/simulation/physics-simulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Simulation</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Physics Simulation</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/simulation/differentiable-simulation/" title="method/simulation/differentiable-simulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Simulation</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Differentiable Simulation</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/domain/robotics/manipulation/" title="domain/robotics/manipulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Robotics</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Manipulation</span></a></li></ul></div></article><article class="row" data-type="paper" data-astro-cid-gc2g3jd6><div class="meta" data-astro-cid-gc2g3jd6><span class="type" data-astro-cid-gc2g3jd6>Papers</span><time datetime="2026-10-30" data-astro-cid-gc2g3jd6>Oct 30, 2026</time><span class="pending" data-astro-cid-gc2g3jd6>AI-written, not reviewed</span></div><div class="body" data-astro-cid-gc2g3jd6><h3 class="title" data-astro-cid-gc2g3jd6="true"><a href="/en/papers/vla-hwbench-where-the-time-goes/" data-astro-cid-gc2g3jd6>VLA-HWBench: Where the Time Goes When VLA Models Run on Edge Hardware</a></h3><p class="summary" data-astro-cid-gc2g3jd6>VLA-HWBench measures 18 open VLA models on NVIDIA Jetson AGX Thor and AMD Ryzen AI Max+ PRO 395 with a seven-stage call breakdown, analyzing latency effects of compilation, specialized backends, and low-precision optimization. It finds that edge VLA latency is driven more by action-generation method, runtime, and platform than by model size.</p><ul class="tags" data-astro-cid-gc2g3jd6><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/task/benchmarking/" title="task/benchmarking" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Benchmarking</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/architecture/vision-language-action/" title="method/architecture/vision-language-action" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Architecture</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Vision-Language-Action (VLA)</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/inference/" title="method/inference" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Inference</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/domain/robotics/" title="domain/robotics" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Robotics</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/domain/performance/" title="domain/performance" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Performance</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/domain/hardware-architecture/" title="domain/hardware-architecture" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Hardware Architecture</span></a></li></ul></div></article></section></aside></main><footer class="wrap" data-astro-cid-hkbrpulz><p class="site-footer" data-astro-cid-hkbrpulz>Tech Blog</p></footer><dialog class="search" aria-label="Search posts" data-unavailable="The search index is built with the site. Run npm run build, then npm run preview." data-astro-cid-ac66eqjo><div class="search-head" data-astro-cid-ac66eqjo><h2 data-astro-cid-ac66eqjo>Search posts</h2><button type="button" class="close" data-search-close data-astro-cid-ac66eqjo>Close</button></div><div id="pagefind" class="search-body" data-astro-cid-ac66eqjo></div></dialog><script type="module">var e=document.querySelector(`dialog.search`),t=e.querySelector(`#pagefind`),n=!1;async function r(){if(!n){n=!0;try{let e=document.createElement(`link`);e.rel=`stylesheet`,e.href=`/pagefind/pagefind-ui.css`,document.head.append(e),await new Promise((e,t)=>{let n=document.createElement(`script`);n.src=`/pagefind/pagefind-ui.js`,n.onload=()=>e(),n.onerror=()=>t(Error(`pagefind missing`)),document.head.append(n)}),new PagefindUI({element:t,showSubResults:!0,showImages:!1,autofocus:!0})}catch{t.textContent=e.dataset.unavailable??``}}}function i(){e.showModal(),r(),t.querySelector(`input`)?.focus()}document.querySelectorAll(`[data-search-open]`).forEach(e=>e.addEventListener(`click`,i)),e.querySelector(`[data-search-close]`).addEventListener(`click`,()=>e.close()),e.addEventListener(`click`,t=>{t.target===e&&e.close()}),document.addEventListener(`keydown`,t=>{let n=t.target.tagName;e.open||n===`INPUT`||n===`TEXTAREA`||(t.key===`/`||(t.metaKey||t.ctrlKey)&&t.key.toLowerCase()===`k`)&&(t.preventDefault(),i())});</script></body></html><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_0_lang.C9cTWiA5.js"></script><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_1_lang.BhCYdHk-.js"></script>
