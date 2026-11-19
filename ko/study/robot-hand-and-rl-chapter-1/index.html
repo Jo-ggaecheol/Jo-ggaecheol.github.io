@@ -1,0 +1,977 @@
+<!DOCTYPE html><html lang="ko" data-astro-cid-hkbrpulz><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Robot Hand와 RL · 1장. 강화학습의 언어 | Tech Blog</title><meta name="description" content="에이전트·환경·보상·MDP·정책·가치함수 등 강화학습 기본 개념을 로봇 손 예시로 설명하고 CartPole 실습으로 reset-step 루프와 규칙 정책을 비교한다."><meta property="og:title" content="Robot Hand와 RL · 1장. 강화학습의 언어"><meta property="og:description" content="에이전트·환경·보상·MDP·정책·가치함수 등 강화학습 기본 개념을 로봇 손 예시로 설명하고 CartPole 실습으로 reset-step 루프와 규칙 정책을 비교한다."><meta name="theme-color" content="#f4f6f9" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#0e131b" media="(prefers-color-scheme: dark)"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate" hreflang="en" href="/en/study/robot-hand-and-rl-chapter-1/"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap"><script>
+      // 깜빡임 방지: 렌더 전에 테마 결정 (저장값 > 시스템 설정)
+      (() => {
+        let saved = null;
+        try {
+          saved = localStorage.getItem('theme');
+        } catch {}
+        const dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      })();
+    </script><link rel="stylesheet" href="/_astro/Base.BJamWqg3.css"><style>.tagpath[data-astro-cid-jjfiepte]{font-size:var(--step--1);color:var(--ink-3);flex-wrap:wrap;align-items:baseline;gap:0 .3em;line-height:1.6;text-decoration:none;display:inline-flex}.leaf[data-astro-cid-jjfiepte]{color:var(--ink-2);font-weight:500}.sep[data-astro-cid-jjfiepte]{opacity:.55}.tagpath[data-astro-cid-jjfiepte]:hover .leaf[data-astro-cid-jjfiepte]{color:var(--ink);text-underline-offset:.2em;text-decoration:underline}.row[data-astro-cid-gc2g3jd6]{border-top:1px solid var(--rule);grid-template-columns:8.5rem 1fr;gap:.25rem 1.5rem;padding-block:1.6rem;display:grid}.meta[data-astro-cid-gc2g3jd6]{font-size:var(--step--1);color:var(--ink-3);font-variant-numeric:tabular-nums;flex-direction:column;gap:.15rem;padding-top:.3rem;display:flex}.type[data-astro-cid-gc2g3jd6]{color:var(--type);align-items:center;gap:.45rem;font-weight:600;display:inline-flex}.type[data-astro-cid-gc2g3jd6]:before{content:"";background:var(--type);border-radius:2px;width:.5rem;height:.5rem}.pending[data-astro-cid-gc2g3jd6]{color:var(--ink-3);align-self:flex-start;font-size:.75rem}.draft[data-astro-cid-gc2g3jd6]{border:1px dashed var(--rule-strong);border-radius:4px;align-self:flex-start;margin-top:.3rem;padding:0 .4rem;font-size:.75rem}.title[data-astro-cid-gc2g3jd6]{font-size:var(--step-2);margin:0;font-weight:600;line-height:1.35}.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]{background-image:linear-gradient(var(--type), var(--type));background-position:0 100%;background-repeat:no-repeat;background-size:0 2px;text-decoration:none;transition:background-size .2s}.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]:hover,.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]:focus-visible{background-size:100% 2px}.summary[data-astro-cid-gc2g3jd6]{max-width:62ch;color:var(--ink-2);margin:.45rem 0 0}.tags[data-astro-cid-gc2g3jd6]{flex-wrap:wrap;gap:.1rem 1.1rem;margin:.6rem 0 0;padding:0;list-style:none;display:flex}@media (width<=640px){.row[data-astro-cid-gc2g3jd6]{grid-template-columns:1fr;padding-block:1.25rem}.meta[data-astro-cid-gc2g3jd6]{flex-flow:wrap;gap:.75rem;padding-top:0}.draft[data-astro-cid-gc2g3jd6]{margin-top:0}.title[data-astro-cid-gc2g3jd6]{font-size:var(--step-1)}}
+</style><link rel="stylesheet" href="/_astro/_slug_.y0bcMRw3.css"></head><body data-astro-cid-hkbrpulz><a class="skip" href="#main" data-astro-cid-hkbrpulz>본문 바로가기</a><header class="site-header wrap" data-astro-cid-nen7h5rs><a class="wordmark" href="/ko/" translate="no" data-astro-cid-nen7h5rs>Tech Blog</a><nav class="nav" aria-label="주 메뉴" data-astro-cid-nen7h5rs><ul data-astro-cid-nen7h5rs><li data-type="paper" data-astro-cid-nen7h5rs><a href="/ko/papers/" data-astro-cid-nen7h5rs>논문</a></li><li data-type="study" data-astro-cid-nen7h5rs><a href="/ko/study/" aria-current="page" data-astro-cid-nen7h5rs>공부</a></li><li data-type="dev" data-astro-cid-nen7h5rs><a href="/ko/dev/" data-astro-cid-nen7h5rs>개발</a></li><li data-type="clip" data-astro-cid-nen7h5rs><a href="/ko/clips/" data-astro-cid-nen7h5rs>클립</a></li><li data-astro-cid-nen7h5rs><a href="/ko/graph/" data-astro-cid-nen7h5rs>그래프</a></li><li data-astro-cid-nen7h5rs><a href="/ko/tags/" data-astro-cid-nen7h5rs>태그</a></li></ul></nav><div class="tools" data-astro-cid-nen7h5rs><button class="icon-btn" type="button" data-search-open aria-label="검색" aria-keyshortcuts="/" data-astro-cid-nen7h5rs><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8" data-astro-cid-nen7h5rs></circle><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-astro-cid-nen7h5rs></path></svg></button><a class="lang" href="/en/study/robot-hand-and-rl-chapter-1/" hreflang="en" aria-label="영어로 보기" data-astro-cid-nen7h5rs>English</a><button class="icon-btn" type="button" data-theme-toggle data-label-light="라이트 모드로 전환" data-label-dark="다크 모드로 전환" aria-label="다크 모드로 전환" data-astro-cid-nen7h5rs><svg class="sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8" data-astro-cid-nen7h5rs></circle><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-astro-cid-nen7h5rs></path></svg><svg class="moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><path d="M19.5 14.6A7.8 7.8 0 0 1 9.4 4.5a7.8 7.8 0 1 0 10.1 10.1Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" data-astro-cid-nen7h5rs></path></svg></button></div></header><script type="module">var e=document.querySelector(`[data-theme-toggle]`),t=document.documentElement,n=()=>{let n=t.dataset.theme===`dark`;document.querySelectorAll(`meta[name="theme-color"]`).forEach(e=>{e.setAttribute(`content`,n?`#0e131b`:`#f4f6f9`),e.removeAttribute(`media`)}),e.setAttribute(`aria-label`,(n?e.dataset.labelLight:e.dataset.labelDark)??``),e.setAttribute(`aria-pressed`,String(n))};n(),e.addEventListener(`click`,()=>{t.dataset.theme=t.dataset.theme===`dark`?`light`:`dark`;try{localStorage.setItem(`theme`,t.dataset.theme)}catch{}n()});</script><main id="main" data-astro-cid-hkbrpulz><article class="post wrap" data-type="study" data-pagefind-body data-astro-cid-krmc5xkp><header class="head" data-astro-cid-krmc5xkp><div class="meta" data-astro-cid-krmc5xkp><a class="type" href="/ko/study/" data-pagefind-ignore data-astro-cid-krmc5xkp>공부</a><time datetime="2026-11-19" data-astro-cid-krmc5xkp>2026년 11월 19일</time></div><h1 data-astro-cid-krmc5xkp>Robot Hand와 RL · 1장. 강화학습의 언어</h1><p class="summary" data-astro-cid-krmc5xkp>에이전트·환경·보상·MDP·정책·가치함수 등 강화학습 기본 개념을 로봇 손 예시로 설명하고 CartPole 실습으로 reset-step 루프와 규칙 정책을 비교한다.</p><dl class="source" data-astro-cid-krmc5xkp><dt data-astro-cid-krmc5xkp>첨부</dt><dd data-astro-cid-krmc5xkp><a href="/files/study/robot-hand-and-rl-chapter-1/01_rl_lang.md" rel="noopener" data-astro-cid-krmc5xkp>원본 Markdown</a></dd></dl><ul class="tags" data-pagefind-ignore data-astro-cid-krmc5xkp><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/method/reinforcement-learning/" title="method/reinforcement-learning" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>방법론</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>강화학습</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/domain/robotics/manipulation/" title="domain/robotics/manipulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>분야</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="parent" data-astro-cid-jjfiepte>로보틱스</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>로봇 조작</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/ko/tags/task/benchmarking/" title="task/benchmarking" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>태스크</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>벤치마크·성능 측정</span></a></li></ul><div class="tags-editor" hidden data-dir="content/study/robot-hand-and-rl-chapter-1" data-pagefind-ignore data-astro-cid-krmc5xkp></div></header><div class="columns" data-astro-cid-krmc5xkp><div class="prose" data-astro-cid-krmc5xkp><details class="toc-inline" data-pagefind-ignore data-astro-cid-krmc5xkp><summary data-astro-cid-krmc5xkp>목차</summary><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#s1" data-astro-cid-krmc5xkp>01 에이전트와 환경</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s2" data-astro-cid-krmc5xkp>02 에피소드와 종료</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s3" data-astro-cid-krmc5xkp>03 리턴과 할인율 γ</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s4" data-astro-cid-krmc5xkp>04 MDP와 마르코프 성질</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-1" data-astro-cid-krmc5xkp>마르코프 성질: 지금만 알면 과거는 필요 없다</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s5" data-astro-cid-krmc5xkp>05 🤖 엄지 버튼 에피소드 따라가기</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s6" data-astro-cid-krmc5xkp>06 학습 루프: 에피소드 ≠ 업데이트</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s7" data-astro-cid-krmc5xkp>07 정책, 가치함수, Advantage</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-2" data-astro-cid-krmc5xkp>정책 π: 이 상황에서 무엇을 할까</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-3" data-astro-cid-krmc5xkp>V, Q, Advantage</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s8" data-astro-cid-krmc5xkp>08 탐험과 활용</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s9" data-astro-cid-krmc5xkp>09 🤖 실습: CartPole</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-4" data-astro-cid-krmc5xkp>환경 준비</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-5" data-astro-cid-krmc5xkp>CartPole</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-6" data-astro-cid-krmc5xkp>코드 1: 루프 ( cartpole_loop.py )</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-7" data-astro-cid-krmc5xkp>코드 2: 규칙 정책 ( rule_policies.py )</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-8" data-astro-cid-krmc5xkp>직접 돌려 보기: 브라우저 CartPole</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-9" data-astro-cid-krmc5xkp>무엇을 확인했나</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-10" data-astro-cid-krmc5xkp>설계자가 정하는 곳은 환경 안에 있다</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s10" data-astro-cid-krmc5xkp>10 🤖 사람은 어디에 관여하나</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s11" data-astro-cid-krmc5xkp>11 전체 정리 &amp;#x26; 다음 장 연결</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#quiz" data-astro-cid-krmc5xkp>? 확인 문제</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#qa" data-astro-cid-krmc5xkp>Q&amp;#x26;A 질문 &amp;#x26; 답변</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#check" data-astro-cid-krmc5xkp>✓ 헷갈렸던 개념</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#refs" data-astro-cid-krmc5xkp>📚 더 읽을거리</a></li></ol></details><style>
+.rawhtml { --fg: var(--ink); --text: var(--ink); --muted: var(--ink-3); --line: var(--rule); --border: var(--rule) }
+.rawhtml :is(h2, h3) > span:first-child:not(:only-child) { margin-right: 0.5em }
+.rawhtml { --acc: #2f6bd8; --acc-soft: #e2ebfb; --warm: #c9701c; --warm-soft: #fbecd9; --green: #23875a; --green-soft: #dcf1e6; --red: #c24141; --red-soft: #f9e0e0; --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100 }
+@media (prefers-color-scheme: dark) {
+:root:not([data-theme="light"]) .rawhtml { --acc: #6d9cf0; --acc-soft: #1f2d48; --warm: #e7a15a; --warm-soft: #3a2b1a; --green: #5cc493; --green-soft: #183527; --red: #e57777; --red-soft: #3d1f22; --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500 }
+}
+:root[data-theme="dark"] .rawhtml { --acc: #6d9cf0; --acc-soft: #1f2d48; --warm: #e7a15a; --warm-soft: #3a2b1a; --green: #5cc493; --green-soft: #183527; --red: #e57777; --red-soft: #3d1f22; --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500 }
+.rawhtml h2 .num { font-family: var(--font-mono); font-size: .95rem; color: var(--acc); background: var(--acc-soft); border-radius: 6px; padding: 2px 8px }
+.rawhtml .lead { color: var(--muted); margin: 0 }
+.rawhtml .meta { color: var(--muted); font-size: .9rem; margin-top: 12px }
+.rawhtml nav.toc { margin: 32px 0 0; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px }
+.rawhtml nav.toc ol { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 4px 16px }
+.rawhtml nav.toc a { text-decoration: none; color: var(--fg); font-size: .95rem }
+.rawhtml nav.toc a:hover { color: var(--acc) }
+.rawhtml nav.toc .n { font-family: var(--font-mono); color: var(--muted); margin-right: 8px; font-size: .85rem }
+.rawhtml figure { position: relative; margin: 24px 0; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px }
+.rawhtml figure svg { display: block; width: 100%; height: auto }
+.rawhtml figcaption { color: var(--muted); font-size: .88rem; margin-top: 12px }
+.rawhtml figcaption b { color: var(--fg) }
+.rawhtml td.num, .rawhtml th.num { text-align: right; font-family: var(--font-mono); font-size: .86rem }
+.rawhtml .table-wrap { overflow-x: auto }
+.rawhtml pre .c { color: var(--muted) }
+.rawhtml .callout { border-left: 4px solid var(--acc); background: var(--acc-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0 }
+.rawhtml .callout.warm { border-color: var(--warm); background: var(--warm-soft) }
+.rawhtml .callout.green { border-color: var(--green); background: var(--green-soft) }
+.rawhtml .robot { border: 1px dashed var(--line); border-radius: 10px; padding: 12px 16px; margin: 16px 0; background: var(--surface) }
+.rawhtml .robot > b:first-child { color: var(--green) }
+.rawhtml .formula { font-family: var(--font-mono); font-size: 1.02rem; text-align: center; padding: 16px 8px; margin: 16px 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; white-space: nowrap; line-height: 1.9 }
+.rawhtml .formula .lbl { display: block; font-family: var(--font-sans); font-size: .82rem; color: var(--muted) }
+.rawhtml .hl-a { color: var(--acc); font-weight: 600 }
+.rawhtml .hl-w { color: var(--warm); font-weight: 600 }
+.rawhtml svg text { font-family: var(--font-sans); font-size: 13px; fill: var(--fg) }
+.rawhtml svg .mut { fill: var(--muted); font-size: 12px }
+.rawhtml svg .small { font-size: 11px }
+.rawhtml svg .bold { font-weight: 700 }
+.rawhtml svg .mono { font-family: var(--font-mono) }
+.rawhtml .s-box { fill: var(--surface); stroke: var(--line); stroke-width: 1.5 }
+.rawhtml .s-acc { fill: var(--acc-soft); stroke: var(--acc); stroke-width: 1.5 }
+.rawhtml .s-warm { fill: var(--warm-soft); stroke: var(--warm); stroke-width: 1.5 }
+.rawhtml .s-green { fill: var(--green-soft); stroke: var(--green); stroke-width: 1.5 }
+.rawhtml .s-red { fill: var(--red-soft); stroke: var(--red); stroke-width: 1.5 }
+.rawhtml .s-frame { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 5 4 }
+.rawhtml .s-line { fill: none; stroke: var(--muted); stroke-width: 1.5 }
+.rawhtml .s-accline { fill: none; stroke: var(--acc); stroke-width: 2 }
+.rawhtml .s-warmline { fill: none; stroke: var(--warm); stroke-width: 2 }
+.rawhtml .s-ahead { fill: var(--muted) }
+.rawhtml .s-ahead-acc { fill: var(--acc) }
+.rawhtml .s-ahead-warm { fill: var(--warm) }
+.rawhtml .grid { stroke: var(--line); stroke-width: 1 }
+.rawhtml .axis { stroke: var(--muted); stroke-width: 1 }
+.rawhtml .control { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; font-size: .92rem }
+.rawhtml .control input[type="range"] { flex: 1; min-width: 140px; accent-color: var(--acc) }
+.rawhtml .control output { font-family: var(--font-mono); min-width: 3em }
+.rawhtml .control label { display: inline-flex; align-items: center; gap: 6px }
+.rawhtml .btn { font: inherit; font-size: .86rem; padding: 5px 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--fg) }
+.rawhtml .btn:hover { border-color: var(--acc) }
+.rawhtml .btn.on { border-color: var(--acc); background: var(--acc-soft) }
+.rawhtml .readout { font-family: var(--font-mono); font-size: .82rem; color: var(--muted); margin-top: 8px; overflow-x: auto; white-space: nowrap }
+.rawhtml .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .86rem; margin: 0 0 8px }
+.rawhtml .legend span { display: inline-flex; align-items: center; gap: 6px }
+.rawhtml .legend i { width: 18px; height: 3px; border-radius: 2px; display: inline-block }
+.rawhtml .tip { position: absolute; pointer-events: none; display: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: .8rem; line-height: 1.5; box-shadow: 0 4px 14px rgba(0,0,0,.12); white-space: nowrap; z-index: 2 }
+.rawhtml .tip b { font-family: var(--font-mono); font-weight: 600 }
+.rawhtml .qa-tools { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap }
+.rawhtml .qa-tools button { font: inherit; font-size: .88rem; padding: 6px 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--fg) }
+.rawhtml details.qa, .rawhtml details.quiz { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; margin: 12px 0; padding: 0 }
+.rawhtml details.qa summary, .rawhtml details.quiz summary { cursor: pointer; padding: 16px 20px; list-style: none; display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: baseline }
+.rawhtml details.qa summary::-webkit-details-marker, .rawhtml details.quiz summary::-webkit-details-marker { display: none }
+.rawhtml details .qn { font-family: var(--font-mono); font-weight: 600; color: var(--warm); background: var(--warm-soft); border-radius: 6px; padding: 1px 8px; font-size: .9rem }
+.rawhtml details.quiz .qn { color: var(--acc); background: var(--acc-soft) }
+.rawhtml details .qt { font-weight: 500 }
+.rawhtml details .stage { display: block; color: var(--muted); font-size: .8rem; font-weight: 400 }
+.rawhtml details .ans { padding: 0 20px 16px 20px; border-top: 1px solid var(--line) }
+.rawhtml details .ans ul { padding-left: 20px }
+.rawhtml .hint { font-size: .85rem; color: var(--muted) }
+.rawhtml .checklist { list-style: none; padding: 0 }
+.rawhtml .checklist li { padding: 10px 14px 10px 40px; position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; margin: 8px 0 }
+.rawhtml .checklist li::before { content: "✓"; position: absolute; left: 14px; top: 10px; color: var(--green); font-weight: 700 }
+.rawhtml .checklist .ref { color: var(--muted); font-size: .85rem }
+.rawhtml .refs li { margin: 4px 0 }
+@media (max-width: 560px) {
+.rawhtml figure { padding: 12px }
+}
+</style>
+<div class="rawhtml">
+<svg aria-hidden="true" height="0" style="position:absolute" width="0">
+<defs>
+<marker id="ah" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="9" refY="5" viewBox="0 0 10 10"><path class="s-ahead" d="M0,0 L10,5 L0,10 z"></path></marker>
+<marker id="ah-acc" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="9" refY="5" viewBox="0 0 10 10"><path class="s-ahead-acc" d="M0,0 L10,5 L0,10 z"></path></marker>
+<marker id="ah-warm" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="9" refY="5" viewBox="0 0 10 10"><path class="s-ahead-warm" d="M0,0 L10,5 L0,10 z"></path></marker>
+</defs>
+</svg>
+
+
+
+
+<section>
+<h2 id="s1"><span class="num">01</span>에이전트와 환경</h2>
+<p>강화학습은 한 문장으로 <b>"해 보고, 점수를 받고, 점수가 높아지는 쪽으로 행동을 고친다"</b>이다. 등장하는 것은 둘뿐이다.</p>
+<figure>
+<svg aria-label="환경이 관측과 보상을 에이전트에게 주고, 에이전트가 행동을 환경에 돌려주는 루프" role="img" viewBox="0 0 720 230">
+<rect class="s-green" height="110" rx="12" width="230" x="30" y="60"></rect>
+<text class="bold" text-anchor="middle" x="145" y="98">환경 (Environment)</text>
+<text class="small" text-anchor="middle" x="145" y="122">손 + 손잡이 + 버튼 + 물리 엔진</text>
+<text class="mut small mono" text-anchor="middle" x="145" y="146">Isaac Lab / gymnasium</text>
+<rect class="s-acc" height="110" rx="12" width="230" x="460" y="60"></rect>
+<text class="bold" text-anchor="middle" x="575" y="98">에이전트 (Agent)</text>
+<text class="small" text-anchor="middle" x="575" y="122">정책 π (신경망)</text>
+<text class="mut small mono" text-anchor="middle" x="575" y="146">Core 스킬</text>
+<path class="s-accline" d="M145 58 C145 32, 575 32, 575 56" marker-end="url(#ah-acc)"></path>
+<text class="small" style="fill:var(--acc)" text-anchor="middle" x="360" y="26">관측 o<tspan baseline-shift="sub" font-size="9">t</tspan>, 보상 r<tspan baseline-shift="sub" font-size="9">t</tspan></text>
+<path class="s-warmline" d="M575 172 C575 198, 145 198, 145 174" marker-end="url(#ah-warm)"></path>
+<text class="small" style="fill:var(--warm)" text-anchor="middle" x="360" y="224">행동 a<tspan baseline-shift="sub" font-size="9">t</tspan></text>
+<text class="mut small" text-anchor="middle" x="360" y="110">env.step(a) 한 번 =</text>
+<text class="mut small" text-anchor="middle" x="360" y="128">이 루프 한 바퀴</text>
+</svg>
+<figcaption><b>그림 1.</b> 강화학습의 기본 루프. 환경은 관측과 보상을 주고, 에이전트는 행동을 돌려준다. 코드에서는 <code>env.step(action)</code> 한 줄이 한 바퀴다(<a href="#s9">9장</a>).</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<thead><tr><th>용어</th><th>뜻</th><th>🤖 엄지 버튼에서는</th></tr></thead>
+<tbody>
+<tr><td><b>상태 s</b></td><td>세상의 진짜 전체 정보</td><td>손·공구·버튼의 정확한 위치·속도·접촉력 전부</td></tr>
+<tr><td><b>관측 o</b></td><td>에이전트가 실제로 볼 수 있는 것</td><td>관절 각도·속도, 손끝 압력, 모터 전류, 버튼 위치</td></tr>
+<tr><td><b>행동 a</b></td><td>에이전트가 고르는 것</td><td>관절 목표 변화량 + 손가락별 강성</td></tr>
+<tr><td><b>보상 r</b></td><td>방금 행동이 얼마나 좋았는지 매기는 숫자 하나</td><td><code>r_reach + r_press + r_click + …</code></td></tr>
+</tbody></table></div>
+<div class="robot"><b>🤖 상태 ≠ 관측.</b> 시뮬은 공구의 정확한 자세(상태)를 알지만 실제 V6 손은 압력과 전류(관측)만 안다. <b>정책에는 관측만</b> 넣고, 학습 때만 쓰는 부품(보상 계산, critic, 교사)은 상태를 써도 된다. 로드맵 카드의 "(교사만) 정확한 물체 자세"가 이것이다. → <a href="#qa">Q1 · Q3</a></div>
+<p>보상은 여러 항을 더해도 결국 <b>스칼라 하나</b>다. 그래서 항별 가중치가 중요하다(4장 보상 설계).</p>
+</section>
+
+<section>
+<h2 id="s2"><span class="num">02</span>에피소드와 종료</h2>
+<p>루프를 시작부터 끝까지 한 번 돈 것이 <b>에피소드</b>다. 게임 한 판.</p>
+<figure>
+<svg aria-label="reset에서 시작해 관측, 행동, 보상이 이어지다가 성공이나 실패로 끝나는 terminated와 시간이 다 되어 끝나는 truncated로 갈라지는 에피소드 타임라인" role="img" viewBox="0 0 720 210">
+<rect class="s-box" height="44" rx="10" width="80" x="10" y="70"></rect>
+<text class="mono small" text-anchor="middle" x="50" y="97">reset()</text>
+<line class="s-line" marker-end="url(#ah)" x1="92" x2="118" y1="92" y2="92"></line>
+<g>
+<circle class="s-acc" cx="140" cy="92" r="18"></circle><text class="mono small" text-anchor="middle" x="140" y="96">o₀</text>
+<line class="s-warmline" marker-end="url(#ah-warm)" x1="160" x2="196" y1="92" y2="92"></line><text class="mono small" style="fill:var(--warm)" text-anchor="middle" x="178" y="84">a₀</text>
+<circle class="s-acc" cx="218" cy="92" r="18"></circle><text class="mono small" text-anchor="middle" x="218" y="96">o₁</text>
+<text class="mono small" text-anchor="middle" x="218" y="130">r₁</text>
+<line class="s-warmline" marker-end="url(#ah-warm)" x1="238" x2="274" y1="92" y2="92"></line><text class="mono small" style="fill:var(--warm)" text-anchor="middle" x="256" y="84">a₁</text>
+<circle class="s-acc" cx="296" cy="92" r="18"></circle><text class="mono small" text-anchor="middle" x="296" y="96">o₂</text>
+<text class="mono small" text-anchor="middle" x="296" y="130">r₂</text>
+<text class="bold" text-anchor="middle" x="350" y="97">⋯</text>
+<circle class="s-acc" cx="404" cy="92" r="18"></circle><text class="mono small" text-anchor="middle" x="404" y="96">o_T</text>
+<text class="mono small" text-anchor="middle" x="404" y="130">r_T</text>
+</g>
+<path class="s-line" d="M424 86 L480 44" marker-end="url(#ah)"></path>
+<path class="s-line" d="M424 98 L480 140" marker-end="url(#ah)"></path>
+<rect class="s-green" height="62" rx="10" width="226" x="484" y="14"></rect>
+<text class="bold mono small" text-anchor="middle" x="597" y="38">terminated = True</text>
+<text class="small" text-anchor="middle" x="597" y="60">성공·실패로 끝남 (클릭, SLIP)</text>
+<rect class="s-warm" height="62" rx="10" width="226" x="484" y="110"></rect>
+<text class="bold mono small" text-anchor="middle" x="597" y="134">truncated = True</text>
+<text class="small" text-anchor="middle" x="597" y="156">결과 없이 시간이 다 됨 (TIMEOUT)</text>
+<text class="mut small" text-anchor="middle" x="218" y="190">매 스텝 (o, a, r)이 하나씩 쌓인다</text>
+</svg>
+<figcaption><b>그림 2.</b> 에피소드 하나. 끝나는 방법은 두 가지이고, gymnasium의 <code>step()</code>도 둘을 따로 돌려준다. 로드맵 카드의 "종료·성공 판정" 칸이 이걸 정한다.</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<thead><tr><th>종류</th><th>뜻</th><th>🤖 엄지 버튼</th><th>CartPole</th></tr></thead>
+<tbody>
+<tr><td><b>terminated</b></td><td>성공이나 실패로 끝남</td><td>클릭 성공, 공구 떨어뜨림(SLIP)</td><td>막대 > 12°, 카트 > ±2.4</td></tr>
+<tr><td><b>truncated</b></td><td>정해 둔 시간이 다 됨</td><td>TIMEOUT (5초 = 250스텝)</td><td>500스텝</td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+<h2 id="s3"><span class="num">03</span>리턴과 할인율 γ</h2>
+<p>에이전트의 목표는 <b>지금 받는 보상</b>이 아니라 <b>에피소드 끝까지 받을 보상의 합</b>을 최대로 만드는 것이다. 엄지를 버튼 쪽으로 옮기는 순간엔 이득이 없어도, 그래야 나중에 <code>r_press</code>와 <code>r_click</code>(+10)을 받는다.</p>
+<div class="formula">G<sub>t</sub> = r<sub>t+1</sub> + <span class="hl-a">γ</span>·r<sub>t+2</sub> + <span class="hl-a">γ²</span>·r<sub>t+3</sub> + ⋯ ,    0 ≤ γ &#x3C; 1
+<span class="lbl">리턴 = 앞으로 받을 보상의 할인 합 · 멀리 있는 보상일수록 <span class="hl-a">γ<sup>k</sup></span>만큼 깎는다</span></div>
+<figure>
+<svg aria-label="k스텝 뒤 보상에 곱해지는 가중치 감마의 k제곱을 막대로 표시. 감마가 클수록 천천히 줄어든다" id="discSvg" role="img" viewBox="0 0 720 220"></svg>
+<div class="control">
+<label for="discG">γ</label>
+<input id="discG" max="0.99" min="0" step="0.01" type="range" value="0.9">
+<output id="discGOut">0.90</output>
+<button class="btn" data-g="0.5" type="button">0.5</button>
+<button class="btn" data-g="0.9" type="button">0.9</button>
+<button class="btn" data-g="0.99" type="button">0.99</button>
+</div>
+<div class="readout" id="discRead"></div>
+<figcaption><b>그림 3.</b> k스텝 뒤 보상의 가중치 γ<sup>k</sup>. 점선은 유효 시야 1/(1−γ). 아래 숫자는 🤖 <b>20스텝 뒤 클릭 +10</b>이 지금 얼마로 보이는지다. γ = 0.5면 거의 0, 0.99면 8.2.</figcaption>
+</figure>
+<p>깎는 이유는 세 가지다. ① 에피소드가 길어도 합이 무한대가 되지 않는다 ② 먼 미래는 불확실하다 ③ 같은 +10이라도 빨리 받을수록 가치가 커서 <b>빨리 끝내도록</b> 유도된다.</p>
+<div class="callout"><b>실무 감각:</b> γ가 보는 시야 ≈ <b>1 / (1 − γ) 스텝</b>. γ = 0.99면 약 100스텝. 50 Hz로 5초(250스텝) 돌리는 엄지 버튼에서는 0.99 근처를 쓴다. Isaac Lab 예제도 대부분 0.99다. <a href="#s9">9장</a> 실습에서 500스텝을 버텨도 할인 리턴이 99.3에서 멈추는 것으로 확인했다.</div>
+<div class="robot"><b>🤖 보상을 단계형으로 주는 이유.</b> 클릭 +10만 주면 γ 때문에 멀리 있는 보상이 흐릿하게 보이고, 처음엔 우연히 클릭할 일도 거의 없다. 그래서 <code>r_reach</code>(다가가기)와 <code>r_press</code>(눌림 진행률)로 중간중간 길을 알려 준다.</div>
+</section>
+
+<section>
+<h2 id="s4"><span class="num">04</span>MDP와 마르코프 성질</h2>
+<div class="formula">MDP = ( S, A, <span class="hl-w">P</span>, R, γ )
+<span class="lbl">상태 공간 · 행동 공간 · <span class="hl-w">전이 확률 P(s′ | s, a)</span> · 보상 함수 · 할인율</span></div>
+<div class="table-wrap"><table>
+<thead><tr><th>기호</th><th>이름</th><th>🤖 엄지 버튼에서는</th></tr></thead>
+<tbody>
+<tr><td>S</td><td>상태 공간</td><td>손·공구·버튼의 모든 위치·속도·접촉</td></tr>
+<tr><td>A</td><td>행동 공간</td><td>관절 목표 변화량 + 강성 (연속값)</td></tr>
+<tr><td>P</td><td>전이 확률</td><td><b>물리 엔진</b>이 이 역할</td></tr>
+<tr><td>R</td><td>보상 함수</td><td><code>r_reach + r_press + r_click …</code></td></tr>
+<tr><td>γ</td><td>할인율</td><td>0.99</td></tr>
+</tbody></table></div>
+<p><b>P는 몰라도 된다.</b> 마찰·접촉을 수식으로 몰라도 <code>step()</code>을 불러 결과만 받으면 학습할 수 있다. 이게 <b>model-free RL</b>이고 PPO도 여기 속한다. 우리가 정할 것은 S·A·R·γ와 종료 조건뿐이다. <b>문제 카드를 짠다 = MDP를 정의한다.</b></p>
+<h3 id="sec-1">마르코프 성질: 지금만 알면 과거는 필요 없다</h3>
+<p>다음 상태는 <b>현재 상태와 행동만으로</b> 정해진다. 그런데 <b>관측만 보면 이 성질이 자주 깨진다.</b> 관측이 상태를 다 못 담는 경우를 <b>POMDP</b>라고 하고, 실제 로봇 문제는 거의 다 POMDP다.</p>
+<figure>
+<svg aria-label="각도 사진 한 장만으로는 막대가 넘어가는 중인지 돌아오는 중인지 알 수 없지만, 각속도를 함께 보면 알 수 있다" role="img" viewBox="0 0 720 190">
+<rect class="s-red" height="172" rx="12" width="340" x="10" y="10"></rect>
+<text class="bold" text-anchor="middle" x="180" y="34">관측 = 각도만</text>
+<line stroke="var(--fg)" stroke-linecap="round" stroke-width="4" x1="110" x2="140" y1="130" y2="62"></line>
+<rect class="s-box" height="16" rx="3" width="40" x="90" y="128"></rect>
+<text class="mut small" x="140" y="56">?</text>
+<line stroke="var(--fg)" stroke-linecap="round" stroke-width="4" x1="250" x2="280" y1="130" y2="62"></line>
+<rect class="s-box" height="16" rx="3" width="40" x="230" y="128"></rect>
+<text class="mut small" x="280" y="56">?</text>
+<text class="mut small" text-anchor="middle" x="180" y="100">같은 사진</text>
+<text class="small" text-anchor="middle" x="180" y="168">넘어가는 중? 돌아오는 중? → 모름</text>
+<rect class="s-green" height="172" rx="12" width="340" x="370" y="10"></rect>
+<text class="bold" text-anchor="middle" x="540" y="34">관측 = 각도 + 각속도</text>
+<line stroke="var(--fg)" stroke-linecap="round" stroke-width="4" x1="470" x2="500" y1="130" y2="62"></line>
+<rect class="s-box" height="16" rx="3" width="40" x="450" y="128"></rect>
+<path class="s-warmline" d="M506 66 Q520 72 524 88" marker-end="url(#ah-warm)"></path>
+<text class="small" style="fill:var(--warm)" x="530" y="72">넘어감</text>
+<line stroke="var(--fg)" stroke-linecap="round" stroke-width="4" x1="610" x2="640" y1="130" y2="62"></line>
+<rect class="s-box" height="16" rx="3" width="40" x="590" y="128"></rect>
+<path class="s-accline" d="M640 56 Q626 48 612 54" marker-end="url(#ah-acc)"></path>
+<text class="small" style="fill:var(--acc)" x="648" y="58">돌아옴</text>
+<text class="small" text-anchor="middle" x="540" y="168">다음에 일어날 일을 예측 가능 → 거의 마르코프</text>
+</svg>
+<figcaption><b>그림 4.</b> 마르코프는 <b>관측(상태 표현)의 성질</b>이다. 각도 사진 한 장으로는 다음을 예측할 수 없다. <a href="#s9">9장</a> CartPole에서 각도만 보는 정책이 41스텝, 각속도까지 보는 정책이 500스텝을 버틴 이유다.</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<thead><tr><th>관측</th><th>마르코프인가</th><th>이유</th></tr></thead>
+<tbody>
+<tr><td>관절 각도만</td><td>❌</td><td>속도를 몰라 다음 위치를 예측 못 함</td></tr>
+<tr><td>관절 각도 + 속도</td><td>거의 ✅</td><td></td></tr>
+<tr><td>+ 손끝 압력</td><td>여전히 부족</td><td>압력만으로 공구 자세를 완전히 알 수 없음</td></tr>
+<tr><td>+ 직전 행동</td><td>더 나아짐</td><td>모터 지연이 있을 때 "방금 뭘 시켰는지" 알면 도움</td></tr>
+</tbody></table></div>
+<p>해결책: 속도와 직전 행동을 관측에 넣기 · 최근 몇 스텝을 쌓아서 넣기(아타리 DQN의 <b>frame stacking</b>, <a href="#qa">Q4</a>) · RNN · 교사–학생으로 이력에서 숨은 물리값 추정(HORA, 6장).</p>
+<div class="callout green">문제 카드의 관측 칸을 채울 때: <b>"이 정보만으로 다음에 뭐가 일어날지 알 수 있나?"</b></div>
+</section>
+
+<section>
+<h2 id="s5"><span class="num">05</span>🤖 엄지 버튼 에피소드 따라가기</h2>
+<p>커리큘럼 ①(이미 쥔 상태에서 엄지로 누르기)의 에피소드 하나를 끝까지 따라가 본다. 정책은 <b>50 Hz</b>로 행동하고, 그 사이 물리 엔진은 200 Hz로 4번 돈다(Isaac Lab의 <code>decimation = 4</code>).</p>
+<figure>
+<svg aria-label="스텝별 보상 막대. 다가가는 동안은 거리만큼 음수, 접촉 후 누르는 동안은 작은 양수, 클릭 순간 큰 양수" id="epSvg" role="img" viewBox="0 0 720 260"></svg>
+<div class="control">
+<label for="epT">t</label>
+<input id="epT" max="55" min="0" step="1" type="range" value="55">
+<output id="epTOut">55</output>
+<button class="btn" id="epPlay" type="button">▶ 재생</button>
+</div>
+<div class="readout" id="epRead"></div>
+<div class="tip" id="epTip"></div>
+<figcaption><b>그림 5.</b> 단순화한 엄지 버튼 에피소드. 보상은 <code>r_reach = −1.0 × 거리(cm)</code>, <code>r_press = +2.0 × 눌림 증가분 / 스트로크 3 mm</code>, <code>r_click = +10</code>. 엄지는 2.0 cm에서 매 스텝 0.05 cm씩 다가가 t = 40에 닿고, t = 55에 3 mm를 눌러 클릭한다. 막대에 마우스를 올리면 값이 보인다.</figcaption>
+</figure>
+<ul>
+<li>보상은 받는 즉시 합치지 않는다. <b>스텝마다 (o, a, r)을 저장</b>했다가, 각 스텝에서부터의 리턴·advantage를 따로 계산한다. 그래야 "t = 10의 행동이 좋았나?"를 따로 평가할 수 있다.</li>
+<li>엉뚱한 데를 헤매다 250스텝이 되면 <code>truncated</code>, 공구가 빠지면 <code>terminated</code>(실패)로 끝난다.</li>
+</ul>
+</section>
+
+<section>
+<h2 id="s6"><span class="num">06</span>학습 루프: 에피소드 ≠ 업데이트</h2>
+<p>정책은 <b>매 스텝 고치지 않는다.</b> 경험을 한참 모아 두었다가 한꺼번에 고친다.</p>
+<figure>
+<svg aria-label="경험 모으기, advantage 계산, 정책 수정이 반복되는 학습 루프" role="img" viewBox="0 0 720 230">
+<rect class="s-acc" height="120" rx="12" width="200" x="20" y="40"></rect>
+<text class="bold" text-anchor="middle" x="120" y="68">① 경험 모으기</text>
+<text class="small" text-anchor="middle" x="120" y="92">환경 4096개 × 24스텝</text>
+<text class="small" text-anchor="middle" x="120" y="112">≈ 10만 개 (o, a, r, done)</text>
+<text class="small" style="fill:var(--acc)" text-anchor="middle" x="120" y="140">이 동안 정책은 고정</text>
+<rect class="s-warm" height="120" rx="12" width="200" x="260" y="40"></rect>
+<text class="bold" text-anchor="middle" x="360" y="68">② 평가</text>
+<text class="small" text-anchor="middle" x="360" y="92">스텝마다 advantage 계산</text>
+<text class="small" text-anchor="middle" x="360" y="112">"평소보다 좋았나?"</text>
+<text class="mut small" text-anchor="middle" x="360" y="140">critic V 사용 (7장)</text>
+<rect class="s-green" height="120" rx="12" width="200" x="500" y="40"></rect>
+<text class="bold" text-anchor="middle" x="600" y="68">③ 정책 수정</text>
+<text class="small" text-anchor="middle" x="600" y="92">좋았던 행동 확률 ↑</text>
+<text class="small" text-anchor="middle" x="600" y="112">나빴던 행동 확률 ↓</text>
+<text class="mut small" text-anchor="middle" x="600" y="140">버퍼 비움</text>
+<line class="s-line" marker-end="url(#ah)" x1="222" x2="256" y1="100" y2="100"></line>
+<line class="s-line" marker-end="url(#ah)" x1="462" x2="496" y1="100" y2="100"></line>
+<path class="s-line" d="M600 162 C600 214, 120 214, 120 164" marker-end="url(#ah)"></path>
+<text class="mut small" text-anchor="middle" x="360" y="222">④ 조금 나아진 정책으로 다시 ① (수천 번)</text>
+<text class="mut small" text-anchor="middle" x="120" y="28">끝난 환경은 자동 reset</text>
+</svg>
+<figcaption><b>그림 6.</b> PPO 학습 루프. 한 번의 업데이트에 에피소드 수천 개의 조각이 들어가고, 에피소드 하나가 두 번의 rollout에 걸쳐 쪼개지기도 한다. <b>에피소드와 업데이트는 따로 도는 단위</b>다.</figcaption>
+</figure>
+<p>그래서 학습 초반엔 엄지가 막 흔들리다가, 반복할수록 "다가가면 벌점이 준다 → 닿으면 +가 나온다 → 끝까지 누르면 +10" 순서로 행동이 자리를 잡는다.</p>
+</section>
+
+<section>
+<h2 id="s7"><span class="num">07</span>정책, 가치함수, Advantage</h2>
+<h3 id="sec-2">정책 π: 이 상황에서 무엇을 할까</h3>
+<p><b>결정적 정책</b>은 같은 관측에 항상 같은 행동을, <b>확률적 정책</b>은 분포에서 행동을 뽑는다. 로봇 손처럼 행동이 연속값이면 보통 정규분포를 쓴다.</p>
+<pre><code>신경망(o) → 평균 μ (관절마다), 표준편차 σ
+a ~ Normal(μ, σ)     <span class="c"># 학습 중: σ만큼 흔들림 = 탐험 (8장)</span>
+a = μ                <span class="c"># 실기 배포: 보통 평균만</span></code></pre>
+<h3 id="sec-3">V, Q, Advantage</h3>
+<div class="formula">V(s) = E[ G | s ]  ·  Q(s, a) = E[ G | s, <span class="hl-w">a 먼저</span> ]  ·  <span class="hl-a">A(s, a) = Q(s, a) − V(s)</span>
+<span class="lbl">V = 상황 점수 · Q = 이 행동 하나를 먼저 하고 그 뒤로 정책대로 했을 때 · <span class="hl-a">A = 이 행동이 평소보다 얼마나 나은가</span></span></div>
+<p>Advantage의 비교 대상은 "지금 vs 나중"이 아니라 <b>"이 행동 vs 여기서 평소 하던 행동"</b>이다.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>상황</th><th>행동</th><th class="num">Q</th><th class="num">V</th><th class="num">A</th><th>판정</th></tr></thead>
+<tbody>
+<tr><td>엄지가 버튼 2 cm 앞</td><td>버튼 쪽으로</td><td class="num">+7</td><td class="num">+5</td><td class="num"><b>+2</b></td><td>확률 ↑</td></tr>
+<tr><td>엄지가 버튼 2 cm 앞</td><td>반대쪽으로</td><td class="num">+1</td><td class="num">+5</td><td class="num"><b>−4</b></td><td>확률 ↓</td></tr>
+<tr><td>공구가 기울어짐 (위기)</td><td>다시 꽉 쥐기</td><td class="num">−1</td><td class="num">−3</td><td class="num"><b>+2</b></td><td>나빠도 평소보다 나음 → ↑</td></tr>
+</tbody></table></div>
+<p>PPO에는 Q 신경망이 없다. critic V 하나로 추정한다.</p>
+<div class="formula">A<sub>t</sub> ≈ <span class="hl-a">r<sub>t+1</sub> + γ·V(s<sub>t+1</sub>)</span> − <span class="hl-w">V(s<sub>t</sub>)</span>
+<span class="lbl"><span class="hl-a">실제로 해 보니</span> − <span class="hl-w">예상</span> · TD 오차. 실제로는 여러 스텝을 섞은 GAE를 쓴다 (3장)</span></div>
+<figure>
+<svg aria-label="Actor는 관측을 받아 행동을 내고 실기로 간다. Critic은 상태를 받아 가치를 내고 advantage 계산에만 쓰인다" role="img" viewBox="0 0 720 220">
+<rect class="s-box" height="56" rx="10" width="150" x="20" y="30"></rect>
+<text text-anchor="middle" x="95" y="63">관측 o</text>
+<rect class="s-box" height="56" rx="10" width="150" x="20" y="134"></rect>
+<text text-anchor="middle" x="95" y="160">상태 s</text>
+<text class="mut small" text-anchor="middle" x="95" y="178">(또는 관측)</text>
+<rect class="s-acc" height="68" rx="12" width="190" x="240" y="24"></rect>
+<text class="bold" text-anchor="middle" x="335" y="52">Actor (정책 π)</text>
+<text class="small" text-anchor="middle" x="335" y="74">선수: 행동을 고른다</text>
+<rect class="s-warm" height="68" rx="12" width="190" x="240" y="128"></rect>
+<text class="bold" text-anchor="middle" x="335" y="156">Critic (가치함수 V)</text>
+<text class="small" text-anchor="middle" x="335" y="178">코치: 상황을 평가한다</text>
+<line class="s-line" marker-end="url(#ah)" x1="172" x2="236" y1="58" y2="58"></line>
+<line class="s-line" marker-end="url(#ah)" x1="172" x2="236" y1="162" y2="162"></line>
+<rect class="s-green" height="68" rx="12" width="190" x="510" y="24"></rect>
+<text class="bold" text-anchor="middle" x="605" y="52">행동 a → 실기 ✅</text>
+<text class="small" text-anchor="middle" x="605" y="74">V6 손으로 나간다</text>
+<rect class="s-frame" height="68" rx="12" width="190" x="510" y="128"></rect>
+<text class="bold" text-anchor="middle" x="605" y="156">advantage 계산 ❌</text>
+<text class="small" text-anchor="middle" x="605" y="178">학습 때만 쓰고 버린다</text>
+<line class="s-line" marker-end="url(#ah)" x1="432" x2="506" y1="58" y2="58"></line>
+<line class="s-line" marker-end="url(#ah)" x1="432" x2="506" y1="162" y2="162"></line>
+<path class="s-warmline" d="M560 126 C560 108, 380 108, 380 96" marker-end="url(#ah-warm)"></path>
+<text class="small" style="fill:var(--warm)" x="572" y="116">A로 actor 수정</text>
+</svg>
+<figcaption><b>그림 7.</b> PPO 안의 신경망 두 개. 코치(critic)는 경기장(실기)에 안 나가니 정답지(상태)를 봐도 된다. 이 방식을 <b>asymmetric actor-critic</b>이라고 한다.</figcaption>
+</figure>
+</section>
+
+<section>
+<h2 id="s8"><span class="num">08</span>탐험과 활용</h2>
+<div class="table-wrap"><table>
+<thead><tr><th></th><th>뜻</th><th>🤖 엄지 버튼에서는</th></tr></thead>
+<tbody>
+<tr><td><b>활용</b> (Exploitation)</td><td>지금까지 가장 좋았던 행동</td><td>"아래로 누르면 +였지" → 계속 아래로</td></tr>
+<tr><td><b>탐험</b> (Exploration)</td><td>안 해 본 행동도 시도</td><td>옆으로, 다른 각도로, 강성을 바꿔서</td></tr>
+</tbody></table></div>
+<p>활용만 하면 버튼 가장자리를 비스듬히 누르는 어설픈 방법에 갇히고(국소 최적), 탐험만 하면 배운 걸 못 써먹는다.</p>
+<figure>
+<svg aria-label="평균 주변 정규분포 곡선과 그 분포에서 뽑은 행동 점들. 시그마가 클수록 넓게 퍼진다" id="sigSvg" role="img" viewBox="0 0 720 210"></svg>
+<div class="control">
+<label for="sigS">σ</label>
+<input id="sigS" max="1" min="0.05" step="0.05" type="range" value="0.6">
+<output id="sigOut">0.60</output>
+<button class="btn" data-s="0.8" type="button">학습 초반</button>
+<button class="btn" data-s="0.15" type="button">학습 후반</button>
+</div>
+<figcaption><b>그림 8.</b> 확률적 정책 a ~ Normal(μ, σ)에서 뽑은 행동 40개. 초록 띠는 버튼을 정확히 누르는 행동 범위(가정). σ가 크면 여러 곳을 시도하고(탐험), 학습되면서 σ가 줄면 좋은 곳에 모인다(활용).</figcaption>
+</figure>
+<p><b>PPO에서 탐험하는 방법</b></p>
+<ol>
+<li><b>확률적 정책의 σ</b>: 학습되면서 저절로 줄어든다</li>
+<li><b>엔트로피 보너스</b>: σ가 너무 빨리 줄지 않게 "분포가 넓을수록 보너스". 3장의 <code>entropy coefficient</code></li>
+<li><b>병렬 환경</b>: 4096개가 각자 다르게 시도</li>
+<li><b>랜덤 시작 / 도메인 랜덤화</b>: 매번 조건이 달라 같은 행동만 반복해서는 점수가 안 나온다</li>
+</ol>
+<div class="callout warm"><b>학습 곡선 신호:</b> entropy가 너무 빨리 0으로 → 탐험 부족, 국소 최적 의심. 계속 높게 유지 → 아직 확신이 없거나 보상 신호가 약함.</div>
+<div class="robot"><b>🤖 로드맵 랜덤화의 두 번째 역할.</b> 버튼 위치 ±5 mm, 작동력 ±30%, 시작 자세 ±15 mm는 sim-to-real용이면서, 학습 중 다양한 경험을 하게 하는 탐험 효과도 있다.</div>
+</section>
+
+<section>
+<h2 id="s9"><span class="num">09</span>🤖 실습: CartPole</h2>
+<h3 id="sec-4">환경 준비</h3>
+<pre><code>conda create -n rl-study python=3.11   <span class="c"># Isaac Sim 5.x와 같은 버전</span>
+conda activate rl-study
+pip install "gymnasium[classic-control]" numpy matplotlib</code></pre>
+<div class="callout warm"><b>트러블슈팅:</b> VS Code에서 <code>ModuleNotFoundError: No module named 'gymnasium'</code> → VS Code가 시스템 파이썬(<code>/usr/bin/python3.12</code>)으로 실행한 것. <code>Ctrl+Shift+P</code> → <code>Python: Select Interpreter</code> → <code>rl-study</code>. (<a href="#qa">Q6</a>)</div>
+<h3 id="sec-5">CartPole</h3>
+<p>카트 위에 막대를 세워 두고, 카트를 좌우로 밀어 막대가 안 넘어지게 버티는 문제.</p>
+<div class="table-wrap"><table>
+<tbody>
+<tr><th>관측 <code>obs</code></th><td><code>[카트 위치 m, 카트 속도 m/s, 막대 각도 rad, 막대 각속도 rad/s]</code>. 각도 + = 오른쪽으로 기울어짐</td></tr>
+<tr><th>행동</th><td><code>0</code> 왼쪽으로 밀기, <code>1</code> 오른쪽으로 밀기 (이산. 엄지 버튼은 연속)</td></tr>
+<tr><th>보상</th><td>버틴 스텝마다 +1 → 리턴 = 버틴 스텝 수</td></tr>
+<tr><th>terminated</th><td>각도 > 12° 또는 위치 > ±2.4</td></tr>
+<tr><th>truncated</th><td>500스텝 (사실상 성공)</td></tr>
+</tbody></table></div>
+<h3 id="sec-6">코드 1: 루프 (<code>cartpole_loop.py</code>)</h3>
+<pre><code>import gymnasium as gym
+
+env = gym.make("CartPole-v1")
+
+for episode in range(3):
+    obs, info = env.reset(seed=episode)   <span class="c"># 에피소드 시작, 첫 관측 o₀</span>
+    episode_return = 0.0
+    t = 0
+
+    while True:
+        action = env.action_space.sample()   <span class="c"># 정책 자리. 지금은 무작위</span>
+        next_obs, reward, terminated, truncated, info = env.step(action)   <span class="c"># 루프 한 바퀴</span>
+
+        episode_return += reward
+        obs = next_obs        <span class="c"># 빼먹으면 정책이 계속 옛날 관측만 봄</span>
+        t += 1
+
+        if terminated or truncated:
+            print(f"[에피소드 {episode}] 길이 {t}스텝, 리턴 {episode_return:.0f}")
+            break
+
+env.close()</code></pre>
+<pre><code>t=  0  o=[ 0.014 -0.023 -0.046 -0.048]  a=0  r=1.0  terminated=False  truncated=False
+t=  1  o=[ 0.013 -0.217 -0.047  0.23 ]  a=1  r=1.0  terminated=False  truncated=False
+...
+[에피소드 0] 길이 17스텝, 리턴 17, 종료: terminated
+[에피소드 1] 길이 17스텝, 리턴 17, 종료: terminated
+[에피소드 2] 길이 37스텝, 리턴 37, 종료: terminated</code></pre>
+<p>t = 0에서 왼쪽으로 밀자 카트 속도가 −0.023 → −0.217, 반작용으로 막대 각속도가 −0.048 → +0.23. 막대가 오른쪽으로 넘어가기 시작했다.</p>
+<h3 id="sec-7">코드 2: 규칙 정책 (<code>rule_policies.py</code>)</h3>
+<p>무작위 대신 obs를 보고 행동을 정하는 <b>사람이 짠 정책</b>. 손바닥 위 빗자루처럼, 기우는 쪽으로 카트를 민다.</p>
+<pre><code>policies = {
+    "무작위":              None,
+    "각도만 obs[2]":        lambda o: o[2] > 0,
+    "각속도만 obs[3]":      lambda o: o[3] > 0,
+    "각도 + 1.0 × 각속도":  lambda o: o[2] + 1.0 * o[3] > 0,
+    "각도 + 0.5 × 각속도":  lambda o: o[2] + 0.5 * o[3] > 0,
+    "각도 + 0.1 × 각속도":  lambda o: o[2] + 0.1 * o[3] > 0,
+}
+G      += reward                  <span class="c"># 할인 없는 리턴</span>
+G_disc += (GAMMA ** t) * reward   <span class="c"># γ = 0.99 할인 리턴</span></code></pre>
+<figure>
+<div class="legend"><span><i style="background:var(--s1)"></i>평균 리턴</span><span><i style="background:var(--muted)"></i>최소 ~ 최대</span></div>
+<svg aria-label="정책별 평균 리턴 가로 막대. 무작위 22, 각도만 41, 각속도만 199, 각도+1.0각속도 492, 각도+0.5각속도와 0.1각속도는 500" id="resSvg" role="img" viewBox="0 0 720 290"></svg>
+<div class="tip" id="resTip"></div>
+<figcaption><b>그림 9.</b> 정책별 리턴 (seed 0~19, 20 에피소드). 막대 위 선은 최소~최대 범위. 막대에 마우스를 올리면 할인 리턴도 보인다. 숫자는 아래 표에 그대로 있다.</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<thead><tr><th>정책</th><th class="num">평균 리턴</th><th class="num">최소</th><th class="num">최대</th><th class="num">평균 할인 리턴 (γ=0.99)</th></tr></thead>
+<tbody>
+<tr><td>무작위</td><td class="num">22.1</td><td class="num">11</td><td class="num">39</td><td class="num">19.7</td></tr>
+<tr><td>각도만</td><td class="num">40.9</td><td class="num">25</td><td class="num">52</td><td class="num">33.5</td></tr>
+<tr><td>각속도만</td><td class="num">198.7</td><td class="num">138</td><td class="num">278</td><td class="num">85.5</td></tr>
+<tr><td>각도 + 1.0 × 각속도</td><td class="num">491.7</td><td class="num">334</td><td class="num">500</td><td class="num">99.2</td></tr>
+<tr><td>각도 + 0.5 × 각속도</td><td class="num"><b>500.0</b></td><td class="num">500</td><td class="num">500</td><td class="num">99.3</td></tr>
+<tr><td>각도 + 0.1 × 각속도</td><td class="num"><b>500.0</b></td><td class="num">500</td><td class="num">500</td><td class="num">99.3</td></tr>
+</tbody></table></div>
+<h3 id="sec-8">직접 돌려 보기: 브라우저 CartPole</h3>
+<figure>
+<svg aria-label="카트폴 애니메이션" id="cpSvg" role="img" viewBox="0 0 720 200"></svg>
+<div class="control">
+<button class="btn" data-rule="rand" type="button">무작위</button>
+<button class="btn" data-rule="ang" type="button">각도만</button>
+<button class="btn" data-rule="vel" type="button">각속도만</button>
+<button class="btn on" data-rule="mix" type="button">각도 + k × 각속도</button>
+</div>
+<div class="control">
+<label for="cpK">k</label>
+<input id="cpK" max="2" min="0" step="0.05" type="range" value="1">
+<output id="cpKOut">1.00</output>
+<button class="btn" id="cpPlay" type="button">▶ 에피소드 재생</button>
+</div>
+<div class="readout" id="cpRead"></div>
+<figcaption><b>그림 10.</b> gymnasium CartPole과 같은 물리식(오일러, dt = 0.02초)을 브라우저에서 돌린다. 규칙과 k를 바꾸면 무작위 시작 20번의 리턴이 바로 다시 계산된다. 시작 상태의 난수가 파이썬과 달라 숫자는 위 표와 조금 다를 수 있다.</figcaption>
+</figure>
+<h3 id="sec-9">무엇을 확인했나</h3>
+<ol>
+<li><b>정책 = obs → action 함수.</b> obs를 쓰기 시작하자 무작위보다 2배 버틴다.</li>
+<li><b>속도가 왜 필요한가.</b> 각도만 보면 이미 기운 뒤에 반응해 흔들림이 커진다(40.9). 각속도를 보면 넘어가는 <i>중</i>에 미리 반응한다(198.7). 둘 다 보면 500. 각도만 쓰는 정책은 <b>속도를 못 보는 부분 관측</b>과 같다(<a href="#s4">4장</a>).</li>
+<li><b>k를 손으로 바꾸는 게 튜닝.</b> k = 0.5, 0.1에서 매번 500. PPO는 이런 숫자 수만 개를 자동으로 찾는다(<a href="#s10">10장</a>).</li>
+<li><b>γ의 시야.</b> 500스텝을 버텨도 할인 리턴은 99.3에서 멈춘다. (1 − 0.99<sup>500</sup>) / (1 − 0.99) ≈ 99.3. γ = 0.99는 대략 100스텝 앞까지 본다(<a href="#s3">3장</a>).</li>
+</ol>
+<h3 id="sec-10">설계자가 정하는 곳은 환경 안에 있다</h3>
+<p>이번 코드에는 튜닝할 곳이 없다. 남이 만든 환경을 쓰기만 했으니까. 설계자가 정하는 값은 CartPole 환경 안에 이미 들어 있고, 엄지 버튼에서는 우리가 정해야 한다.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>설계 항목</th><th>CartPole에 정해진 값</th><th>🤖 엄지 버튼 (로드맵 카드)</th></tr></thead>
+<tbody>
+<tr><td>관측</td><td>위치·속도·각도·각속도</td><td>관절, 압력, 전류, 버튼 위치, 직전 행동</td></tr>
+<tr><td>행동</td><td>좌/우 (이산)</td><td>관절 목표 변화량 + 강성 (연속)</td></tr>
+<tr><td><b>보상</b></td><td>+1/스텝</td><td><code>r_reach −1.0/cm</code>, <code>r_press +2.0</code>, <code>r_click +10</code> … <b>가장 많이 튜닝</b></td></tr>
+<tr><td>종료</td><td>각도 > 12°, 위치 > ±2.4</td><td>클릭, SLIP, TIMEOUT</td></tr>
+<tr><td>시간 제한</td><td>500스텝</td><td>250스텝</td></tr>
+<tr><td>시작 상태</td><td>±0.05 무작위</td><td>시작 자세 ±15 mm</td></tr>
+<tr><td>물리</td><td>카트 1.0 kg, 막대 0.5 m, 힘 10 N, dt 0.02초</td><td>마찰, 작동력, 스트로크 + 랜덤화 범위</td></tr>
+</tbody></table></div>
+<p>CartPole 소스(<code>gymnasium/envs/classic_control/cartpole.py</code>)의 <code>__init__</code>에 물리값과 종료 기준, <code>step()</code>에 보상과 종료 판정, <code>reset()</code>에 시작 상태가 있다. Isaac Lab에서는 <code>_get_observations</code>, <code>_get_rewards</code>, <code>_get_dones</code>, <code>_reset_idx</code>가 같은 자리다(5장).</p>
+</section>
+
+<section>
+<h2 id="s10"><span class="num">10</span>🤖 사람은 어디에 관여하나</h2>
+<p>k는 <b>정책 안의</b> 숫자라서 RL이 자동으로 찾는다. 보상 설계·쉐이핑은 사람 몫이 맞지만 k와는 층이 다르다. k는 "어떻게 풀까", 보상은 "무엇을 잘한 걸로 칠까"다.</p>
+<figure>
+<svg aria-label="세 층. 맨 아래 정책 파라미터는 RL이 자동으로, 가운데 문제 설정 값은 사람과 자동 탐색이 함께, 맨 위 목표와 판단은 사람이 정한다" role="img" viewBox="0 0 720 250">
+<rect class="s-green" height="66" rx="12" width="680" x="20" y="16"></rect>
+<text class="bold" x="40" y="44">목표와 판단</text>
+<text class="small" x="40" y="66">무엇이 성공인가 · 하면 안 되는 것(과한 힘, 공구 파손) · 실기에서 정말 되는가</text>
+<text class="bold" style="fill:var(--green)" text-anchor="end" x="680" y="52">사람</text>
+<rect class="s-warm" height="66" rx="12" width="680" x="20" y="92"></rect>
+<text class="bold" x="40" y="120">문제 설정 값</text>
+<text class="small" x="40" y="142">보상 가중치(−1.0/cm, +10) · γ, lr · 랜덤화 범위 · 커리큘럼</text>
+<text class="bold" style="fill:var(--warm)" text-anchor="end" x="680" y="120">사람 + 자동 탐색</text>
+<text class="mut small" text-anchor="end" x="680" y="142">sweep · Eureka · LLM</text>
+<rect class="s-acc" height="66" rx="12" width="680" x="20" y="168"></rect>
+<text class="bold" x="40" y="196">정책 파라미터</text>
+<text class="small" x="40" y="218">k, 신경망 가중치 수만 개</text>
+<text class="bold" style="fill:var(--acc)" text-anchor="end" x="680" y="204">RL이 자동으로</text>
+</svg>
+<figcaption><b>그림 11.</b> 누가 무엇을 정하나. AI 시대에 바뀐 건 가운데 층이다. 보상 코드를 쓰고 결과를 보고 고쳐 다시 돌리는 반복은 LLM이 꽤 잘한다(Eureka: 29개 과제 중 83%에서 사람 보상보다 나음).</figcaption>
+</figure>
+<p>그래서 사람의 일은 <b>위아래 양 끝</b>으로 옮겨 간다.</p>
+<ul>
+<li><b>목표 정의</b>: "클릭"이 무엇이고 몇 N까지 눌러도 되는지. 공구·공정·고객 요구에서 나온다</li>
+<li><b>행동을 보고 판단</b>: 보상 곡선은 올랐는데 영상을 보면 버튼을 옆에서 문지르고 있다 → 보상 해킹을 알아채는 눈</li>
+<li><b>하드웨어와 안전</b>: V6 손끝 17.3 N, 연속 작업 발열, MCU 하드 한계</li>
+<li><b>실기 검증</b>: 시뮬에서 된 게 V6에서 되는지, 안 되면 시뮬의 무엇이 틀렸는지</li>
+</ul>
+<div class="callout green">숫자를 맞추는 일에서 <b>"무엇을 잘해야 하는지 정하고, 정말 잘하는지 확인하는 일"</b>로.</div>
+</section>
+
+<section>
+<h2 id="s11"><span class="num">11</span>전체 정리 &#x26; 다음 장 연결</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>개념</th><th>한 줄</th><th>🤖 엄지 버튼 문제 카드에서</th></tr></thead>
+<tbody>
+<tr><td>관측 / 상태</td><td>정책은 관측만, 학습 부품은 상태도</td><td>관측 칸, "(교사만)"</td></tr>
+<tr><td>에피소드</td><td>reset → … → terminated / truncated</td><td>종료·성공 판정 칸</td></tr>
+<tr><td>리턴, γ</td><td>할인된 보상 합, 시야 ≈ 1/(1−γ)</td><td>단계형 보상의 이유</td></tr>
+<tr><td>MDP</td><td>(S, A, P, R, γ), P는 물리 엔진</td><td>문제 카드 전체</td></tr>
+<tr><td>정책 / V / Q / A</td><td>선수 / 상황 점수 / 행동 점수 / 평소 대비</td><td>Actor는 실기로, Critic은 학습에만</td></tr>
+<tr><td>탐험</td><td>σ, 엔트로피, 병렬, 랜덤화</td><td>랜덤화·커리큘럼 칸</td></tr>
+</tbody></table></div>
+<div class="callout"><b>다음: 2장. 가치 기반에서 정책 기반으로.</b> Q-learning/DQN 개념 → 왜 로봇 손에는 정책 기반인가 → Policy Gradient → Actor-Critic. 실습에서는 Stable-Baselines3 PPO로 CartPole과 Pendulum을 <b>신경망이</b> 풀게 하고, 이 장의 규칙 정책과 비교한다.</div>
+</section>
+
+<section>
+<h2 id="quiz"><span class="num">?</span>확인 문제</h2>
+<p class="hint">답을 먼저 떠올려 본 뒤 펼쳐보자.</p>
+<details class="quiz">
+<summary><span class="qn">문제 1</span><span class="qt">CartPole 관측에서 속도 두 개(카트 속도, 각속도)를 빼면 어떤 문제가 되고, 어떻게 보완하나?</span></summary>
+<div class="ans"><p>마르코프가 깨진 부분 관측(POMDP)이 된다. 각도만 보는 정책이 41스텝에서 넘어진 것과 같은 이유다. 최근 몇 스텝의 관측을 쌓아 넣으면(frame stacking) 차이로 속도를 추정할 수 있다.</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">문제 2</span><span class="qt">γ = 0.9, 정책 50 Hz일 때 시야는 몇 초인가? 55스텝 뒤 클릭 +10은 지금 얼마로 보이나?</span></summary>
+<div class="ans"><p>1/(1−0.9) = 10스텝 = 0.2초. 10 × 0.9<sup>55</sup> ≈ 0.03. 클릭이 거의 안 보이니 엄지 버튼에는 너무 근시안이다. 0.99면 10 × 0.99<sup>55</sup> ≈ 5.8. (그림 3에서 확인)</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">문제 3</span><span class="qt">공구를 떨어뜨려 끝난 것과 250스텝이 다 돼서 끝난 것은 각각 무엇인가? 왜 구분하나?</span></summary>
+<div class="ans"><p>terminated와 truncated. 떨어뜨린 뒤엔 더 받을 보상이 없지만, 시간 초과는 "계속했으면 받았을 보상"이 남아 있다. 둘을 섞으면 critic이 "250스텝째는 원래 가치가 0"이라고 잘못 배운다. 자세한 처리는 3장 GAE에서.</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">문제 4</span><span class="qt">버튼 앞에서 어떤 행동의 Q = +3, 그 상황의 V = +5다. 보상이 플러스인데 이 행동의 확률은 올라가나?</span></summary>
+<div class="ans"><p>내려간다. A = 3 − 5 = −2. 평소보다 못한 행동이다. 기준은 "플러스냐"가 아니라 "평소보다 나으냐"다.</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">문제 5</span><span class="qt"><code>r_push</code>(공구가 손 안에서 돈 각도)는 실제 V6로 잴 수 없다. 보상에 써도 되나? 정책 관측에는?</span></summary>
+<div class="ans"><p>보상에는 써도 된다. 보상은 학습 때만 쓰고 시뮬은 정답을 안다. 정책 관측에는 넣으면 안 된다. 실기에서 그 값이 없으니까. 넣고 싶다면 교사 관측에만 넣고 학생이 압력·전류 이력에서 추정하게 한다.</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">문제 6</span><span class="qt">규칙 정책의 k와 <code>r_reach</code>의 −1.0/cm 중 PPO가 찾아 주는 것은?</span></summary>
+<div class="ans"><p>k. k는 정책 안의 숫자다. −1.0/cm는 "무엇을 잘한 걸로 칠지"를 정하는 문제 쪽 값이라 사람이 정한다(또는 Eureka 같은 바깥 루프로 탐색).</p></div>
+</details>
+</section>
+
+<section>
+<h2 id="qa"><span class="num">Q&#x26;A</span>질문 &#x26; 답변</h2>
+<div class="qa-tools">
+<p class="hint">공부하면서 직접 했던 질문들. 답을 먼저 떠올려 본 뒤 펼쳐보자.</p>
+<button id="toggleAll" type="button">모두 펼치기</button>
+</div>
+<details class="qa">
+<summary><span class="qn">Q1</span><span class="qt">세상의 진짜 상태와 관측으로 나누는 이유는? 학습에 영향이 있나? 관측만 넣어도 되지 않나?<span class="stage">01 · 에이전트와 환경</span></span></summary>
+<div class="ans"><ul>
+<li><b>정책에는 관측만 넣는 게 맞다.</b> 실기에는 관측밖에 없다.</li>
+<li>그래도 나누는 이유 ① 관측이 상태를 다 못 담으면 학습이 안 된다(POMDP). 속도가 없으면 다가가는 중인지 멀어지는 중인지 모른다. → <a href="#s4">그림 4</a></li>
+<li>② 보상은 학습 때만 쓰니 상태로 계산해도 된다. <code>r_push</code>는 실기로 못 재지만 시뮬은 안다.</li>
+<li>③ critic·교사는 학습 때만 쓰니 상태를 받아도 된다. 로드맵의 "(교사만)". → <a href="#s7">그림 7</a></li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q2</span><span class="qt">행동이 잘게 계속 나오면, 매 스텝 새 관측과 보상이 생기고 그걸 누적하고 정책을 고치는 건가? 한 사이클을 종료까지 예시로 정리해 줘<span class="stage">02 · 에피소드</span></span></summary>
+<div class="ans"><ul>
+<li>맞다. 정책이 50 Hz로 행동을 내고, 매 스텝 새 관측과 보상이 나온다. → <a href="#s5">그림 5</a></li>
+<li>다만 보상은 바로 합치지 않고 <b>(o, a, r)을 저장</b>했다가 스텝별 리턴·advantage를 계산한다.</li>
+<li><b>정책은 매 스텝 고치지 않는다.</b> 4096 환경 × 24스텝을 정책 고정으로 모은 뒤 한꺼번에 고친다. 에피소드 ≠ 업데이트. → <a href="#s6">그림 6</a></li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q3</span><span class="qt">보상 계산, critic처럼 실기로 안 나가는 것들은 상태값으로 진짜 점수를 알아내서 평가하는 건가?<span class="stage">02 · 에피소드</span></span></summary>
+<div class="ans"><ul>
+<li>맞다. critic에 상태를 주는 방식을 <b>asymmetric actor-critic</b>이라고 한다.</li>
+<li>단서 ① 보상은 "진짜 점수"가 아니라 <b>"우리가 정한 점수"</b>다. 식이 틀리면 엉뚱한 걸 잘하게 된다(보상 해킹, 4장).</li>
+<li>단서 ② 실기 성공 판정은 관측으로 만들어야 한다. 로드맵 원칙 "시뮬 성공 판정은 실기 판정기와 같은 신호(압력 패턴, 클릭 힘 변화, 전류)로".</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q4</span><span class="qt">아타리 문제처럼 과거 정보를 조금 쌓아서 상태를 추정하는 건가?<span class="stage">04 · MDP</span></span></summary>
+<div class="ans"><ul>
+<li>같다. DQN(2015) 아타리는 화면 한 장으로 공의 속도를 몰라 <b>최근 4프레임을 쌓아</b> 넣었다(frame stacking).</li>
+<li>로봇은 관절 속도를 직접 넣을 수 있어 이력이 짧아도 되는 경우가 많다.</li>
+<li>마찰·질량 같은 숨은 물리값은 긴 이력 + 학습된 추정기로 푼다(HORA의 adaptation module, 6장).</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q5</span><span class="qt">V는 상황 점수, Q는 이 상황에서 이 정책으로 행동했을 때 평균 점수? Advantage는 무엇을 기준으로, 상태 기반으로 평가하나?<span class="stage">07 · 정책과 가치함수</span></span></summary>
+<div class="ans"><ul>
+<li>V는 맞다. Q는 "정책대로"가 아니라 <b>"이 행동 하나를 먼저 하고 그다음부터 정책대로"</b>다.</li>
+<li>Advantage는 "지금 vs 나중"이 아니라 <b>"이 행동 vs 여기서 평소 하던 행동"</b>. 위기 상황에서 덜 나빠지는 행동도 A > 0.</li>
+<li>평가 대상은 정책 전체가 아니라 <b>그 스텝의 행동 하나</b>.</li>
+<li>PPO는 critic V로 A ≈ r + γV(s′) − V(s)를 계산한다. V에 상태를 넣으면 advantage도 정답 정보 기반이 된다. → <a href="#s7">7장</a></li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q6</span><span class="qt">VS Code에서 실행하니 <code>ModuleNotFoundError: No module named 'gymnasium'</code><span class="stage">09 · 실습</span></span></summary>
+<div class="ans"><ul>
+<li>VS Code가 시스템 파이썬(<code>/usr/bin/python3.12</code>)으로 실행했다. gymnasium은 <code>rl-study</code> 환경에만 있다.</li>
+<li><code>Ctrl+Shift+P</code> → <code>Python: Select Interpreter</code> → <code>rl-study</code>. 터미널에서는 <code>which python</code>으로 확인.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q7</span><span class="qt">코드를 한 줄씩 설명해 줘. 실제로 RL을 설계할 때 직접 작성·튜닝해야 하는 곳은?<span class="stage">09 · 실습</span></span></summary>
+<div class="ans"><ul>
+<li>핵심 줄: <code>reset()</code> = 에피소드 시작, <code>action = …</code> = 정책 자리, <code>step()</code> = 루프 한 바퀴, <code>obs = next_obs</code> = 빼먹으면 옛날 관측만 봄.</li>
+<li>이 코드엔 튜닝할 곳이 없다. 설계자가 정하는 값(관측, 행동, 보상, 종료, 시간 제한, 시작 분포, 물리)은 <b>환경 안에</b> 있다. → <a href="#s9">9장 표</a></li>
+<li>여기에 학습 하이퍼파라미터(γ, lr, rollout 길이, entropy)가 더해진다(2·3장).</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q8</span><span class="qt"><code>obs</code>가 의미하는 게 뭐고, 과제 1번은 뭘 해 보라는 건가?<span class="stage">09 · 실습</span></span></summary>
+<div class="ans"><ul>
+<li><code>obs</code> = observation. <code>[카트 위치, 카트 속도, 막대 각도, 막대 각속도]</code>, 각도 + = 오른쪽으로 기울어짐.</li>
+<li>과제 1: 무작위 대신 obs를 보고 행동을 정하는 <b>규칙 정책</b> 만들기. 빗자루가 오른쪽으로 기울면 손을 오른쪽으로.</li>
+<li>목적: 정책 = obs → action 함수임을 체감하고, RL은 이 if문을 신경망이 찾게 하는 것임을 보기.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q9</span><span class="qt">관측값으로 분기해서 행동하는 건 단순한 "마르코프 분기"가 만들어진 건가?<span class="stage">09 · 실습</span></span></summary>
+<div class="ans"><ul>
+<li>현재 관측만 보고 행동 → <b>마르코프 정책</b>(memoryless). 같은 obs면 같은 행동 → <b>결정적 정책</b>. 기준을 넘으면 확 바꾸는 방식 → 제어 분야의 <b>bang-bang 제어</b>.</li>
+<li>결과: 무작위 17/17/37 → 각도 규칙 41/51/35. 각도만 보면 기운 뒤에 반응해서 500에 못 미친다.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q10</span><span class="qt">AI 시대에 RL에서 사람이 관여할 곳은 k 같은 값을 정하는 것인가? 보상 설계·쉐이핑이 여기에 속하나?<span class="stage">10 · 사람의 역할</span></span></summary>
+<div class="ans"><ul>
+<li><b>k는 RL이 찾는다.</b> 정책 안의 숫자다.</li>
+<li>보상 설계·쉐이핑은 사람 몫이 맞지만 층이 다르다. k = "어떻게 풀까", 보상 = "무엇을 잘한 걸로 칠까". → <a href="#s10">그림 11</a></li>
+<li>보상 코드 작성·반복 수정은 LLM이 잘한다(Eureka). 사람은 목표 정의, 영상 보고 보상 해킹 알아채기, 하드웨어·안전, 실기 검증으로 옮겨 간다.</li>
+</ul></div>
+</details>
+</section>
+
+<section>
+<h2 id="check"><span class="num">✓</span>헷갈렸던 개념</h2>
+<ul class="checklist">
+<li><b>관측 ≠ 상태</b>: 정책은 관측만, 보상·critic·교사는 상태도 된다. <span class="ref">Q1 · Q3</span></li>
+<li><b>보상은 저장했다가 계산</b>: 스텝마다 (o, a, r) 저장 → 스텝별 리턴·advantage. <span class="ref">Q2</span></li>
+<li><b>에피소드 ≠ 업데이트</b>: rollout은 정책 고정, 업데이트는 수천 에피소드 조각으로. <span class="ref">Q2</span></li>
+<li><b>마르코프는 관측의 성질</b>: 각도 사진 한 장 vs (각도, 각속도). 부족하면 frame stacking. <span class="ref">Q4</span></li>
+<li><b>Q는 "이 행동 먼저"</b>, Advantage는 "평소 대비". 플러스 보상이어도 A &#x3C; 0일 수 있다. <span class="ref">Q5</span></li>
+<li><b>설계자가 정하는 곳 = 환경</b>: 관측·행동·보상·종료·시작 분포·물리. <span class="ref">Q7</span></li>
+<li><b>규칙 정책</b>: 마르코프 + 결정적 정책, bang-bang 제어. <span class="ref">Q9</span></li>
+<li><b>k vs 보상 가중치</b>: 정책 파라미터(RL이 찾음) vs 문제 설정 값(사람이 정함). <span class="ref">Q10</span></li>
+</ul>
+</section>
+<section>
+<h2 id="refs"><span class="num">📚</span>더 읽을거리</h2>
+<ul class="refs">
+<li>Sutton &#x26; Barto, <i>Reinforcement Learning: An Introduction</i> (2nd ed.), Ch. 1, Ch. 3 (Finite MDPs)</li>
+<li>HuggingFace Deep RL Course, Unit 1</li>
+<li>OpenAI Spinning Up, Part 1: Key Concepts in RL</li>
+<li>Barto, Sutton, Anderson, "Neuronlike Adaptive Elements That Can Solve Difficult Learning Control Problems" (1983): CartPole의 원형</li>
+<li>Mnih et al., "Human-level control through deep reinforcement learning" (Nature 2015): DQN, frame stacking</li>
+<li>Pinto et al., "Asymmetric Actor Critic for Image-Based Robot Learning" (RSS 2018)</li>
+<li>Pardo et al., "Time Limits in Reinforcement Learning" (ICML 2018): truncation vs termination</li>
+<li>Qi et al., "In-Hand Object Rotation via Rapid Motor Adaptation" (CoRL 2022, arXiv 2210.04887): HORA</li>
+<li>Ma et al., "Eureka: Human-Level Reward Design via Coding Large Language Models" (ICLR 2024, arXiv 2310.12931)</li>
+<li>Gymnasium 문서, CartPole-v1</li>
+</ul>
+</section>
+
+<script>
+(function () {
+  const NS = 'http://www.w3.org/2000/svg';
+  function el(parent, tag, attrs, text) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text !== undefined) e.textContent = text;
+    parent.appendChild(e);
+    return e;
+  }
+  function clear(svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); }
+  const f2 = x => x.toFixed(2), f3 = x => x.toFixed(3);
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function showTip(tip, fig, evt, html) {
+    const r = fig.getBoundingClientRect();
+    tip.innerHTML = html; tip.style.display = 'block';
+    let x = evt.clientX - r.left + 12, y = evt.clientY - r.top + 12;
+    if (x + tip.offsetWidth > r.width) x = evt.clientX - r.left - tip.offsetWidth - 12;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  }
+
+  // ---------- Figure 3: discount ----------
+  const dSvg = document.getElementById('discSvg'), dG = document.getElementById('discG');
+  const dGOut = document.getElementById('discGOut'), dRead = document.getElementById('discRead');
+  function drawDisc() {
+    const g = +dG.value; dGOut.textContent = f2(g);
+    clear(dSvg);
+    const K = 60, X0 = 50, X1 = 700, Y0 = 20, Y1 = 180, bw = (X1 - X0) / (K + 1);
+    el(dSvg, 'line', { x1: X0, y1: Y1, x2: X1, y2: Y1, class: 'axis' });
+    [0, 0.5, 1].forEach(v => {
+      el(dSvg, 'line', { x1: X0, y1: Y1 - (Y1 - Y0) * v, x2: X1, y2: Y1 - (Y1 - Y0) * v, class: 'grid' });
+      el(dSvg, 'text', { x: X0 - 6, y: Y1 - (Y1 - Y0) * v + 4, 'text-anchor': 'end', class: 'mut small mono' }, v.toFixed(1));
+    });
+    for (let k = 0; k <= K; k++) {
+      const w = Math.pow(g, k), h = (Y1 - Y0) * w;
+      el(dSvg, 'rect', { x: X0 + k * bw + 1, y: Y1 - h, width: Math.max(bw - 2, 1), height: h, fill: k === 20 ? 'var(--s2)' : 'var(--s1)', 'fill-opacity': 0.85, rx: 1 });
+    }
+    [0, 10, 20, 30, 40, 50, 60].forEach(k => el(dSvg, 'text', { x: X0 + k * bw + bw / 2, y: Y1 + 16, 'text-anchor': 'middle', class: 'mut small mono' }, k));
+    el(dSvg, 'text', { x: X1, y: Y1 + 34, 'text-anchor': 'end', class: 'mut small' }, 'k스텝 뒤 →');
+    const H = 1 / (1 - g);
+    if (H <= K + 1) {
+      const hx = X0 + H * bw;
+      el(dSvg, 'line', { x1: hx, y1: Y0, x2: hx, y2: Y1, stroke: 'var(--warm)', 'stroke-dasharray': '5 4', 'stroke-width': 1.5 });
+      el(dSvg, 'text', { x: hx + 6, y: Y0 + 12, class: 'small', style: 'fill:var(--warm)' }, '유효 시야 ' + H.toFixed(1) + '스텝');
+    } else {
+      el(dSvg, 'text', { x: X1, y: Y0 + 12, 'text-anchor': 'end', class: 'small', style: 'fill:var(--warm)' }, '유효 시야 ' + H.toFixed(0) + '스텝 → (화면 밖)');
+    }
+    el(dSvg, 'text', { x: X0 + 20 * bw + bw / 2, y: Y1 - (Y1 - Y0) * Math.pow(g, 20) - 6, 'text-anchor': 'middle', class: 'small' }, 'k=20');
+    dRead.textContent = '20스텝 뒤 클릭 +10의 현재 가치 = 10 × γ²⁰ = ' + (10 * Math.pow(g, 20)).toFixed(g < 0.6 ? 5 : 2)
+      + ' · 유효 시야 1/(1−γ) = ' + H.toFixed(1) + '스텝 (50 Hz면 ' + (H / 50).toFixed(2) + '초)';
+  }
+  dG.addEventListener('input', drawDisc);
+  document.querySelectorAll('[data-g]').forEach(b => b.addEventListener('click', () => { dG.value = b.dataset.g; drawDisc(); }));
+  drawDisc();
+
+  // ---------- Figure 5: thumb-button episode ----------
+  const eSvg = document.getElementById('epSvg'), eT = document.getElementById('epT');
+  const eTOut = document.getElementById('epTOut'), eRead = document.getElementById('epRead');
+  const eTip = document.getElementById('epTip'), eFig = eSvg.parentNode;
+  const EP = [];
+  (function buildEp() {
+    let G = 0;
+    for (let t = 1; t <= 55; t++) {
+      let d, depth, r, phase;
+      if (t <= 40) { d = Math.max(2.0 - 0.05 * t, 0); depth = 0; r = -1.0 * d; phase = '접근'; }
+      else { d = 0; depth = 3 * (t - 40) / 15; r = 2.0 * (0.2 / 3); phase = '누름'; }
+      if (t === 55) { r += 10; phase = '클릭!'; }
+      G += r;
+      EP.push({ t, d, depth, r, G, phase });
+    }
+  })();
+  function drawEp() {
+    const T = +eT.value; eTOut.textContent = T;
+    clear(eSvg);
+    const X0 = 50, X1 = 700, Y0 = 20, Y1 = 220, ymin = -2, ymax = 1, bw = (X1 - X0) / 55;
+    const y = v => Y0 + (ymax - v) / (ymax - ymin) * (Y1 - Y0);
+    [-2, -1, 0, 1].forEach(v => {
+      el(eSvg, 'line', { x1: X0, y1: y(v), x2: X1, y2: y(v), class: v === 0 ? 'axis' : 'grid' });
+      el(eSvg, 'text', { x: X0 - 6, y: y(v) + 4, 'text-anchor': 'end', class: 'mut small mono' }, (v > 0 ? '+' : '') + v);
+    });
+    el(eSvg, 'rect', { x: X0 + 40 * bw, y: Y0, width: 15 * bw, height: Y1 - Y0, fill: 'var(--green-soft)', opacity: 0.6 });
+    el(eSvg, 'text', { x: X0 + 20 * bw, y: Y1 + 16, 'text-anchor': 'middle', class: 'mut small' }, '접근: r = −거리');
+    el(eSvg, 'text', { x: X0 + 47.5 * bw, y: Y1 + 16, 'text-anchor': 'middle', class: 'mut small' }, '누름: r = +Δ');
+    EP.forEach(s => {
+      const x = X0 + (s.t - 1) * bw + 1, w = Math.max(bw - 2, 1);
+      const shown = s.t <= T;
+      const v = Math.min(s.r, ymax), top = Math.min(y(v), y(0)), h = Math.max(Math.abs(y(v) - y(0)), 1);
+      const color = s.t === 55 ? 'var(--s2)' : (s.r < 0 ? 'var(--s1)' : 'var(--s3)');
+      const bar = el(eSvg, 'rect', { x, y: top, width: w, height: h, rx: 1, fill: color, 'fill-opacity': shown ? 0.9 : 0.15 });
+      const hit = el(eSvg, 'rect', { x: x - 1, y: Y0, width: bw, height: Y1 - Y0, fill: 'transparent' });
+      hit.addEventListener('mousemove', e => showTip(eTip, eFig, e, 't = <b>' + s.t + '</b> · ' + s.phase + '<br>거리 <b>' + s.d.toFixed(2) + ' cm</b> · 눌림 <b>' + s.depth.toFixed(1) + ' mm</b><br>r = <b>' + (s.r >= 0 ? '+' : '') + s.r.toFixed(2) + '</b>'));
+      hit.addEventListener('mouseleave', () => { eTip.style.display = 'none'; });
+      hit.addEventListener('click', () => { eT.value = s.t; drawEp(); });
+    });
+    el(eSvg, 'text', { x: X0 + 54.5 * bw, y: y(ymax) - 4, 'text-anchor': 'end', class: 'small bold', style: 'fill:var(--fg)' }, '+10.13 ↑ (축 밖)');
+    if (T > 0) el(eSvg, 'line', { x1: X0 + T * bw, y1: Y0, x2: X0 + T * bw, y2: Y1, stroke: 'var(--warm)', 'stroke-width': 1.5, 'stroke-dasharray': '4 3' });
+    if (T === 0) { eRead.textContent = 't = 0 · reset() → 엄지–버튼 2.00 cm, 눌림 0 mm · 아직 보상 없음'; return; }
+    const s = EP[T - 1];
+    let Gd = 0; for (let k = 0; k < T; k++) Gd += Math.pow(0.99, k) * EP[k].r;
+    eRead.textContent = 't = ' + T + ' (' + (T * 0.02).toFixed(2) + '초) · ' + s.phase + ' · 거리 ' + s.d.toFixed(2) + ' cm · 눌림 ' + s.depth.toFixed(1) + ' mm · r = ' + (s.r >= 0 ? '+' : '') + s.r.toFixed(2)
+      + ' · 지금까지 합 ' + s.G.toFixed(2) + ' · 할인 합(γ=0.99) ' + Gd.toFixed(2) + (T === 55 ? ' · terminated' : '');
+  }
+  eT.addEventListener('input', drawEp);
+  let epTimer = null;
+  document.getElementById('epPlay').addEventListener('click', () => {
+    if (epTimer) { clearInterval(epTimer); epTimer = null; return; }
+    if (+eT.value >= 55) eT.value = 0;
+    epTimer = setInterval(() => {
+      eT.value = +eT.value + 1; drawEp();
+      if (+eT.value >= 55) { clearInterval(epTimer); epTimer = null; }
+    }, 80);
+  });
+  drawEp();
+
+  // ---------- Figure 8: sigma ----------
+  const sSvg = document.getElementById('sigSvg'), sS = document.getElementById('sigS'), sOut = document.getElementById('sigOut');
+  const NOISE = (function () { const rnd = mulberry32(7), out = []; for (let i = 0; i < 40; i++) { const u = rnd() || 1e-9, v = rnd(); out.push(Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v)); } return out; })();
+  function drawSig() {
+    const s = +sS.value; sOut.textContent = f2(s);
+    clear(sSvg);
+    const X0 = 40, X1 = 680, xmin = -2.5, xmax = 2.5, Yb = 130, Yt = 20;
+    const x = v => X0 + (v - xmin) / (xmax - xmin) * (X1 - X0);
+    const mu = 0.3, lo = 0.15, hi = 0.45;
+    el(sSvg, 'rect', { x: x(lo), y: Yt, width: x(hi) - x(lo), height: 175 - Yt, fill: 'var(--green-soft)' });
+    el(sSvg, 'text', { x: x(hi) + 6, y: Yt + 12, class: 'small', style: 'fill:var(--green)' }, '버튼 정중앙 누르기');
+    el(sSvg, 'line', { x1: X0, y1: Yb, x2: X1, y2: Yb, class: 'axis' });
+    const peak = 1 / (s * Math.sqrt(2 * Math.PI));
+    const hScale = (Yb - Yt) / Math.max(peak, 1 / (0.25 * Math.sqrt(2 * Math.PI)));
+    let d = '';
+    for (let i = 0; i <= 200; i++) {
+      const v = xmin + (xmax - xmin) * i / 200;
+      const p = Math.exp(-0.5 * Math.pow((v - mu) / s, 2)) / (s * Math.sqrt(2 * Math.PI));
+      d += (i ? 'L' : 'M') + x(v).toFixed(1) + ' ' + (Yb - p * hScale).toFixed(1);
+    }
+    el(sSvg, 'path', { d, fill: 'none', stroke: 'var(--s1)', 'stroke-width': 2 });
+    el(sSvg, 'line', { x1: x(mu), y1: Yt, x2: x(mu), y2: Yb, stroke: 'var(--muted)', 'stroke-dasharray': '4 3' });
+    el(sSvg, 'text', { x: x(mu), y: Yt - 4, 'text-anchor': 'middle', class: 'mut small' }, 'μ');
+    let hit = 0;
+    NOISE.forEach((n, i) => {
+      const a = mu + s * n, inside = a >= lo && a <= hi;
+      if (inside) hit++;
+      if (a < xmin || a > xmax) return;
+      el(sSvg, 'circle', { cx: x(a), cy: 150 + (i % 4) * 7, r: 4, fill: inside ? 'var(--s3)' : 'var(--s1)', stroke: 'var(--surface)', 'stroke-width': 2 });
+    });
+    el(sSvg, 'text', { x: X0, y: 205, class: 'mut small' }, '뽑은 행동 40개 중 ' + hit + '개가 초록 띠 안 · 나머지는 다른 곳을 시도 (탐험)');
+    el(sSvg, 'text', { x: X1, y: 205, 'text-anchor': 'end', class: 'mut small' }, '행동 a (예: 엄지 목표 위치) →');
+  }
+  sS.addEventListener('input', drawSig);
+  document.querySelectorAll('[data-s]').forEach(b => b.addEventListener('click', () => { sS.value = b.dataset.s; drawSig(); }));
+  drawSig();
+
+  // ---------- Figure 9: results ----------
+  const RES = [
+    ['무작위', 22.1, 11, 39, 19.7],
+    ['각도만', 40.9, 25, 52, 33.5],
+    ['각속도만', 198.7, 138, 278, 85.5],
+    ['각도 + 1.0 × 각속도', 491.7, 334, 500, 99.2],
+    ['각도 + 0.5 × 각속도', 500.0, 500, 500, 99.3],
+    ['각도 + 0.1 × 각속도', 500.0, 500, 500, 99.3],
+  ];
+  const rSvg = document.getElementById('resSvg'), rTip = document.getElementById('resTip'), rFig = rSvg.parentNode;
+  (function drawRes() {
+    const X0 = 170, X1 = 660, Y0 = 10, rowH = 38, bh = 16, x = v => X0 + v / 500 * (X1 - X0);
+    [0, 100, 200, 300, 400, 500].forEach(v => {
+      el(rSvg, 'line', { x1: x(v), y1: Y0, x2: x(v), y2: Y0 + rowH * RES.length, class: v === 0 ? 'axis' : 'grid' });
+      el(rSvg, 'text', { x: x(v), y: Y0 + rowH * RES.length + 18, 'text-anchor': 'middle', class: 'mut small mono' }, v);
+    });
+    el(rSvg, 'text', { x: X1, y: Y0 + rowH * RES.length + 36, 'text-anchor': 'end', class: 'mut small' }, '리턴 = 버틴 스텝 수 (최대 500)');
+    RES.forEach((r, i) => {
+      const cy = Y0 + rowH * i + rowH / 2;
+      el(rSvg, 'text', { x: X0 - 10, y: cy + 4, 'text-anchor': 'end', class: 'small' }, r[0]);
+      el(rSvg, 'rect', { x: X0, y: cy - bh / 2, width: Math.max(x(r[1]) - X0, 1), height: bh, rx: 4, fill: 'var(--s1)' });
+      if (r[2] !== r[3]) {
+        el(rSvg, 'line', { x1: x(r[2]), y1: cy - bh / 2 - 5, x2: x(r[3]), y2: cy - bh / 2 - 5, stroke: 'var(--muted)', 'stroke-width': 2 });
+        [r[2], r[3]].forEach(v => el(rSvg, 'line', { x1: x(v), y1: cy - bh / 2 - 9, x2: x(v), y2: cy - bh / 2 - 1, stroke: 'var(--muted)', 'stroke-width': 2 }));
+      }
+      el(rSvg, 'text', { x: x(r[1]) + 6, y: cy + 4, class: 'small mono' }, r[1].toFixed(1));
+      const hit = el(rSvg, 'rect', { x: 0, y: cy - rowH / 2, width: 720, height: rowH, fill: 'transparent' });
+      hit.addEventListener('mousemove', e => showTip(rTip, rFig, e, r[0] + '<br>평균 <b>' + r[1].toFixed(1) + '</b> · 최소 <b>' + r[2] + '</b> · 최대 <b>' + r[3] + '</b><br>할인 리턴(γ=0.99) <b>' + r[4].toFixed(1) + '</b>'));
+      hit.addEventListener('mouseleave', () => { rTip.style.display = 'none'; });
+    });
+  })();
+
+  // ---------- Figure 10: browser CartPole ----------
+  const CP = { g: 9.8, mc: 1.0, mp: 0.1, l: 0.5, F: 10.0, tau: 0.02, thMax: 12 * 2 * Math.PI / 360, xMax: 2.4 };
+  function cpStep(s, a) {
+    let [x, xd, th, thd] = s;
+    const force = a === 1 ? CP.F : -CP.F, ct = Math.cos(th), st = Math.sin(th), M = CP.mc + CP.mp, pml = CP.mp * CP.l;
+    const temp = (force + pml * thd * thd * st) / M;
+    const thacc = (CP.g * st - ct * temp) / (CP.l * (4 / 3 - CP.mp * ct * ct / M));
+    const xacc = temp - pml * thacc * ct / M;
+    x += CP.tau * xd; xd += CP.tau * xacc; th += CP.tau * thd; thd += CP.tau * thacc;
+    return [x, xd, th, thd];
+  }
+  let rule = 'mix';
+  const cK = document.getElementById('cpK'), cKOut = document.getElementById('cpKOut'), cRead = document.getElementById('cpRead');
+  function act(o, rnd) {
+    const k = +cK.value;
+    if (rule === 'rand') return rnd() < 0.5 ? 0 : 1;
+    if (rule === 'ang') return o[2] > 0 ? 1 : 0;
+    if (rule === 'vel') return o[3] > 0 ? 1 : 0;
+    return o[2] + k * o[3] > 0 ? 1 : 0;
+  }
+  function runEp(seed, record) {
+    const rnd = mulberry32(1000 + seed);
+    let s = [0, 0, 0, 0].map(() => (rnd() - 0.5) * 0.1), G = 0, traj = record ? [s] : null;
+    for (let t = 0; t < 500; t++) {
+      s = cpStep(s, act(s, rnd)); G += 1;
+      if (record) traj.push(s);
+      if (Math.abs(s[0]) > CP.xMax || Math.abs(s[2]) > CP.thMax) return { G, traj, end: 'terminated' };
+    }
+    return { G, traj, end: 'truncated' };
+  }
+  const cSvg = document.getElementById('cpSvg');
+  function drawCart(s, label) {
+    clear(cSvg);
+    const X0 = 40, X1 = 680, xs = v => X0 + (v + CP.xMax) / (2 * CP.xMax) * (X1 - X0), Yg = 160;
+    el(cSvg, 'line', { x1: X0, y1: Yg, x2: X1, y2: Yg, class: 'axis' });
+    [-CP.xMax, CP.xMax].forEach(v => el(cSvg, 'line', { x1: xs(v), y1: Yg - 8, x2: xs(v), y2: Yg + 8, stroke: 'var(--red)', 'stroke-width': 2 }));
+    el(cSvg, 'text', { x: xs(-CP.xMax), y: Yg + 24, 'text-anchor': 'middle', class: 'mut small mono' }, '−2.4');
+    el(cSvg, 'text', { x: xs(CP.xMax), y: Yg + 24, 'text-anchor': 'middle', class: 'mut small mono' }, '+2.4');
+    const cx = xs(s[0]), len = 110;
+    el(cSvg, 'rect', { x: cx - 30, y: Yg - 26, width: 60, height: 22, rx: 4, class: 's-acc' });
+    const tilt = Math.abs(s[2]) > CP.thMax * 0.8;
+    el(cSvg, 'line', { x1: cx, y1: Yg - 26, x2: cx + len * Math.sin(s[2]), y2: Yg - 26 - len * Math.cos(s[2]), stroke: tilt ? 'var(--red)' : 'var(--fg)', 'stroke-width': 5, 'stroke-linecap': 'round' });
+    el(cSvg, 'circle', { cx, cy: Yg - 26, r: 4, fill: 'var(--muted)' });
+    el(cSvg, 'text', { x: X0, y: 18, class: 'mut small mono' }, label);
+  }
+  function evalRule() {
+    cKOut.textContent = f2(+cK.value);
+    const Gs = []; for (let i = 0; i < 20; i++) Gs.push(runEp(i, false).G);
+    const mean = Gs.reduce((a, b) => a + b, 0) / Gs.length;
+    const name = { rand: '무작위', ang: '각도만', vel: '각속도만', mix: '각도 + ' + f2(+cK.value) + ' × 각속도' }[rule];
+    cRead.textContent = name + ' · 20 에피소드 평균 ' + mean.toFixed(1) + ' · 최소 ' + Math.min(...Gs) + ' · 최대 ' + Math.max(...Gs) + ' · 500 도달 ' + Gs.filter(g => g === 500).length + '/20';
+    cK.disabled = rule !== 'mix';
+  }
+  document.querySelectorAll('[data-rule]').forEach(b => b.addEventListener('click', () => {
+    rule = b.dataset.rule;
+    document.querySelectorAll('[data-rule]').forEach(x => x.classList.toggle('on', x === b));
+    stopAnim(); evalRule(); drawCart([0, 0, 0, 0], 'ready');
+  }));
+  cK.addEventListener('input', () => { stopAnim(); evalRule(); });
+  let anim = null;
+  function stopAnim() { if (anim) { cancelAnimationFrame(anim); anim = null; } }
+  document.getElementById('cpPlay').addEventListener('click', () => {
+    stopAnim();
+    const ep = runEp(0, true); let i = 0, last = 0;
+    function frame(ts) {
+      if (ts - last >= 20) { last = ts; i++; }
+      const s = ep.traj[Math.min(i, ep.traj.length - 1)];
+      drawCart(s, 't = ' + Math.min(i, ep.G) + ' / 리턴 ' + ep.G + (i >= ep.traj.length - 1 ? ' · ' + ep.end : ''));
+      if (i < ep.traj.length - 1) anim = requestAnimationFrame(frame); else anim = null;
+    }
+    anim = requestAnimationFrame(frame);
+  });
+  evalRule(); drawCart([0, 0, 0, 0], 'ready');
+
+  // ---------- Q&A toggle ----------
+  const toggle = document.getElementById('toggleAll');
+  toggle.addEventListener('click', () => {
+    const all = document.querySelectorAll('details.qa');
+    const open = Array.from(all).some(d => !d.open);
+    all.forEach(d => { d.open = open; });
+    toggle.textContent = open ? '모두 접기' : '모두 펼치기';
+  });
+})();
+</script>
+</div>
+<div class="notes-editor" hidden data-path="content/study/robot-hand-and-rl-chapter-1/index.ko.md" data-notes data-pagefind-ignore data-astro-cid-krmc5xkp><button type="button" class="ne-open" data-astro-cid-krmc5xkp>내 생각 쓰기</button><form class="ne-form" hidden data-astro-cid-krmc5xkp><textarea rows="8" aria-label="내 생각 (markdown)" placeholder="markdown 으로 쓰기" data-astro-cid-krmc5xkp></textarea><div class="ne-actions" data-astro-cid-krmc5xkp><button type="submit" data-astro-cid-krmc5xkp>저장</button><button type="button" class="ne-delete" data-astro-cid-krmc5xkp>지우기</button><button type="button" class="ne-cancel" data-astro-cid-krmc5xkp>취소</button><span class="ne-status" role="status" data-astro-cid-krmc5xkp></span></div></form></div><div class="post-admin" hidden data-dir="content/study/robot-hand-and-rl-chapter-1" data-lang="ko" data-incoming="[]" data-relations="[]" data-pagefind-ignore data-astro-cid-krmc5xkp></div></div><nav class="toc" aria-labelledby="toc-h" data-pagefind-ignore data-astro-cid-krmc5xkp><h2 id="toc-h" data-astro-cid-krmc5xkp>목차</h2><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#s1" data-astro-cid-krmc5xkp>01 에이전트와 환경</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s2" data-astro-cid-krmc5xkp>02 에피소드와 종료</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s3" data-astro-cid-krmc5xkp>03 리턴과 할인율 γ</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s4" data-astro-cid-krmc5xkp>04 MDP와 마르코프 성질</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-1" data-astro-cid-krmc5xkp>마르코프 성질: 지금만 알면 과거는 필요 없다</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s5" data-astro-cid-krmc5xkp>05 🤖 엄지 버튼 에피소드 따라가기</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s6" data-astro-cid-krmc5xkp>06 학습 루프: 에피소드 ≠ 업데이트</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s7" data-astro-cid-krmc5xkp>07 정책, 가치함수, Advantage</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-2" data-astro-cid-krmc5xkp>정책 π: 이 상황에서 무엇을 할까</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-3" data-astro-cid-krmc5xkp>V, Q, Advantage</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s8" data-astro-cid-krmc5xkp>08 탐험과 활용</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s9" data-astro-cid-krmc5xkp>09 🤖 실습: CartPole</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-4" data-astro-cid-krmc5xkp>환경 준비</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-5" data-astro-cid-krmc5xkp>CartPole</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-6" data-astro-cid-krmc5xkp>코드 1: 루프 ( cartpole_loop.py )</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-7" data-astro-cid-krmc5xkp>코드 2: 규칙 정책 ( rule_policies.py )</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-8" data-astro-cid-krmc5xkp>직접 돌려 보기: 브라우저 CartPole</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-9" data-astro-cid-krmc5xkp>무엇을 확인했나</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-10" data-astro-cid-krmc5xkp>설계자가 정하는 곳은 환경 안에 있다</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s10" data-astro-cid-krmc5xkp>10 🤖 사람은 어디에 관여하나</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s11" data-astro-cid-krmc5xkp>11 전체 정리 &amp;#x26; 다음 장 연결</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#quiz" data-astro-cid-krmc5xkp>? 확인 문제</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#qa" data-astro-cid-krmc5xkp>Q&amp;#x26;A 질문 &amp;#x26; 답변</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#check" data-astro-cid-krmc5xkp>✓ 헷갈렸던 개념</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#refs" data-astro-cid-krmc5xkp>📚 더 읽을거리</a></li></ol></nav></div></article><aside class="after wrap" data-pagefind-ignore data-astro-cid-krmc5xkp><section aria-labelledby="related-h" data-astro-cid-krmc5xkp><h2 id="related-h" data-astro-cid-krmc5xkp>같은 태그의 글</h2><article class="row" data-type="paper" data-astro-cid-gc2g3jd6><div class="meta" data-astro-cid-gc2g3jd6><span class="type" data-astro-cid-gc2g3jd6>논문</span><time datetime="2026-11-16" data-astro-cid-gc2g3jd6>2026년 11월 16일</time><span class="pending" data-astro-cid-gc2g3jd6>AI 정리, 검수 전</span></div><div class="body" data-astro-cid-gc2g3jd6><h3 class="title" data-astro-cid-gc2g3jd6="true"><a href="/ko/papers/exrl-sample-efficient-online-adaptation-of/" data-astro-cid-gc2g3jd6>ExRL: Sample-Efficient Online Adaptation of Long-Chunk Policies via Execution Length Control</a></h3><p class="summary" data-astro-cid-gc2g3jd6>ExRL은 예측된 액션 청크를 얼마나 실행할지를 경량 어댑터가 결정하도록 하여, 고차원 액션 최적화 대신 저차원 이산 결정으로 롱-청크 로봇 정책을 온라인 RL로 적응시킨다. 시뮬레이션과 실세계 조작 작업에서 π0.5 등 다양한 롱-청크 정책을 적은 물리적 상호작용으로 개선한다.</p><ul class="tags" data-astro-cid-gc2g3jd6><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/method/reinforcement-learning/" title="method/reinforcement-learning" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>강화학습</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/domain/robotics/manipulation/" title="domain/robotics/manipulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>로보틱스</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>로봇 조작</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/method/architecture/vision-language-action/" title="method/architecture/vision-language-action" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>아키텍처</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>비전-언어-행동 모델(VLA)</span></a></li></ul></div></article><article class="row" data-type="paper" data-astro-cid-gc2g3jd6><div class="meta" data-astro-cid-gc2g3jd6><span class="type" data-astro-cid-gc2g3jd6>논문</span><time datetime="2026-11-09" data-astro-cid-gc2g3jd6>2026년 11월 9일</time><span class="pending" data-astro-cid-gc2g3jd6>AI 정리, 검수 전</span></div><div class="body" data-astro-cid-gc2g3jd6><h3 class="title" data-astro-cid-gc2g3jd6="true"><a href="/ko/papers/la-jepa-compact-robot-policies-with/" data-astro-cid-gc2g3jd6>La-JEPA: Compact Robot Policies with Latent World Modeling</a></h3><p class="summary" data-astro-cid-gc2g3jd6>La-JEPA는 사전학습된 V-JEPA 2.1 인코더의 특징 공간에서 정책을 처음부터 학습하는 컴팩트한 월드-액션 모델로, 학습 시 미래 특징 예측을 함께 하고 추론 시에는 동작만 생성한다.</p><ul class="tags" data-astro-cid-gc2g3jd6><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/method/world-model/" title="method/world-model" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>월드 모델</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/domain/robotics/manipulation/" title="domain/robotics/manipulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>로보틱스</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>로봇 조작</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/task/benchmarking/" title="task/benchmarking" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>벤치마크·성능 측정</span></a></li></ul></div></article><article class="row" data-type="paper" data-astro-cid-gc2g3jd6><div class="meta" data-astro-cid-gc2g3jd6><span class="type" data-astro-cid-gc2g3jd6>논문</span><time datetime="2026-11-09" data-astro-cid-gc2g3jd6>2026년 11월 9일</time><span class="pending" data-astro-cid-gc2g3jd6>AI 정리, 검수 전</span></div><div class="body" data-astro-cid-gc2g3jd6><h3 class="title" data-astro-cid-gc2g3jd6="true"><a href="/ko/papers/spatial-umi-dream-scaling-world-action/" data-astro-cid-gc2g3jd6>Spatial-UMI-Dream: Scaling World Action Models with Metric Geometry for UMI Manipulation</a></h3><p class="summary" data-astro-cid-gc2g3jd6>Spatial-UMI-Dream은 RGB·metric depth·action을 함께 예측하는 5B 월드 액션 모델로, 605시간 UMI 데이터에서 두 단계 사전학습을 수행한다. RoboTwin-UMI 시뮬레이션 벤치마크와 실세계 이두 조작 작업에서 in-domain 성능과 환경·로봇 embodiment 일반화 성능을 평가한다.</p><ul class="tags" data-astro-cid-gc2g3jd6><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/method/world-model/" title="method/world-model" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>월드 모델</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/method/training/pretraining/" title="method/training/pretraining" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>학습</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>사전학습</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/domain/robotics/manipulation/" title="domain/robotics/manipulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>로보틱스</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>로봇 조작</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/task/benchmarking/" title="task/benchmarking" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>벤치마크·성능 측정</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/method/architecture/diffusion/" title="method/architecture/diffusion" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>아키텍처</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>디퓨전</span></a></li></ul></div></article><article class="row" data-type="study" data-astro-cid-gc2g3jd6><div class="meta" data-astro-cid-gc2g3jd6><span class="type" data-astro-cid-gc2g3jd6>공부</span><time datetime="2026-10-30" data-astro-cid-gc2g3jd6>2026년 10월 30일</time></div><div class="body" data-astro-cid-gc2g3jd6><h3 class="title" data-astro-cid-gc2g3jd6="true"><a href="/ko/study/01-rl-problem-setup-multi-armed/" data-astro-cid-gc2g3jd6>01. RL 문제 설정 &amp; Multi-armed Bandit</a></h3><p class="summary" data-astro-cid-gc2g3jd6>강화학습의 상호작용 루프와 지도학습과의 차이를 정리하고, multi-armed bandit에서 탐험/활용 문제를 가치 추정, regret, UCB, Thompson sampling으로 다룬다.</p><ul class="tags" data-astro-cid-gc2g3jd6><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/method/reinforcement-learning/" title="method/reinforcement-learning" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>강화학습</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/domain/machine-learning/" title="domain/machine-learning" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>머신러닝</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/ko/tags/task/benchmarking/" title="task/benchmarking" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>벤치마크·성능 측정</span></a></li></ul></div></article></section></aside></main><footer class="wrap" data-astro-cid-hkbrpulz><p class="site-footer" data-astro-cid-hkbrpulz>Tech Blog</p></footer><dialog class="search" aria-label="글 검색" data-unavailable="검색 색인은 사이트를 빌드할 때 만들어집니다. npm run build 후 npm run preview 에서 확인하세요." data-astro-cid-ac66eqjo><div class="search-head" data-astro-cid-ac66eqjo><h2 data-astro-cid-ac66eqjo>글 검색</h2><button type="button" class="close" data-search-close data-astro-cid-ac66eqjo>닫기</button></div><div id="pagefind" class="search-body" data-astro-cid-ac66eqjo></div></dialog><script type="module">var e=document.querySelector(`dialog.search`),t=e.querySelector(`#pagefind`),n=!1;async function r(){if(!n){n=!0;try{let e=document.createElement(`link`);e.rel=`stylesheet`,e.href=`/pagefind/pagefind-ui.css`,document.head.append(e),await new Promise((e,t)=>{let n=document.createElement(`script`);n.src=`/pagefind/pagefind-ui.js`,n.onload=()=>e(),n.onerror=()=>t(Error(`pagefind missing`)),document.head.append(n)}),new PagefindUI({element:t,showSubResults:!0,showImages:!1,autofocus:!0})}catch{t.textContent=e.dataset.unavailable??``}}}function i(){e.showModal(),r(),t.querySelector(`input`)?.focus()}document.querySelectorAll(`[data-search-open]`).forEach(e=>e.addEventListener(`click`,i)),e.querySelector(`[data-search-close]`).addEventListener(`click`,()=>e.close()),e.addEventListener(`click`,t=>{t.target===e&&e.close()}),document.addEventListener(`keydown`,t=>{let n=t.target.tagName;e.open||n===`INPUT`||n===`TEXTAREA`||(t.key===`/`||(t.metaKey||t.ctrlKey)&&t.key.toLowerCase()===`k`)&&(t.preventDefault(),i())});</script></body></html><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_0_lang.C9cTWiA5.js"></script><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_1_lang.BhCYdHk-.js"></script>

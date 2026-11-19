@@ -1,0 +1,958 @@
+<!DOCTYPE html><html lang="en" data-astro-cid-hkbrpulz><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Robot Hand and RL, Chapter 1: The Language of Reinforcement Learning | Tech Blog</title><meta name="description" content="Explains core reinforcement learning concepts such as agents, environments, rewards, MDPs, policies, and value functions using a robot hand example, then compares rule-based policies with a CartPole reset-step loop."><meta property="og:title" content="Robot Hand and RL, Chapter 1: The Language of Reinforcement Learning"><meta property="og:description" content="Explains core reinforcement learning concepts such as agents, environments, rewards, MDPs, policies, and value functions using a robot hand example, then compares rule-based policies with a CartPole reset-step loop."><meta name="theme-color" content="#f4f6f9" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#0e131b" media="(prefers-color-scheme: dark)"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate" hreflang="ko" href="/ko/study/robot-hand-and-rl-chapter-1/"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap"><script>
+      // 깜빡임 방지: 렌더 전에 테마 결정 (저장값 > 시스템 설정)
+      (() => {
+        let saved = null;
+        try {
+          saved = localStorage.getItem('theme');
+        } catch {}
+        const dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      })();
+    </script><link rel="stylesheet" href="/_astro/Base.BJamWqg3.css"><style>.tagpath[data-astro-cid-jjfiepte]{font-size:var(--step--1);color:var(--ink-3);flex-wrap:wrap;align-items:baseline;gap:0 .3em;line-height:1.6;text-decoration:none;display:inline-flex}.leaf[data-astro-cid-jjfiepte]{color:var(--ink-2);font-weight:500}.sep[data-astro-cid-jjfiepte]{opacity:.55}.tagpath[data-astro-cid-jjfiepte]:hover .leaf[data-astro-cid-jjfiepte]{color:var(--ink);text-underline-offset:.2em;text-decoration:underline}.row[data-astro-cid-gc2g3jd6]{border-top:1px solid var(--rule);grid-template-columns:8.5rem 1fr;gap:.25rem 1.5rem;padding-block:1.6rem;display:grid}.meta[data-astro-cid-gc2g3jd6]{font-size:var(--step--1);color:var(--ink-3);font-variant-numeric:tabular-nums;flex-direction:column;gap:.15rem;padding-top:.3rem;display:flex}.type[data-astro-cid-gc2g3jd6]{color:var(--type);align-items:center;gap:.45rem;font-weight:600;display:inline-flex}.type[data-astro-cid-gc2g3jd6]:before{content:"";background:var(--type);border-radius:2px;width:.5rem;height:.5rem}.pending[data-astro-cid-gc2g3jd6]{color:var(--ink-3);align-self:flex-start;font-size:.75rem}.draft[data-astro-cid-gc2g3jd6]{border:1px dashed var(--rule-strong);border-radius:4px;align-self:flex-start;margin-top:.3rem;padding:0 .4rem;font-size:.75rem}.title[data-astro-cid-gc2g3jd6]{font-size:var(--step-2);margin:0;font-weight:600;line-height:1.35}.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]{background-image:linear-gradient(var(--type), var(--type));background-position:0 100%;background-repeat:no-repeat;background-size:0 2px;text-decoration:none;transition:background-size .2s}.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]:hover,.title[data-astro-cid-gc2g3jd6] a[data-astro-cid-gc2g3jd6]:focus-visible{background-size:100% 2px}.summary[data-astro-cid-gc2g3jd6]{max-width:62ch;color:var(--ink-2);margin:.45rem 0 0}.tags[data-astro-cid-gc2g3jd6]{flex-wrap:wrap;gap:.1rem 1.1rem;margin:.6rem 0 0;padding:0;list-style:none;display:flex}@media (width<=640px){.row[data-astro-cid-gc2g3jd6]{grid-template-columns:1fr;padding-block:1.25rem}.meta[data-astro-cid-gc2g3jd6]{flex-flow:wrap;gap:.75rem;padding-top:0}.draft[data-astro-cid-gc2g3jd6]{margin-top:0}.title[data-astro-cid-gc2g3jd6]{font-size:var(--step-1)}}
+</style><link rel="stylesheet" href="/_astro/_slug_.y0bcMRw3.css"></head><body data-astro-cid-hkbrpulz><a class="skip" href="#main" data-astro-cid-hkbrpulz>Skip to content</a><header class="site-header wrap" data-astro-cid-nen7h5rs><a class="wordmark" href="/en/" translate="no" data-astro-cid-nen7h5rs>Tech Blog</a><nav class="nav" aria-label="Main" data-astro-cid-nen7h5rs><ul data-astro-cid-nen7h5rs><li data-type="paper" data-astro-cid-nen7h5rs><a href="/en/papers/" data-astro-cid-nen7h5rs>Papers</a></li><li data-type="study" data-astro-cid-nen7h5rs><a href="/en/study/" aria-current="page" data-astro-cid-nen7h5rs>Study</a></li><li data-type="dev" data-astro-cid-nen7h5rs><a href="/en/dev/" data-astro-cid-nen7h5rs>Dev</a></li><li data-type="clip" data-astro-cid-nen7h5rs><a href="/en/clips/" data-astro-cid-nen7h5rs>Clips</a></li><li data-astro-cid-nen7h5rs><a href="/en/graph/" data-astro-cid-nen7h5rs>Graph</a></li><li data-astro-cid-nen7h5rs><a href="/en/tags/" data-astro-cid-nen7h5rs>Tags</a></li></ul></nav><div class="tools" data-astro-cid-nen7h5rs><button class="icon-btn" type="button" data-search-open aria-label="Search" aria-keyshortcuts="/" data-astro-cid-nen7h5rs><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8" data-astro-cid-nen7h5rs></circle><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-astro-cid-nen7h5rs></path></svg></button><a class="lang" href="/ko/study/robot-hand-and-rl-chapter-1/" hreflang="ko" aria-label="Read in Korean" data-astro-cid-nen7h5rs>한국어</a><button class="icon-btn" type="button" data-theme-toggle data-label-light="Switch to light mode" data-label-dark="Switch to dark mode" aria-label="Switch to dark mode" data-astro-cid-nen7h5rs><svg class="sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8" data-astro-cid-nen7h5rs></circle><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" data-astro-cid-nen7h5rs></path></svg><svg class="moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" data-astro-cid-nen7h5rs><path d="M19.5 14.6A7.8 7.8 0 0 1 9.4 4.5a7.8 7.8 0 1 0 10.1 10.1Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" data-astro-cid-nen7h5rs></path></svg></button></div></header><script type="module">var e=document.querySelector(`[data-theme-toggle]`),t=document.documentElement,n=()=>{let n=t.dataset.theme===`dark`;document.querySelectorAll(`meta[name="theme-color"]`).forEach(e=>{e.setAttribute(`content`,n?`#0e131b`:`#f4f6f9`),e.removeAttribute(`media`)}),e.setAttribute(`aria-label`,(n?e.dataset.labelLight:e.dataset.labelDark)??``),e.setAttribute(`aria-pressed`,String(n))};n(),e.addEventListener(`click`,()=>{t.dataset.theme=t.dataset.theme===`dark`?`light`:`dark`;try{localStorage.setItem(`theme`,t.dataset.theme)}catch{}n()});</script><main id="main" data-astro-cid-hkbrpulz><article class="post wrap" data-type="study" data-pagefind-body data-astro-cid-krmc5xkp><header class="head" data-astro-cid-krmc5xkp><div class="meta" data-astro-cid-krmc5xkp><a class="type" href="/en/study/" data-pagefind-ignore data-astro-cid-krmc5xkp>Study</a><time datetime="2026-11-19" data-astro-cid-krmc5xkp>Nov 19, 2026</time></div><h1 data-astro-cid-krmc5xkp>Robot Hand and RL, Chapter 1: The Language of Reinforcement Learning</h1><p class="summary" data-astro-cid-krmc5xkp>Explains core reinforcement learning concepts such as agents, environments, rewards, MDPs, policies, and value functions using a robot hand example, then compares rule-based policies with a CartPole reset-step loop.</p><dl class="source" data-astro-cid-krmc5xkp><dt data-astro-cid-krmc5xkp>Files</dt><dd data-astro-cid-krmc5xkp><a href="/files/study/robot-hand-and-rl-chapter-1/01_rl_lang.md" rel="noopener" data-astro-cid-krmc5xkp>Markdown source</a></dd></dl><ul class="tags" data-pagefind-ignore data-astro-cid-krmc5xkp><li data-astro-cid-krmc5xkp><a class="tagpath" href="/en/tags/method/reinforcement-learning/" title="method/reinforcement-learning" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Method</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Reinforcement Learning</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/en/tags/domain/robotics/manipulation/" title="domain/robotics/manipulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Field</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="parent" data-astro-cid-jjfiepte>Robotics</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Manipulation</span></a></li><li data-astro-cid-krmc5xkp><a class="tagpath" href="/en/tags/task/benchmarking/" title="task/benchmarking" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Task</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Benchmarking</span></a></li></ul><div class="tags-editor" hidden data-dir="content/study/robot-hand-and-rl-chapter-1" data-pagefind-ignore data-astro-cid-krmc5xkp></div></header><div class="columns" data-astro-cid-krmc5xkp><div class="prose" data-astro-cid-krmc5xkp><p class="note" data-astro-cid-krmc5xkp>Machine-translated from the Korean original.</p><details class="toc-inline" data-pagefind-ignore data-astro-cid-krmc5xkp><summary data-astro-cid-krmc5xkp>Contents</summary><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#s1" data-astro-cid-krmc5xkp>01 Agent and Environment</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s2" data-astro-cid-krmc5xkp>02 Episodes and Termination</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s3" data-astro-cid-krmc5xkp>03 Return and Discount Rate γ</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s4" data-astro-cid-krmc5xkp>04 MDP and the Markov Property</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-1" data-astro-cid-krmc5xkp>Markov Property: Knowing the present is enough; the past is unnecessary</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s5" data-astro-cid-krmc5xkp>05 🤖 Following a Thumb Button Episode</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s6" data-astro-cid-krmc5xkp>06 Learning Loop: Episode ≠ Update</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s7" data-astro-cid-krmc5xkp>07 Policy, Value Function, Advantage</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-2" data-astro-cid-krmc5xkp>Policy π: What to do in this situation</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-3" data-astro-cid-krmc5xkp>V, Q, Advantage</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s8" data-astro-cid-krmc5xkp>08 Exploration and Exploitation</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s9" data-astro-cid-krmc5xkp>09 🤖 Hands-on: CartPole</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-4" data-astro-cid-krmc5xkp>Environment Setup</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-5" data-astro-cid-krmc5xkp>CartPole</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-6" data-astro-cid-krmc5xkp>Code 1: Loop ( cartpole_loop.py )</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-7" data-astro-cid-krmc5xkp>Code 2: Rule-based Policies ( rule_policies.py )</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-8" data-astro-cid-krmc5xkp>Try It Yourself: Browser CartPole</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-9" data-astro-cid-krmc5xkp>What Did We Confirm?</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-10" data-astro-cid-krmc5xkp>What the Designer Decides Is Inside the Environment</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s10" data-astro-cid-krmc5xkp>10 🤖 Where does the human fit in?</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s11" data-astro-cid-krmc5xkp>11 Overall Summary &amp;#x26; Connection to Next Chapter</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#quiz" data-astro-cid-krmc5xkp>? Check Questions</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#qa" data-astro-cid-krmc5xkp>Q&amp;#x26;A Questions &amp;#x26; Answers</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#check" data-astro-cid-krmc5xkp>✓ Confusing Concepts</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#refs" data-astro-cid-krmc5xkp>📚 Further Reading</a></li></ol></details><style>
+.rawhtml { --fg: var(--ink); --text: var(--ink); --muted: var(--ink-3); --line: var(--rule); --border: var(--rule) }
+.rawhtml :is(h2, h3) > span:first-child:not(:only-child) { margin-right: 0.5em }
+.rawhtml { --acc: #2f6bd8; --acc-soft: #e2ebfb; --warm: #c9701c; --warm-soft: #fbecd9; --green: #23875a; --green-soft: #dcf1e6; --red: #c24141; --red-soft: #f9e0e0; --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100 }
+@media (prefers-color-scheme: dark) {
+:root:not([data-theme="light"]) .rawhtml { --acc: #6d9cf0; --acc-soft: #1f2d48; --warm: #e7a15a; --warm-soft: #3a2b1a; --green: #5cc493; --green-soft: #183527; --red: #e57777; --red-soft: #3d1f22; --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500 }
+}
+:root[data-theme="dark"] .rawhtml { --acc: #6d9cf0; --acc-soft: #1f2d48; --warm: #e7a15a; --warm-soft: #3a2b1a; --green: #5cc493; --green-soft: #183527; --red: #e57777; --red-soft: #3d1f22; --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500 }
+.rawhtml h2 .num { font-family: var(--font-mono); font-size: .95rem; color: var(--acc); background: var(--acc-soft); border-radius: 6px; padding: 2px 8px }
+.rawhtml .lead { color: var(--muted); margin: 0 }
+.rawhtml .meta { color: var(--muted); font-size: .9rem; margin-top: 12px }
+.rawhtml nav.toc { margin: 32px 0 0; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px }
+.rawhtml nav.toc ol { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 4px 16px }
+.rawhtml nav.toc a { text-decoration: none; color: var(--fg); font-size: .95rem }
+.rawhtml nav.toc a:hover { color: var(--acc) }
+.rawhtml nav.toc .n { font-family: var(--font-mono); color: var(--muted); margin-right: 8px; font-size: .85rem }
+.rawhtml figure { position: relative; margin: 24px 0; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px }
+.rawhtml figure svg { display: block; width: 100%; height: auto }
+.rawhtml figcaption { color: var(--muted); font-size: .88rem; margin-top: 12px }
+.rawhtml figcaption b { color: var(--fg) }
+.rawhtml td.num, .rawhtml th.num { text-align: right; font-family: var(--font-mono); font-size: .86rem }
+.rawhtml .table-wrap { overflow-x: auto }
+.rawhtml pre .c { color: var(--muted) }
+.rawhtml .callout { border-left: 4px solid var(--acc); background: var(--acc-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0 }
+.rawhtml .callout.warm { border-color: var(--warm); background: var(--warm-soft) }
+.rawhtml .callout.green { border-color: var(--green); background: var(--green-soft) }
+.rawhtml .robot { border: 1px dashed var(--line); border-radius: 10px; padding: 12px 16px; margin: 16px 0; background: var(--surface) }
+.rawhtml .robot > b:first-child { color: var(--green) }
+.rawhtml .formula { font-family: var(--font-mono); font-size: 1.02rem; text-align: center; padding: 16px 8px; margin: 16px 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; white-space: nowrap; line-height: 1.9 }
+.rawhtml .formula .lbl { display: block; font-family: var(--font-sans); font-size: .82rem; color: var(--muted) }
+.rawhtml .hl-a { color: var(--acc); font-weight: 600 }
+.rawhtml .hl-w { color: var(--warm); font-weight: 600 }
+.rawhtml svg text { font-family: var(--font-sans); font-size: 13px; fill: var(--fg) }
+.rawhtml svg .mut { fill: var(--muted); font-size: 12px }
+.rawhtml svg .small { font-size: 11px }
+.rawhtml svg .bold { font-weight: 700 }
+.rawhtml svg .mono { font-family: var(--font-mono) }
+.rawhtml .s-box { fill: var(--surface); stroke: var(--line); stroke-width: 1.5 }
+.rawhtml .s-acc { fill: var(--acc-soft); stroke: var(--acc); stroke-width: 1.5 }
+.rawhtml .s-warm { fill: var(--warm-soft); stroke: var(--warm); stroke-width: 1.5 }
+.rawhtml .s-green { fill: var(--green-soft); stroke: var(--green); stroke-width: 1.5 }
+.rawhtml .s-red { fill: var(--red-soft); stroke: var(--red); stroke-width: 1.5 }
+.rawhtml .s-frame { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 5 4 }
+.rawhtml .s-line { fill: none; stroke: var(--muted); stroke-width: 1.5 }
+.rawhtml .s-accline { fill: none; stroke: var(--acc); stroke-width: 2 }
+.rawhtml .s-warmline { fill: none; stroke: var(--warm); stroke-width: 2 }
+.rawhtml .s-ahead { fill: var(--muted) }
+.rawhtml .s-ahead-acc { fill: var(--acc) }
+.rawhtml .s-ahead-warm { fill: var(--warm) }
+.rawhtml .grid { stroke: var(--line); stroke-width: 1 }
+.rawhtml .axis { stroke: var(--muted); stroke-width: 1 }
+.rawhtml .control { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; font-size: .92rem }
+.rawhtml .control input[type="range"] { flex: 1; min-width: 140px; accent-color: var(--acc) }
+.rawhtml .control output { font-family: var(--font-mono); min-width: 3em }
+.rawhtml .control label { display: inline-flex; align-items: center; gap: 6px }
+.rawhtml .btn { font: inherit; font-size: .86rem; padding: 5px 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--fg) }
+.rawhtml .btn:hover { border-color: var(--acc) }
+.rawhtml .btn.on { border-color: var(--acc); background: var(--acc-soft) }
+.rawhtml .readout { font-family: var(--font-mono); font-size: .82rem; color: var(--muted); margin-top: 8px; overflow-x: auto; white-space: nowrap }
+.rawhtml .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .86rem; margin: 0 0 8px }
+.rawhtml .legend span { display: inline-flex; align-items: center; gap: 6px }
+.rawhtml .legend i { width: 18px; height: 3px; border-radius: 2px; display: inline-block }
+.rawhtml .tip { position: absolute; pointer-events: none; display: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: .8rem; line-height: 1.5; box-shadow: 0 4px 14px rgba(0,0,0,.12); white-space: nowrap; z-index: 2 }
+.rawhtml .tip b { font-family: var(--font-mono); font-weight: 600 }
+.rawhtml .qa-tools { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap }
+.rawhtml .qa-tools button { font: inherit; font-size: .88rem; padding: 6px 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--fg) }
+.rawhtml details.qa, .rawhtml details.quiz { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; margin: 12px 0; padding: 0 }
+.rawhtml details.qa summary, .rawhtml details.quiz summary { cursor: pointer; padding: 16px 20px; list-style: none; display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: baseline }
+.rawhtml details.qa summary::-webkit-details-marker, .rawhtml details.quiz summary::-webkit-details-marker { display: none }
+.rawhtml details .qn { font-family: var(--font-mono); font-weight: 600; color: var(--warm); background: var(--warm-soft); border-radius: 6px; padding: 1px 8px; font-size: .9rem }
+.rawhtml details.quiz .qn { color: var(--acc); background: var(--acc-soft) }
+.rawhtml details .qt { font-weight: 500 }
+.rawhtml details .stage { display: block; color: var(--muted); font-size: .8rem; font-weight: 400 }
+.rawhtml details .ans { padding: 0 20px 16px 20px; border-top: 1px solid var(--line) }
+.rawhtml details .ans ul { padding-left: 20px }
+.rawhtml .hint { font-size: .85rem; color: var(--muted) }
+.rawhtml .checklist { list-style: none; padding: 0 }
+.rawhtml .checklist li { padding: 10px 14px 10px 40px; position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; margin: 8px 0 }
+.rawhtml .checklist li::before { content: "✓"; position: absolute; left: 14px; top: 10px; color: var(--green); font-weight: 700 }
+.rawhtml .checklist .ref { color: var(--muted); font-size: .85rem }
+.rawhtml .refs li { margin: 4px 0 }
+@media (max-width: 560px) {
+.rawhtml figure { padding: 12px }
+}
+</style>
+<div class="rawhtml">
+<svg aria-hidden="true" height="0" style="position:absolute" width="0">
+<defs>
+<marker id="ah" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="9" refY="5" viewBox="0 0 10 10"><path class="s-ahead" d="M0,0 L10,5 L0,10 z"></path></marker>
+<marker id="ah-acc" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="9" refY="5" viewBox="0 0 10 10"><path class="s-ahead-acc" d="M0,0 L10,5 L0,10 z"></path></marker>
+<marker id="ah-warm" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="9" refY="5" viewBox="0 0 10 10"><path class="s-ahead-warm" d="M0,0 L10,5 L0,10 z"></path></marker>
+</defs>
+</svg>
+<section>
+<h2 id="s1"><span class="num">01</span>Agent and Environment</h2>
+<p>Reinforcement learning can be summarized in one sentence: <b>"Try it, get a score, and adjust your actions to increase that score."</b> There are only two players involved.</p>
+<figure>
+<svg aria-label="A loop where the environment provides observations and rewards to the agent, and the agent returns actions to the environment" role="img" viewBox="0 0 720 230">
+<rect class="s-green" height="110" rx="12" width="230" x="30" y="60"></rect>
+<text class="bold" text-anchor="middle" x="145" y="98">Environment</text>
+<text class="small" text-anchor="middle" x="145" y="122">Hand + Gripper + Button + Physics Engine</text>
+<text class="mut small mono" text-anchor="middle" x="145" y="146">Isaac Lab / gymnasium</text>
+<rect class="s-acc" height="110" rx="12" width="230" x="460" y="60"></rect>
+<text class="bold" text-anchor="middle" x="575" y="98">Agent</text>
+<text class="small" text-anchor="middle" x="575" y="122">Policy π (Neural Network)</text>
+<text class="mut small mono" text-anchor="middle" x="575" y="146">Core Skill</text>
+<path class="s-accline" d="M145 58 C145 32, 575 32, 575 56" marker-end="url(#ah-acc)"></path>
+<text class="small" style="fill:var(--acc)" text-anchor="middle" x="360" y="26">Observation o<tspan baseline-shift="sub" font-size="9">t</tspan>, Reward r<tspan baseline-shift="sub" font-size="9">t</tspan></text>
+<path class="s-warmline" d="M575 172 C575 198, 145 198, 145 174" marker-end="url(#ah-warm)"></path>
+<text class="small" style="fill:var(--warm)" text-anchor="middle" x="360" y="224">Action a<tspan baseline-shift="sub" font-size="9">t</tspan></text>
+<text class="mut small" text-anchor="middle" x="360" y="110">One call to env.step(a) =</text>
+<text class="mut small" text-anchor="middle" x="360" y="128">One cycle of this loop</text>
+</svg>
+<figcaption><b>Figure 1.</b> The basic reinforcement learning loop. The environment provides observations and rewards, and the agent returns actions. In code, a single line <code>env.step(action)</code> represents one cycle (<a href="#s9">Chapter 9</a>).</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<thead><tr><th>Term</th><th>Meaning</th><th>🤖 In the Thumb Button Task</th></tr></thead>
+<tbody>
+<tr><td><b>State s</b></td><td>The complete, true information of the world</td><td>All precise positions, velocities, and contact forces of the hand, tool, and button</td></tr>
+<tr><td><b>Observation o</b></td><td>What the agent can actually see</td><td>Joint angles/velocities, fingertip pressure, motor current, button position</td></tr>
+<tr><td><b>Action a</b></td><td>What the agent chooses</td><td>Target joint changes + per-finger stiffness</td></tr>
+<tr><td><b>Reward r</b></td><td>A single number indicating how good the recent action was</td><td><code>r_reach + r_press + r_click + …</code></td></tr>
+</tbody></table></div>
+<div class="robot"><b>🤖 State ≠ Observation.</b> The simulation knows the exact pose of the tool (state), but a real V6 hand only knows pressure and current (observations). <b>Only observations</b> should be fed into the policy, while components used only during training (reward calculation, critic, teacher) may use the state. This is what "(teacher-only) exact object pose" on the roadmap card refers to. → <a href="#qa">Q1 · Q3</a></div>
+<p>Rewards are sums of multiple terms, but they ultimately result in a <b>single scalar</b>. Therefore, the weight of each term is important (Chapter 4: Reward Design).</p>
+</section>
+<section>
+<h2 id="s2"><span class="num">02</span>Episodes and Termination</h2>
+<p>An <b>episode</b> is one complete pass through the loop from start to finish. One game.</p>
+<figure>
+<svg aria-label="Episode timeline starting with reset, followed by observation, action, and reward, ending in either terminated (success or failure) or truncated (time out)" role="img" viewBox="0 0 720 210">
+<rect class="s-box" height="44" rx="10" width="80" x="10" y="70"></rect>
+<text class="mono small" text-anchor="middle" x="50" y="97">reset()</text>
+<line class="s-line" marker-end="url(#ah)" x1="92" x2="118" y1="92" y2="92"></line>
+<g>
+<circle class="s-acc" cx="140" cy="92" r="18"></circle><text class="mono small" text-anchor="middle" x="140" y="96">o₀</text>
+<line class="s-warmline" marker-end="url(#ah-warm)" x1="160" x2="196" y1="92" y2="92"></line><text class="mono small" style="fill:var(--warm)" text-anchor="middle" x="178" y="84">a₀</text>
+<circle class="s-acc" cx="218" cy="92" r="18"></circle><text class="mono small" text-anchor="middle" x="218" y="96">o₁</text>
+<text class="mono small" text-anchor="middle" x="218" y="130">r₁</text>
+<line class="s-warmline" marker-end="url(#ah-warm)" x1="238" x2="274" y1="92" y2="92"></line><text class="mono small" style="fill:var(--warm)" text-anchor="middle" x="256" y="84">a₁</text>
+<circle class="s-acc" cx="296" cy="92" r="18"></circle><text class="mono small" text-anchor="middle" x="296" y="96">o₂</text>
+<text class="mono small" text-anchor="middle" x="296" y="130">r₂</text>
+<text class="bold" text-anchor="middle" x="350" y="97">⋯</text>
+<circle class="s-acc" cx="404" cy="92" r="18"></circle><text class="mono small" text-anchor="middle" x="404" y="96">o_T</text>
+<text class="mono small" text-anchor="middle" x="404" y="130">r_T</text>
+</g>
+<path class="s-line" d="M424 86 L480 44" marker-end="url(#ah)"></path>
+<path class="s-line" d="M424 98 L480 140" marker-end="url(#ah)"></path>
+<rect class="s-green" height="62" rx="10" width="226" x="484" y="14"></rect>
+<text class="bold mono small" text-anchor="middle" x="597" y="38">terminated = True</text>
+<text class="small" text-anchor="middle" x="597" y="60">Ends in success or failure (click, SLIP)</text>
+<rect class="s-warm" height="62" rx="10" width="226" x="484" y="110"></rect>
+<text class="bold mono small" text-anchor="middle" x="597" y="134">truncated = True</text>
+<text class="small" text-anchor="middle" x="597" y="156&#x22;">Time runs out without a result (TIMEOUT)</text>
+<text class="mut small" text-anchor="middle" x="218" y="190">One (o, a, r) tuple is added per step</text>
+</svg>
+<figcaption><b>Figure 2.</b> A single episode. There are two ways to end, and gymnasium's <code>step()</code> returns them separately. The "Termination/Success Check" field in the roadmap card determines this.</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<thead><tr><th>Type</th><th>Meaning</th><th>🤖 Thumb Button</th><th>CartPole</th></tr></thead>
+<tbody>
+<tr><td><b>terminated</b></td><td>Ends in success or failure</td><td>Successful click, tool drop (SLIP)</td><td>Pole > 12°, Cart > ±2.4</td></tr>
+<tr><td><b>truncated</b></td><td>Predefined time limit reached</td><td>TIMEOUT (5s = 250 steps)</td><td>500 steps</td></tr>
+</tbody></table></div>
+</section>
+<section>
+<h2 id="s3"><span class="num">03</span>Return and Discount Rate γ</h2>
+<p>The agent's goal is not to maximize the <b>immediate reward</b>, but to maximize the <b>sum of rewards received until the end of the episode</b>. Moving the thumb toward the button may yield no immediate benefit, but it is necessary to eventually receive <code>r_press</code> and <code>r_click</code> (+10).</p>
+<div class="formula">G<sub>t</sub> = r<sub>t+1</sub> + <span class="hl-a">γ</span>·r<sub>t+2</sub> + <span class="hl-a">γ²</span>·r<sub>t+3</sub> + ⋯ ,    0 ≤ γ &#x3C; 1
+<span class="lbl">Return = Discounted sum of future rewards · Rewards further in the future are discounted by <span class="hl-a">γ<sup>k</sup></span></span></div>
+<figure>
+<svg aria-label="Bar chart showing the weight gamma to the power of k applied to rewards k steps later. The larger gamma is, the slower it decays" id="discSvg" role="img" viewBox="0 0 720 220"></svg>
+<div class="control">
+<label for="discG">γ</label>
+<input id="discG" max="0.99" min="0" step="0.01" type="range" value="0.9">
+<output id="discGOut">0.90</output>
+<button class="btn" data-g="0.5" type="button">0.5</button>
+<button class="btn" data-g="0.9" type="button">0.9</button>
+<button class="btn" data-g="0.99" type="button">0.99</button>
+</div>
+<div class="readout" id="discRead"></div>
+<figcaption><b>Figure 3.</b> Weight γ<sup>k</sup> for rewards k steps later. The dashed line indicates the effective horizon 1/(1−γ). The numbers below show how much a <b>click +10 at 20 steps later</b> is worth now for 🤖. If γ = 0.5, it is nearly 0; if 0.99, it is 8.2.</figcaption>
+</figure>
+<p>There are three reasons for discounting. ① The sum remains finite even if the episode is long ② The distant future is uncertain ③ For the same +10, receiving it sooner has higher value, which incentivizes <b>ending quickly</b>.</p>
+<div class="callout"><b>Practical intuition:</b> The horizon seen by γ ≈ <b>1 / (1 − γ) steps</b>. If γ = 0.99, it is about 100 steps. For the thumb button running at 50 Hz for 5 seconds (250 steps), values near 0.99 are used. Most Isaac Lab examples also use 0.99. In the <a href="#s9">Chapter 9</a> exercise, we confirmed that even after enduring 500 steps, the discounted return stops at 99.3.</div>
+<div class="robot"><b>🤖 Why rewards are given in stages.</b> If only click +10 is given, distant rewards appear blurry due to γ, and accidental clicks are rare at first. Therefore, <code>r_reach</code> (approaching) and <code>r_press</code> (press progress) provide intermediate guidance.</div>
+</section>
+<section>
+<h2 id="s4"><span class="num">04</span>MDP and the Markov Property</h2>
+<div class="formula">MDP = ( S, A, <span class="hl-w">P</span>, R, γ )
+<span class="lbl">State space · Action space · <span class="hl-w">Transition probability P(s′ | s, a)</span> · Reward function · Discount rate</span></div>
+<div class="table-wrap"><table>
+<thead><tr><th>Symbol</th><th>Name</th><th>In the 🤖 Thumb Button task</th></tr></thead>
+<tbody>
+<tr><td>S</td><td>State space</td><td>All positions, velocities, and contacts of hand, tool, and button</td></tr>
+<tr><td>A</td><td>Action space</td><td>Joint target changes + stiffness (continuous values)</td></tr>
+<tr><td>P</td><td>Transition probability</td><td>The <b>physics engine</b> serves this role</td></tr>
+<tr><td>R</td><td>Reward function</td><td><code>r_reach + r_press + r_click …</code></td></tr>
+<tr><td>γ</td><td>Discount rate</td><td>0.99</td></tr>
+</tbody></table></div>
+<p><b>You don't need to know P.</b> Even without formulas for friction and contact, you can learn by calling <code>step()</code> and receiving the results. This is <b>model-free RL</b>, and PPO falls into this category. We only need to define S, A, R, γ, and the termination conditions. <b>Designing the problem card = defining the MDP.</b></p>
+<h3 id="sec-1">Markov Property: Knowing the present is enough; the past is unnecessary</h3>
+<p>The next state is determined solely by the <b>current state and action</b>. However, <b>this property is often violated when looking only at observations.</b> Cases where observations fail to capture the full state are called <b>POMDPs</b>, and almost all real-world robotics problems are POMDPs.</p>
+<figure>
+<svg aria-label="A single angle photo cannot tell if the rod is falling or returning, but adding angular velocity makes it clear" role="img" viewBox="0 0 720 190">
+<rect class="s-red" height="172" rx="12" width="340" x="10" y="10"></rect>
+<text class="bold" text-anchor="middle" x="180" y="34">Observation = Angle only</text>
+<line stroke="var(--fg)" stroke-linecap="round" stroke-width="4" x1="110" x2="140" y1="130" y2="62"></line>
+<rect class="s-box" height="16" rx="3" width="40" x="90" y="128"></rect>
+<text class="mut small" x="140" y="56">?</text>
+<line stroke="var(--fg)" stroke-linecap="round" stroke-width="4" x1="250" x2="280" y1="130" y2="62"></line>
+<rect class="s-box" height="16" rx="3" width="40" x="230" y="128"></rect>
+<text class="mut small" x="280" y="56">?</text>
+<text class="mut small" text-anchor="middle" x="180" y="100">Same photo</text>
+<text class="small" text-anchor="middle" x="180" y="168">Falling? Returning? → Unknown</text>
+<rect class="s-green" height="172" rx="12" width="340" x="370" y="10"></rect>
+<text class="bold" text-anchor="middle" x="540" y="34">Observation = Angle + Angular velocity</text>
+<line stroke="var(--fg)" stroke-linecap="round" stroke-width="4" x1="470" x2="500" y1="130" y2="62"></line>
+<rect class="s-box" height="16" rx="3" width="40" x="450" y="128"></rect>
+<path class="s-warmline" d="M506 66 Q520 72 524 88" marker-end="url(#ah-warm)"></path>
+<text class="small" style="fill:var(--warm)" x="530" y="72">Falling</text>
+<line stroke="var(--fg)" stroke-linecap="round" stroke-width="4" x1="610" x2="640" y1="130" y2="62"></line>
+<rect class="s-box" height="16" rx="3" width="40" x="590" y="128"></rect>
+<path class="s-accline" d="M640 56 Q626 48 612 54" marker-end="url(#ah-acc)"></path>
+<text class="small" style="fill:var(--acc)" x="648" y="58">Returning</text>
+<text class="small" text-anchor="middle" x="540" y="168">Can predict what happens next → Nearly Markov</text>
+</svg>
+<figcaption><b>Figure 4.</b> The Markov property is a property of the <b>observation (state representation)</b>. A single angle photo cannot predict the next state. This explains why in Chapter 9's CartPole, a policy looking only at angles lasts 41 steps, while one including angular velocity lasts 500 steps.</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<thead><tr><th>Observation</th><th>Markov?</th><th>Reason</th></tr></thead>
+<tbody>
+<tr><td>Joint angles only</td><td>❌</td><td>Cannot predict next position without velocity</td></tr>
+<tr><td>Joint angles + velocity</td><td>Nearly ✅</td><td></td></tr>
+<tr><td>+ Fingertip pressure</td><td>Still insufficient</td><td>Pressure alone cannot fully determine tool pose</td></tr>
+<tr><td>+ Previous action</td><td>Better</td><td>Helpful to know "what was just commanded" when there is motor delay</td></tr>
+</tbody></table></div>
+<p>Solutions: Include velocity and previous actions in observations · Stack recent steps (frame stacking in Atari DQN, <a href="#qa">Q4</a>) · RNNs · Teacher-student estimation of hidden physical values from history (HORA, Chapter 6).</p>
+<div class="callout green">When filling out the observation field of a problem card: <b>"Can I predict what happens next with just this information?"</b></div>
+</section>
+<section>
+<h2 id="s5"><span class="num">05</span>🤖 Following a Thumb Button Episode</h2>
+<p>We follow one episode of Curriculum ① (pressing with the thumb while already holding it) to the end. The policy acts at <b>50 Hz</b>, and in between, the physics engine runs 4 times at 200 Hz (<code>decimation = 4</code> in Isaac Lab).</p>
+<figure>
+<svg aria-label="Per-step reward bars. Negative proportional to distance while approaching, small positive while pressing after contact, large positive at the moment of click" id="epSvg" role="img" viewBox="0 0 720 260"></svg>
+<div class="control">
+<label for="epT">t</label>
+<input id="epT" max="55" min="0" step="1" type="range" value="55">
+<output id="epTOut">55</output>
+<button class="btn" id="epPlay" type="button">▶ Play</button>
+</div>
+<div class="readout" id="epRead"></div>
+<div class="tip" id="epTip"></div>
+<figcaption><b>Figure 5.</b> Simplified thumb button episode. Rewards are <code>r_reach = −1.0 × distance(cm)</code>, <code>r_press = +2.0 × press increase / 3 mm stroke</code>, <code>r_click = +10</code>. The thumb approaches by 0.05 cm per step from 2.0 cm, touches at t = 40, and presses 3 mm to click at t = 55. Hovering the mouse over a bar shows its value.</figcaption>
+</figure>
+<ul>
+<li>Rewards are not summed immediately upon receipt. Instead, <b>(o, a, r) is stored for each step</b>, and returns and advantages are calculated separately from each step. This allows evaluating whether "the action at t = 10 was good" independently.</li>
+<li>If wandering aimlessly reaches 250 steps, it ends as <code>truncated</code>; if the tool is dropped, it ends as <code>terminated</code> (failure).</li>
+</ul>
+</section>
+<section>
+<h2 id="s6"><span class="num">06</span>Learning Loop: Episode ≠ Update</h2>
+<p>The policy is <b>not adjusted at every step.</b> Experience is accumulated for a while and then corrected all at once.</p>
+<figure>
+<svg aria-label="A learning loop where collecting experience, calculating advantage, and updating the policy repeat" role="img" viewBox="0 0 720 230">
+<rect class="s-acc" height="120" rx="12" width="200" x="20" y="40"></rect>
+<text class="bold" text-anchor="middle" x="120" y="68">① Collect Experience</text>
+<text class="small" text-anchor="middle" x="120" y="92">4096 environments × 24 steps</text>
+<text class="small" text-anchor="middle" x="120" y="112">≈ 100,000 (o, a, r, done)</text>
+<text class="small" style="fill:var(--acc)" text-anchor="middle" x="120" y="140">Policy is fixed during this time</text>
+<rect class="s-warm" height="120" rx="12" width="200" x="260" y="40"></rect>
+<text class="bold" text-anchor="middle" x="360" y="68">② Evaluate</text>
+<text class="small" text-anchor="middle" x="360" y="92">Calculate advantage at each step</text>
+<text class="small" text-anchor="middle" x="360" y="112">"Was it better than usual?"</text>
+<text class="mut small" text-anchor="middle" x="360" y="140">Uses critic V (Chapter 7)</text>
+<rect class="s-green" height="120" rx="12" width="200" x="500" y="40"></rect>
+<text class="bold" text-anchor="middle" x="600" y="68">③ Update Policy</text>
+<text class="small" text-anchor="middle" x="600" y="92">Probability of good actions ↑</text>
+<text class="small" text-anchor="middle" x="600" y="112">Probability of bad actions ↓</text>
+<text class="mut small" text-anchor="middle" x="600" y="140">Empty buffer</text>
+<line class="s-line" marker-end="url(#ah)" x1="222" x2="256" y1="100" y2="100"></line>
+<line class="s-line" marker-end="url(#ah)" x1="462" x2="496" y1="100" y2="100"></line>
+<path class="s-line" d="M600 162 C600 214, 120 214, 120 164" marker-end="url(#ah)"></path>
+<text class="mut small" text-anchor="middle" x="360" y="222">④ Return to ① with a slightly improved policy (thousands of times)</text>
+<text class="mut small" text-anchor="middle" x="120" y="28">Finished environments are automatically reset</text>
+</svg>
+<figcaption><b>Figure 6.</b> PPO learning loop. A single update contains fragments from thousands of episodes, and a single episode can be split across two rollouts. <b>Episodes and updates are separate units</b>.</figcaption>
+</figure>
+<p>Therefore, in the early stages of learning, the thumb shakes wildly, but with repetition, the behavior settles into the sequence: "penalty decreases as it approaches → positive reward upon contact → +10 when fully pressed."</p>
+</section>
+<section>
+<h2 id="s7"><span class="num">07</span>Policy, Value Function, Advantage</h2>
+<h3 id="sec-2">Policy π: What to do in this situation</h3>
+<p>A <b>deterministic policy</b> always takes the same action for the same observation, while a <b>stochastic policy</b> samples an action from a distribution. If actions are continuous values, like a robotic hand, a normal distribution is typically used.</p>
+<pre><code>NeuralNet(o) → mean μ (per joint), std dev σ
+a ~ Normal(μ, σ)     <span class="c"># During learning: shaking by σ = exploration (Chapter 8)</span>
+a = μ                <span class="c"># Real-world deployment: usually just the mean</span></code></pre>
+<h3 id="sec-3">V, Q, Advantage</h3>
+<div class="formula">V(s) = E[ G | s ]  ·  Q(s, a) = E[ G | s, <span class="hl-w">a first</span> ]  ·  <span class="hl-a">A(s, a) = Q(s, a) − V(s)</span>
+<span class="lbl">V = situation score · Q = after taking this specific action first and then following the policy · <span class="hl-a">A = how much better this action is than usual</span></span></div>
+<p>The comparison target for Advantage is not "now vs later" but <b>"this action vs what is usually done here"</b>.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Situation</th><th>Action</th><th class="num">Q</th><th class="num">V</th><th class="num">A</th><th>Verdict</th></tr></thead>
+<tbody>
+<tr><td>Thumb 2 cm in front of button</td><td>Towards button</td><td class="num">+7</td><td class="num">+5</td><td class="num"><b>+2</b></td><td>Probability ↑</td></tr>
+<tr><td>Thumb 2 cm in front of button</td><td>Away from button</td><td class="num">+1</td><td class="num">+5</td><td class="num"><b>−4</b></td><td>Probability ↓</td></tr>
+<tr><td>Tool is tilted (crisis)</td><td>Grip tighter again</td><td class="num">−1</td><td class="num">−3</td><td class="num"><b>+2</b></td><td>Bad, but better than usual → ↑</td></tr>
+</tbody></table></div>
+<p>PPO does not have a Q neural network. It estimates using only the critic V.</p>
+<div class="formula">A<sub>t</sub> ≈ <span class="hl-a">r<sub>t+1</sub> + γ·V(s<sub>t+1</sub>)</span> − <span class="hl-w">V(s<sub>t</sub>)</span>
+<span class="lbl"><span class="hl-a">Actual result</span> − <span class="hl-w">Expectation</span> · TD error. In practice, GAE mixing multiple steps is used (Chapter 3)</span></div>
+<figure>
+<svg aria-label="The Actor receives observations and outputs actions to the real world. The Critic receives states and outputs values, used only for advantage calculation" role="img" viewBox="0 0 720 220">
+<rect class="s-box" height="56" rx="10" width="150" x="20" y="30"></rect>
+<text text-anchor="middle" x="95" y="63">Observation o</text>
+<rect class="s-box" height="56" rx="10" width="150" x="20" y="134"></rect>
+<text text-anchor="middle" x="95" y="160">State s</text>
+<text class="mut small" text-anchor="middle" x="95" y="178">(or observation)</text>
+<rect class="s-acc" height="68" rx="12" width="190" x="240" y="24"></rect>
+<text class="bold" text-anchor="middle" x="335" y="52">Actor (Policy π)</text>
+<text class="small" text-anchor="middle" x="335" y="74">Player: Chooses actions</text>
+<rect class="s-warm" height="68" rx="12" width="190" x="240" y="128"></rect>
+<text class="bold" text-anchor="middle" x="335" y="156">Critic (Value Function V)</text>
+<text class="small" text-anchor="middle" x="335" y="178">Coach: Evaluates situations</text>
+<line class="s-line" marker-end="url(#ah)" x1="172" x2="236" y1="58" y2="58"></line>
+<line class="s-line" marker-end="url(#ah)" x1="172" x2="236" y1="162" y2="162"></line>
+<rect class="s-green" height="68" rx="12" width="190" x="510" y="24"></rect>
+<text class="bold" text-anchor="middle" x="605" y="52">Action a → Real world ✅</text>
+<text class="small" text-anchor="middle" x="605" y="74">Executed by V6 hand</text>
+<rect class="s-frame" height="68" rx="12" width="190" x="510" y="128"></rect>
+<text class="bold" text-anchor="middle" x="605" y="156">Advantage calculation ❌</text>
+<text class="small" text-anchor="middle" x="605" y="178">Used only during learning, then discarded</text>
+<line class="s-line" marker-end="url(#ah)" x1="432" x2="506" y1="58" y2="58"></line>
+<line class="s-line" marker-end="url(#ah)" x1="432" x2="506" y1="162" y2="162"></line>
+<path class="s-warmline" d="M560 126 C560 108, 380 108, 380 96" marker-end="url(#ah-warm)"></path>
+<text class="small" style="fill:var(--warm)" x="572" y="116">Update actor with A</text>
+</svg>
+<figcaption><b>Figure 7.</b> Two neural networks inside PPO. Since the coach (critic) does not go to the field (real world), it can look at the answer key (state). This approach is called <b>asymmetric actor-critic</b>.</figcaption>
+</figure>
+</section>
+<section>
+<h2 id="s8"><span class="num">08</span>Exploration and Exploitation</h2>
+<div class="table-wrap"><table>
+<thead><tr><th></th><th>Meaning</th><th>🤖 On the thumb button</th></tr></thead>
+<tbody>
+<tr><td><b>Exploitation</b> (Exploitation)</td><td>The best action so far</td><td>"Pressing down gave a + reward" → keep pressing down</td></tr>
+<tr><td><b>Exploration</b> (Exploration)</td><td>Try actions not yet attempted</td><td>Sideways, at different angles, varying stiffness</td></tr>
+</tbody></table></div>
+<p>Relying solely on exploitation gets stuck in a suboptimal method of pressing the button's edge diagonally (local optimum), while relying only on exploration fails to utilize what has been learned.</p>
+<figure>
+<svg aria-label="Average surrounding normal distribution curve and action points sampled from that distribution. The larger the sigma, the wider the spread." id="sigSvg" role="img" viewBox="0 0 720 210"></svg>
+<div class="control">
+<label for="sigS">σ</label>
+<input id="sigS" max="1" min="0.05" step="0.05" type="range" value="0.6">
+<output id="sigOut">0.60</output>
+<button class="btn" data-s="0.8" type="button">Early learning</button>
+<button class="btn" data-s="0.15" type="button">Late learning</button>
+</div>
+<figcaption><b>Figure 8.</b> 40 actions sampled from the stochastic policy a ~ Normal(μ, σ). The green band represents the range of actions that press the button accurately (assumption). A large σ leads to trying multiple locations (exploration), and as learning progresses and σ decreases, actions converge on good spots (exploitation).</figcaption>
+</figure>
+<p><b>How PPO explores</b></p>
+<ol>
+<li><b>σ of the stochastic policy</b>: Decreases naturally as learning progresses</li>
+<li><b>Entropy bonus</b>: "The wider the distribution, the higher the bonus" to prevent σ from decreasing too quickly. See <code>entropy coefficient</code> in Chapter 3.</li>
+<li><b>Parallel environments</b>: 4096 instances each try different things</li>
+<li><b>Random start / Domain randomization</b>: Conditions change every time, so repeating the same action does not yield a score</li>
+</ol>
+<div class="callout warm"><b>Learning curve signal:</b> If entropy drops to 0 too quickly → insufficient exploration, suspect local optimum. If it remains high → still uncertain or weak reward signal.</div>
+<div class="robot"><b>🤖 The second role of roadmap randomization.</b> Button position ±5 mm, actuation force ±30%, and starting pose ±15 mm are for sim-to-real transfer, but they also have an exploration effect by providing diverse experiences during learning.</div>
+</section>
+<section>
+<h2 id="s9"><span class="num">09</span>🤖 Hands-on: CartPole</h2>
+<h3 id="sec-4">Environment Setup</h3>
+<pre><code>conda create -n rl-study python=3.11   <span class="c"># Same version as Isaac Sim 5.x</span>
+conda activate rl-study
+pip install "gymnasium[classic-control]" numpy matplotlib</code></pre>
+<div class="callout warm"><b>Troubleshooting:</b> In VS Code, <code>ModuleNotFoundError: No module named 'gymnasium'</code> → VS Code is running with the system Python (<code>/usr/bin/python3.12</code>). <code>Ctrl+Shift+P</code> → <code>Python: Select Interpreter</code> → <code>rl-study</code>. (<a href="#qa">Q6</a>)</div>
+<h3 id="sec-5">CartPole</h3>
+<p>A problem where you keep a pole balanced on top of a cart by pushing the cart left and right.</p>
+<div class="table-wrap"><table>
+<tbody>
+<tr><th>Observation <code>obs</code></th><td><code>[cart position m, cart velocity m/s, pole angle rad, pole angular velocity rad/s]</code>. Angle + = tilting to the right</td></tr>
+<tr><th>Action</th><td><code>0</code> push left, <code>1</code> push right (discrete. The thumb button is continuous)</td></tr>
+<tr><th>Reward</th><td>+1 for each step survived → return = number of steps survived</td></tr>
+<tr><th>terminated</th><td>Angle > 12° or position > ±2.4</td></tr>
+<tr><th>truncated</th><td>500 steps (effectively a success)</td></tr>
+</tbody></table></div>
+<h3 id="sec-6">Code 1: Loop (<code>cartpole_loop.py</code>)</h3>
+<pre><code>import gymnasium as gym
+
+env = gym.make("CartPole-v1")
+
+for episode in range(3):
+    obs, info = env.reset(seed=episode)   <span class="c"># Episode start, first observation o₀</span>
+    episode_return = 0.0
+    t = 0
+
+    while True:
+        action = env.action_space.sample()   <span class="c"># Policy slot. Currently random</span>
+        next_obs, reward, terminated, truncated, info = env.step(action)   <span class="c"># One loop iteration</span>
+
+        episode_return += reward
+        obs = next_obs        <span class="c"># If skipped, the policy keeps seeing old observations</span>
+        t += 1
+
+        if terminated or truncated:
+            print(f"[Episode {episode}] Length {t} steps, Return {episode_return:.0f}")
+            break
+
+env.close()</code></pre>
+<pre><code>t=  0  o=[ 0.014 -0.023 -0.046 -0.048]  a=0  r=1.0  terminated=False  truncated=False
+t=  1  o=[ 0.013 -0.217 -0.047  0.23 ]  a=1  r=1.0  terminated=False  truncated=False
+...
+[Episode 0] Length 17 steps, Return 17, End: terminated
+[Episode 1] Length 17 steps, Return 17, End: terminated
+[Episode 2] Length 37 steps, Return 37, End: terminated</code></pre>
+<p>At t = 0, pushing left changes the cart velocity from −0.023 → −0.217, and due to the reaction force, the pole's angular velocity changes from −0.048 → +0.23. The pole started falling to the right.</p>
+<h3 id="sec-7">Code 2: Rule-based Policies (<code>rule_policies.py</code>)</h3>
+<p>A <b>human-designed policy</b> that decides actions based on obs instead of randomly. Like a broom on your palm, you push the cart in the direction it is tilting.</p>
+<pre><code>policies = {
+    "Random":              None,
+    "Angle only obs[2]":        lambda o: o[2] > 0,
+    "Angular velocity only obs[3]":      lambda o: o[3] > 0,
+    "Angle + 1.0 × Angular velocity":  lambda o: o[2] + 1.0 * o[3] > 0,
+    "Angle + 0.5 × Angular velocity":  lambda o: o[2] + 0.5 * o[3] > 0,
+    "Angle + 0.1 × Angular velocity":  lambda o: o[2] + 0.1 * o[3] > 0,
+}
+G      += reward                  <span class="c"># Undiscounted return</span>
+G_disc += (GAMMA ** t) * reward   <span class="c"># γ = 0.99 discounted return</span></code></pre>
+<figure>
+<div class="legend"><span><i style="background:var(--s1)"></i>Average Return</span><span><i style="background:var(--muted)"></i>Min ~ Max</span></div>
+<svg aria-label="Horizontal bar chart of average returns per policy. Random 22, Angle only 41, Angular velocity only 199, Angle+1.0 angular velocity 492, Angle+0.5 angular velocity and 0.1 angular velocity are 500" id="resSvg" role="img" viewBox="0 0 720 290"></svg>
+<div class="tip" id="resTip"></div>
+<figcaption><b>Figure 9.</b> Returns per policy (seed 0~19, 20 episodes). The line above the bars indicates the min~max range. Hovering over a bar also shows the discounted return. The numbers are exactly as in the table below.</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<thead><tr><th>Policy</th><th class="num">Average Return</th><th class="num">Min</th><th class="num">Max</th><th class="num">Average Discounted Return (γ=0.99)</th></tr></thead>
+<tbody>
+<tr><td>Random</td><td class="num">22.1</td><td class="num">11</td><td class="num">39</td><td class="num">19.7</td></tr>
+<tr><td>Angle only</td><td class="num">40.9</td><td class="num">25</td><td class="num">52</td><td class="num">33.5</td></tr>
+<tr><td>Angular velocity only</td><td class="num">198.7</td><td class="num">138</td><td class="num">278</td><td class="num">85.5</td></tr>
+<tr><td>Angle + 1.0 × Angular velocity</td><td class="num">491.7</td><td class="num">334</td><td class="num">500</td><td class="num">99.2</td></tr>
+<tr><td>Angle + 0.5 × Angular velocity</td><td class="num"><b>500.0</b></td><td class="num">500</td><td class="num">500</td><td class="num">99.3</td></tr>
+<tr><td>Angle + 0.1 × Angular velocity</td><td class="num"><b>500.0</b></td><td class="num">500</td><td class="num">500</td><td class="num">99.3</td></tr>
+</tbody></table></div>
+<h3 id="sec-8">Try It Yourself: Browser CartPole</h3>
+<figure>
+<svg aria-label="CartPole animation" id="cpSvg" role="img" viewBox="0 0 720 200"></svg>
+<div class="control">
+<button class="btn" data-rule="rand" type="button">Random</button>
+<button class="btn" data-rule="ang" type="button">Angle only</button>
+<button class="btn" data-rule="vel" type="button">Angular velocity only</button>
+<button class="btn on" data-rule="mix" type="button">Angle + k × Angular velocity</button>
+</div>
+<div class="control">
+<label for="cpK">k</label>
+<input id="cpK" max="2" min="0" step="0.05" type="range" value="1">
+<output id="cpKOut">1.00</output>
+<button class="btn" id="cpPlay" type="button">▶ Play Episode</button>
+</div>
+<div class="readout" id="cpRead"></div>
+<figcaption><b>Figure 10.</b> Runs the same physics equations as gymnasium CartPole (Euler, dt = 0.02s) in the browser. Changing the rule and k immediately recalculates the returns for 20 random starts. The numbers may differ slightly from the table above because the random numbers for the initial state differ from Python.</figcaption>
+</figure>
+<h3 id="sec-9">What Did We Confirm?</h3>
+<ol>
+<li><b>Policy = obs → action function.</b> Once we started using obs, it survived 2 times longer than random.</li>
+<li><b>Why is velocity needed?</b> Looking only at the angle means reacting after it has already tilted, causing large oscillations (40.9). Looking at angular velocity allows reacting <i>during</i> the fall (198.7). Looking at both achieves 500. A policy using only the angle is equivalent to <b>partial observation where velocity cannot be seen</b> (<a href="#s4">Chapter 4</a>).</li>
+<li><b>Manually changing k is tuning.</b> With k = 0.5 and 0.1, it achieves 500 every time. PPO automatically finds these kinds of numbers among millions (<a href="#s10">Chapter 10</a>).</li>
+<li><b>The horizon of γ.</b> Even if you survive 500 steps, the discounted return stops at 99.3. (1 − 0.99<sup>500</sup>) / (1 − 0.99) ≈ 99.3. γ = 0.99 looks roughly 100 steps ahead (<a href="#s3">Chapter 3</a>).</li>
+</ol>
+<h3 id="sec-10">What the Designer Decides Is Inside the Environment</h3>
+<p>This code has nothing to tune. We just used an environment made by someone else. The values decided by the designer are already inside the CartPole environment, whereas with the thumb button, we have to decide them ourselves.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Design Item</th><th>Value Defined for CartPole</th><th>🤖 Thumb Button (Roadmap Card)</th></tr></thead>
+<tbody>
+<tr><td>Observation</td><td>Position, velocity, angle, angular velocity</td><td>Joints, pressure, current, button position, previous action</td></tr>
+<tr><td>Action</td><td>Left/Right (discrete)</td><td>Joint target change + stiffness (continuous)</td></tr>
+<tr><td><b>Reward</b></td><td>+1/step</td><td><code>r_reach −1.0/cm</code>, <code>r_press +2.0</code>, <code>r_click +10</code> … <b>Tuned the most</b></td></tr>
+<tr><td>Termination</td><td>Angle > 12°, position > ±2.4</td><td>Click, SLIP, TIMEOUT</td></tr>
+<tr><td>Time Limit</td><td>500 steps</td><td>250 steps</td></tr>
+<tr><td>Initial State</td><td>±0.05 random</td><td>Starting pose ±15 mm</td></tr>
+<tr><td>Physics</td><td>Cart 1.0 kg, pole 0.5 m, force 10 N, dt 0.02s</td><td>Friction, actuation force, stroke + randomization range</td></tr>
+</tbody></table></div>
+<p>The CartPole source (<code>gymnasium/envs/classic_control/cartpole.py</code>) contains physics values and termination criteria in <code>__init__</code>, reward and termination logic in <code>step()</code>, and initial state in <code>reset()</code>. In Isaac Lab, <code>_get_observations</code>, <code>_get_rewards</code>, <code>_get_dones</code>, and <code>_reset_idx</code> serve the same roles (Chapter 5).</p>
+</section>
+<section>
+<h2 id="s10"><span class="num">10</span>🤖 Where does the human fit in?</h2>
+<p>k is a number <b>inside the policy</b>, so RL finds it automatically. Reward design and shaping are indeed human tasks, but they operate on a different level than k. k answers "how to solve it," while reward answers "what counts as doing well."</p>
+<figure>
+<svg aria-label="Three layers. The bottom layer of policy parameters is handled automatically by RL; the middle layer of problem-setting values involves both humans and automatic search; the top layer of goals and judgment is determined by humans" role="img" viewBox="0 0 720 250">
+<rect class="s-green" height="66" rx="12" width="680" x="20" y="16"></rect>
+<text class="bold" x="40" y="44">Goals and Judgment</text>
+<text class="small" x="40" y="66">What counts as success · What must not be done (excessive force, tool damage) · Does it actually work in the real world?</text>
+<text class="bold" style="fill:var(--green)" text-anchor="end" x="680" y="52">Human</text>
+<rect class="s-warm" height="66" rx="12" width="680" x="20" y="92"></rect>
+<text class="bold" x="40" y="120">Problem-Setting Values</text>
+<text class="small" x="40" y="142">Reward weights (−1.0/cm, +10) · γ, lr · Randomization range · Curriculum</text>
+<text class="bold" style="fill:var(--warm)" text-anchor="end" x="680" y="120">Human + Automatic Search</text>
+<text class="mut small" text-anchor="end" x="680" y="142">sweep · Eureka · LLM</text>
+<rect class="s-acc" height="66" rx="12" width="680" x="20" y="168"></rect>
+<text class="bold" x="40" y="196">Policy Parameters</text>
+<text class="small" x="40" y="218">k, tens of thousands of neural network weights</text>
+<text class="bold" style="fill:var(--acc)" text-anchor="end" x="680" y="204">Automatically by RL</text>
+</svg>
+<figcaption><b>Figure 11.</b> Who decides what. What has changed in the AI era is the middle layer. The loop of writing reward code, checking results, fixing it, and re-running is something LLMs do quite well (Eureka: better than human rewards in 83% of 29 tasks).</figcaption>
+</figure>
+<p>Therefore, the human role shifts to <b>the two ends: top and bottom</b>.</p>
+<ul>
+<li><b>Goal Definition</b>: What "click" means and up to how many N it can be pressed. Derived from tool, process, and customer requirements.</li>
+<li><b>Judgment by Observation</b>: The reward curve went up, but watching the video shows the button is being rubbed from the side → the eye to detect reward hacking.</li>
+<li><b>Hardware and Safety</b>: V6 fingertip 17.3 N, heat generation during continuous operation, MCU hardware limits.</li>
+<li><b>Real-World Verification</b>: Does what worked in simulation work on the V6? If not, what is wrong with the simulation?</li>
+</ul>
+<div class="callout green">From tuning numbers to <b>"defining what 'good' means and verifying if it's truly good."</b></div>
+</section>
+<section>
+<h2 id="s11"><span class="num">11</span>Overall Summary &#x26; Connection to Next Chapter</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Concept</th><th>In One Line</th><th>🤖 In the Thumb Button Problem Card</th></tr></thead>
+<tbody>
+<tr><td>Observation / State</td><td>Policy uses only observations; learning components use state too</td><td>Observation cell, "(teacher only)"</td></tr>
+<tr><td>Episode</td><td>reset → … → terminated / truncated</td><td>Termination/Success judgment cell</td></tr>
+<tr><td>Return, γ</td><td>Discounted sum of rewards, horizon ≈ 1/(1−γ)</td><td>Reason for staged rewards</td></tr>
+<tr><td>MDP</td><td>(S, A, P, R, γ), P is the physics engine</td><td>The entire problem card</td></tr>
+<tr><td>Policy / V / Q / A</td><td>Player / Situation score / Action score / Compared to average</td><td>Actor for real-world execution, Critic only for learning</td></tr>
+<tr><td>Exploration</td><td>σ, entropy, parallelism, randomization</td><td>Randomization/Curriculum cell</td></tr>
+</tbody></table></div>
+<div class="callout"><b>Next: Chapter 2. From Value-Based to Policy-Based.</b> Q-learning/DQN concepts → Why policy-based for robot hands? → Policy Gradient → Actor-Critic. In practice, we will have a <b>neural network</b> solve CartPole and Pendulum using Stable-Baselines3 PPO, comparing it with the rule-based policy from this chapter.</div>
+</section>
+<section>
+<h2 id="quiz"><span class="num">?</span>Check Questions</h2>
+<p class="hint">Try to recall the answer first before expanding.</p>
+<details class="quiz">
+<summary><span class="qn">Question 1</span><span class="qt">If you remove the two velocities (cart velocity, angular velocity) from CartPole observations, what problem arises, and how can it be mitigated?</span></summary>
+<div class="ans"><p>It becomes a partially observable Markov decision process (POMDP). This is the same reason why a policy looking only at angle falls over at step 41. By stacking recent observations (frame stacking), velocity can be estimated from the differences.</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">Question 2</span><span class="qt">If γ = 0.9 and the policy runs at 50 Hz, what is the horizon in seconds? How much is a +10 click reward after 55 steps worth now?</span></summary>
+<div class="ans"><p>1/(1−0.9) = 10 steps = 0.2 seconds. 10 × 0.9<sup>55</sup> ≈ 0.03. Since the click is barely visible, this is too short-sighted for a thumb button. With 0.99, it would be 10 × 0.99<sup>55</sup> ≈ 5.8. (Check Figure 3)</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">Question 3</span><span class="qt">What are the terms for ending due to dropping the tool versus ending because 250 steps have passed? Why distinguish them?</span></summary>
+<div class="ans"><p>Terminated and truncated. After dropping, there is no more reward to receive, but time-out implies "reward that would have been received if continued." Mixing them causes the critic to incorrectly learn that "step 250 has an inherent value of 0." Detailed handling is in Chapter 3 GAE.</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">Question 4</span><span class="qt">In front of the button, an action has Q = +3, and the situation's V = +5. Even though the reward is positive, does the probability of this action increase?</span></summary>
+<div class="ans"><p>No, it decreases. A = 3 − 5 = −2. It is a worse-than-average action. The criterion is not "is it positive?" but "is it better than average?"</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">Question 5</span><span class="qt"><code>r_push</code> (angle the tool rotated in hand) cannot be measured on the actual V6. Can it be used in reward? In policy observations?</span></summary>
+<div class="ans"><p>It can be used in reward. Reward is only used during learning, and simulation knows the ground truth. It must not be put in policy observations because that value won't exist in the real world. If you want to include it, put it only in teacher observations and let the student estimate it from pressure/current history.</p></div>
+</details>
+<details class="quiz">
+<summary><span class="qn">Question 6</span><span class="qt">Between k in the rule-based policy and −1.0/cm in <code>r_reach</code>, which one does PPO find?</span></summary>
+<div class="ans"><p>k. k is a number inside the policy. −1.0/cm is a problem-side value determining "what counts as doing well," so it is set by humans (or searched via external loops like Eureka).</p></div>
+</details>
+</section>
+<section>
+<h2 id="qa"><span class="num">Q&#x26;A</span>Questions &#x26; Answers</h2>
+<div class="qa-tools">
+<p class="hint">Questions I asked myself while studying. Try to recall the answer first, then expand.</p>
+<button id="toggleAll" type="button">Expand All</button>
+</div>
+<details class="qa">
+<summary><span class="qn">Q1</span><span class="qt">Why do we distinguish between the true state of the world and observations? Does it affect learning? Can't we just use observations?<span class="stage">01 · Agent and Environment</span></span></summary>
+<div class="ans"><ul>
+<li><b>It is correct to put only observations into the policy.</b> In real-world deployment, you have nothing but observations.</li>
+<li>Reason for distinguishing ① If observations cannot fully capture the state, learning fails (POMDP). Without velocity, you don't know if you are approaching or moving away. → <a href="#s4">Figure 4</a></li>
+<li>② Rewards are only used during training, so they can be calculated using the state. <code>r_push</code> cannot be measured in real-world deployment, but the simulator knows it.</li>
+<li>③ Critics and teachers are only used during training, so they can accept the state. The roadmap's "(teacher only)". → <a href="#s7">Figure 7</a></li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q2</span><span class="qt">If actions are output continuously in small increments, does a new observation and reward occur at every step, which we then accumulate and use to correct the policy? Please summarize one cycle from start to finish with an example<span class="stage">02 · Episode</span></span></summary>
+<div class="ans"><ul>
+<li>Yes. The policy outputs actions at 50 Hz, and a new observation and reward occur at every step. → <a href="#s5">Figure 5</a></li>
+<li>However, rewards are not summed immediately; instead, we <b>store (o, a, r)</b> and then calculate step-wise returns and advantages.</li>
+<li><b>The policy is not corrected at every step.</b> We collect data from 4096 environments × 24 steps with the policy fixed, then correct it all at once. Episode ≠ Update. → <a href="#s6">Figure 6</a></li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q3</span><span class="qt">For reward calculation and things like the critic that don't go to real-world deployment, do we evaluate by finding the true score using state values?<span class="stage">02 · Episode</span></span></summary>
+<div class="ans"><ul>
+<li>Yes. The method of giving the state to the critic is called <b>asymmetric actor-critic</b>.</li>
+<li>Note ① Rewards are not "true scores" but <b>"scores we define"</b>. If the formula is wrong, the agent will become good at doing the wrong thing (reward hacking, Chapter 4).</li>
+<li>Note ② Real-world success judgment must be created using observations. Roadmap principle: "Simulator success judgment should use the same signals as the real-world judge (pressure patterns, click force changes, current)."</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q4</span><span class="qt">Is it like Atari problems where we accumulate a bit of past information to estimate the state?<span class="stage">04 · MDP</span></span></summary>
+<div class="ans"><ul>
+<li>Yes. DQN (2015) for Atari couldn't know the ball's velocity from a single frame, so it <b>stacked the most recent 4 frames</b> and input them (frame stacking).</li>
+<li>Robots can directly input joint velocities, so shorter history is often sufficient.</li>
+<li>Hidden physical values like friction and mass are solved with long history + learned estimators (HORA's adaptation module, Chapter 6).</li>
+</ul></div></details>
+<details class="qa">
+<summary><span class="qn">Q5</span><span class="qt">V is the situation score, Q is the average score when acting according to this policy in this situation? Is Advantage evaluated based on what, and is it state-based?<span class="stage">07 · Policy and Value Function</span></span></summary>
+<div class="ans"><ul>
+<li>V is correct. Q is not "according to the policy" but <b>"take this one action first, then follow the policy afterwards"</b>.</li>
+<li>Advantage is not "now vs later" but <b>"this action vs usual actions here"</b>. Even an action that results in less damage in a crisis situation has A > 0.</li>
+<li>The evaluation target is not the entire policy but <b>the single action at that step</b>.</li>
+<li>PPO calculates A ≈ r + γV(s′) − V(s) using critic V. If we input state into V, advantage also becomes based on correct information. → <a href="#s7">Chapter 7</a></li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q6</span><span class="qt">When I ran it in VS Code, I got <code>ModuleNotFoundError: No module named 'gymnasium'</code><span class="stage">09 · Practice</span></span></summary>
+<div class="ans"><ul>
+<li>VS Code executed using the system Python (<code>/usr/bin/python3.12</code>). gymnasium is only in the <code>rl-study</code> environment.</li>
+<li><code>Ctrl+Shift+P</code> → <code>Python: Select Interpreter</code> → <code>rl-study</code>. Check with <code>which python</code> in the terminal.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q7</span><span class="qt">Explain the code line by line. When actually designing RL, where do I need to write and tune directly?<span class="stage">09 · Practice</span></span></summary>
+<div class="ans"><ul>
+<li>Key lines: <code>reset()</code> = episode start, <code>action = …</code> = policy slot, <code>step()</code> = one loop iteration, <code>obs = next_obs</code> = if missed, you only see old observations.</li>
+<li>This code has no tuning spots. Values determined by the designer (observations, actions, rewards, termination, time limit, start distribution, physics) are <b>inside the environment</b>. → <a href="#s9">Chapter 9 Table</a></li>
+<li>Learning hyperparameters (γ, lr, rollout length, entropy) are added here (Chapters 2 &#x26; 3).</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q8</span><span class="qt">What does <code>obs</code> mean, and what is Task 1 asking us to do?<span class="stage">09 · Practice</span></span></summary>
+<div class="ans"><ul>
+<li><code>obs</code> = observation. <code>[cart position, cart velocity, pole angle, pole angular velocity]</code>, angle + = tilting to the right.</li>
+<li>Task 1: Create a <b>rule-based policy</b> that decides actions by looking at obs instead of randomly. If the broom tilts to the right, move the hand to the right.</li>
+<li>Purpose: To feel that policy = obs → action function, and to see that RL is about letting a neural network find this if-statement.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q9</span><span class="qt">Is branching actions based on observation values creating a simple "Markov branch"?<span class="stage">09 · Practice</span></span></summary>
+<div class="ans"><ul>
+<li>Acting only based on current observations → <b>Markov policy</b> (memoryless). Same obs means same action → <b>deterministic policy</b>. Switching abruptly when a threshold is crossed → <b>bang-bang control</b> in control theory.</li>
+<li>Results: Random 17/17/37 → Angle rule 41/51/35. Looking only at angle, it reacts after tilting, so it doesn't reach 500.</li>
+</ul></div>
+</details>
+<details class="qa">
+<summary><span class="qn">Q10</span><span class="qt">In the AI era, is the human role in RL just setting values like k? Do reward design and shaping fall under this?<span class="stage">10 · Human Role</span></span></summary>
+<div class="ans"><ul>
+<li><b>k is found by RL.</b> It is a number inside the policy.</li>
+<li>Reward design and shaping are indeed human tasks, but they are at different levels. k = "how to solve it", reward = "what to count as doing well". → <a href="#s10">Figure 11</a></li>
+<li>Writing and iteratively modifying reward code is something LLMs do well (Eureka). Humans move towards goal definition, spotting reward hacking by watching videos, hardware/safety, and real-world verification.</li>
+</ul></div>
+</details>
+</section>
+<section>
+<h2 id="check"><span class="num">✓</span>Confusing Concepts</h2>
+<ul class="checklist">
+<li><b>Observation ≠ State</b>: Policy uses only observations, rewards/critic/teacher can use state. <span class="ref">Q1 · Q3</span></li>
+<li><b>Rewards are stored then calculated</b>: Store (o, a, r) at each step → calculate step-wise returns/advantages. <span class="ref">Q2</span></li>
+<li><b>Episode ≠ Update</b>: Rollout is with fixed policy, update uses thousands of episode fragments. <span class="ref">Q2</span></li>
+<li><b>Markov is a property of observations</b>: One angle photo vs (angle, angular velocity). If insufficient, use frame stacking. <span class="ref">Q4</span></li>
+<li><b>Q is "this action first"</b>, Advantage is "compared to usual". Even with positive reward, A &#x3C; 0 is possible. <span class="ref">Q5</span></li>
+<li><b>Designer-defined spots = Environment</b>: Observations/actions/rewards/termination/start distribution/physics. <span class="ref">Q7</span></li>
+<li><b>Rule-based policy</b>: Markov + deterministic policy, bang-bang control. <span class="ref">Q9</span></li>
+<li><b>k vs Reward weight</b>: Policy parameter (found by RL) vs Problem setting value (set by human). <span class="ref">Q10</span></li>
+</ul>
+</section>
+<section>
+<h2 id="refs"><span class="num">📚</span>Further Reading</h2>
+<ul class="refs">
+<li>Sutton &#x26; Barto, <i>Reinforcement Learning: An Introduction</i> (2nd ed.), Ch. 1, Ch. 3 (Finite MDPs)</li>
+<li>HuggingFace Deep RL Course, Unit 1</li>
+<li>OpenAI Spinning Up, Part 1: Key Concepts in RL</li>
+<li>Barto, Sutton, Anderson, "Neuronlike Adaptive Elements That Can Solve Difficult Learning Control Problems" (1983): The prototype of CartPole</li>
+<li>Mnih et al., "Human-level control through deep reinforcement learning" (Nature 2015): DQN, frame stacking</li>
+<li>Pinto et al., "Asymmetric Actor Critic for Image-Based Robot Learning" (RSS 2018)</li>
+<li>Pardo et al., "Time Limits in Reinforcement Learning" (ICML 2018): truncation vs termination</li>
+<li>Qi et al., "In-Hand Object Rotation via Rapid Motor Adaptation" (CoRL 2022, arXiv 2210.04887): HORA</li>
+<li>Ma et al., "Eureka: Human-Level Reward Design via Coding Large Language Models" (ICLR 2024, arXiv 2310.12931)</li>
+<li>Gymnasium documentation, CartPole-v1</li>
+</ul>
+</section>
+<script>
+(function () {
+  const NS = 'http://www.w3.org/2000/svg';
+  function el(parent, tag, attrs, text) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text !== undefined) e.textContent = text;
+    parent.appendChild(e);
+    return e;
+  }
+  function clear(svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); }
+  const f2 = x => x.toFixed(2), f3 = x => x.toFixed(3);
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function showTip(tip, fig, evt, html) {
+    const r = fig.getBoundingClientRect();
+    tip.innerHTML = html; tip.style.display = 'block';
+    let x = evt.clientX - r.left + 12, y = evt.clientY - r.top + 12;
+    if (x + tip.offsetWidth > r.width) x = evt.clientX - r.left - tip.offsetWidth - 12;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  }
+
+  // ---------- Figure 3: discount ----------
+  const dSvg = document.getElementById('discSvg'), dG = document.getElementById('discG');
+  const dGOut = document.getElementById('discGOut'), dRead = document.getElementById('discRead');
+  function drawDisc() {
+    const g = +dG.value; dGOut.textContent = f2(g);
+    clear(dSvg);
+    const K = 60, X0 = 50, X1 = 700, Y0 = 20, Y1 = 180, bw = (X1 - X0) / (K + 1);
+    el(dSvg, 'line', { x1: X0, y1: Y1, x2: X1, y2: Y1, class: 'axis' });
+    [0, 0.5, 1].forEach(v => {
+      el(dSvg, 'line', { x1: X0, y1: Y1 - (Y1 - Y0) * v, x2: X1, y2: Y1 - (Y1 - Y0) * v, class: 'grid' });
+      el(dSvg, 'text', { x: X0 - 6, y: Y1 - (Y1 - Y0) * v + 4, 'text-anchor': 'end', class: 'mut small mono' }, v.toFixed(1));
+    });
+    for (let k = 0; k <= K; k++) {
+      const w = Math.pow(g, k), h = (Y1 - Y0) * w;
+      el(dSvg, 'rect', { x: X0 + k * bw + 1, y: Y1 - h, width: Math.max(bw - 2, 1), height: h, fill: k === 20 ? 'var(--s2)' : 'var(--s1)', 'fill-opacity': 0.85, rx: 1 });
+    }
+    [0, 10, 20, 30, 40, 50, 60].forEach(k => el(dSvg, 'text', { x: X0 + k * bw + bw / 2, y: Y1 + 16, 'text-anchor': 'middle', class: 'mut small mono' }, k));
+    el(dSvg, 'text', { x: X1, y: Y1 + 34, 'text-anchor': 'end', class: 'mut small' }, 'k스텝 뒤 →');
+    const H = 1 / (1 - g);
+    if (H <= K + 1) {
+      const hx = X0 + H * bw;
+      el(dSvg, 'line', { x1: hx, y1: Y0, x2: hx, y2: Y1, stroke: 'var(--warm)', 'stroke-dasharray': '5 4', 'stroke-width': 1.5 });
+      el(dSvg, 'text', { x: hx + 6, y: Y0 + 12, class: 'small', style: 'fill:var(--warm)' }, '유효 시야 ' + H.toFixed(1) + '스텝');
+    } else {
+      el(dSvg, 'text', { x: X1, y: Y0 + 12, 'text-anchor': 'end', class: 'small', style: 'fill:var(--warm)' }, '유효 시야 ' + H.toFixed(0) + '스텝 → (화면 밖)');
+    }
+    el(dSvg, 'text', { x: X0 + 20 * bw + bw / 2, y: Y1 - (Y1 - Y0) * Math.pow(g, 20) - 6, 'text-anchor': 'middle', class: 'small' }, 'k=20');
+    dRead.textContent = '20스텝 뒤 클릭 +10의 현재 가치 = 10 × γ²⁰ = ' + (10 * Math.pow(g, 20)).toFixed(g < 0.6 ? 5 : 2)
+      + ' · 유효 시야 1/(1−γ) = ' + H.toFixed(1) + '스텝 (50 Hz면 ' + (H / 50).toFixed(2) + '초)';
+  }
+  dG.addEventListener('input', drawDisc);
+  document.querySelectorAll('[data-g]').forEach(b => b.addEventListener('click', () => { dG.value = b.dataset.g; drawDisc(); }));
+  drawDisc();
+
+  // ---------- Figure 5: thumb-button episode ----------
+  const eSvg = document.getElementById('epSvg'), eT = document.getElementById('epT');
+  const eTOut = document.getElementById('epTOut'), eRead = document.getElementById('epRead');
+  const eTip = document.getElementById('epTip'), eFig = eSvg.parentNode;
+  const EP = [];
+  (function buildEp() {
+    let G = 0;
+    for (let t = 1; t <= 55; t++) {
+      let d, depth, r, phase;
+      if (t <= 40) { d = Math.max(2.0 - 0.05 * t, 0); depth = 0; r = -1.0 * d; phase = '접근'; }
+      else { d = 0; depth = 3 * (t - 40) / 15; r = 2.0 * (0.2 / 3); phase = '누름'; }
+      if (t === 55) { r += 10; phase = '클릭!'; }
+      G += r;
+      EP.push({ t, d, depth, r, G, phase });
+    }
+  })();
+  function drawEp() {
+    const T = +eT.value; eTOut.textContent = T;
+    clear(eSvg);
+    const X0 = 50, X1 = 700, Y0 = 20, Y1 = 220, ymin = -2, ymax = 1, bw = (X1 - X0) / 55;
+    const y = v => Y0 + (ymax - v) / (ymax - ymin) * (Y1 - Y0);
+    [-2, -1, 0, 1].forEach(v => {
+      el(eSvg, 'line', { x1: X0, y1: y(v), x2: X1, y2: y(v), class: v === 0 ? 'axis' : 'grid' });
+      el(eSvg, 'text', { x: X0 - 6, y: y(v) + 4, 'text-anchor': 'end', class: 'mut small mono' }, (v > 0 ? '+' : '') + v);
+    });
+    el(eSvg, 'rect', { x: X0 + 40 * bw, y: Y0, width: 15 * bw, height: Y1 - Y0, fill: 'var(--green-soft)', opacity: 0.6 });
+    el(eSvg, 'text', { x: X0 + 20 * bw, y: Y1 + 16, 'text-anchor': 'middle', class: 'mut small' }, '접근: r = −거리');
+    el(eSvg, 'text', { x: X0 + 47.5 * bw, y: Y1 + 16, 'text-anchor': 'middle', class: 'mut small' }, '누름: r = +Δ');
+    EP.forEach(s => {
+      const x = X0 + (s.t - 1) * bw + 1, w = Math.max(bw - 2, 1);
+      const shown = s.t <= T;
+      const v = Math.min(s.r, ymax), top = Math.min(y(v), y(0)), h = Math.max(Math.abs(y(v) - y(0)), 1);
+      const color = s.t === 55 ? 'var(--s2)' : (s.r < 0 ? 'var(--s1)' : 'var(--s3)');
+      const bar = el(eSvg, 'rect', { x, y: top, width: w, height: h, rx: 1, fill: color, 'fill-opacity': shown ? 0.9 : 0.15 });
+      const hit = el(eSvg, 'rect', { x: x - 1, y: Y0, width: bw, height: Y1 - Y0, fill: 'transparent' });
+      hit.addEventListener('mousemove', e => showTip(eTip, eFig, e, 't = <b>' + s.t + '</b> · ' + s.phase + '<br>거리 <b>' + s.d.toFixed(2) + ' cm</b> · 눌림 <b>' + s.depth.toFixed(1) + ' mm</b><br>r = <b>' + (s.r >= 0 ? '+' : '') + s.r.toFixed(2) + '</b>'));
+      hit.addEventListener('mouseleave', () => { eTip.style.display = 'none'; });
+      hit.addEventListener('click', () => { eT.value = s.t; drawEp(); });
+    });
+    el(eSvg, 'text', { x: X0 + 54.5 * bw, y: y(ymax) - 4, 'text-anchor': 'end', class: 'small bold', style: 'fill:var(--fg)' }, '+10.13 ↑ (축 밖)');
+    if (T > 0) el(eSvg, 'line', { x1: X0 + T * bw, y1: Y0, x2: X0 + T * bw, y2: Y1, stroke: 'var(--warm)', 'stroke-width': 1.5, 'stroke-dasharray': '4 3' });
+    if (T === 0) { eRead.textContent = 't = 0 · reset() → 엄지–버튼 2.00 cm, 눌림 0 mm · 아직 보상 없음'; return; }
+    const s = EP[T - 1];
+    let Gd = 0; for (let k = 0; k < T; k++) Gd += Math.pow(0.99, k) * EP[k].r;
+    eRead.textContent = 't = ' + T + ' (' + (T * 0.02).toFixed(2) + '초) · ' + s.phase + ' · 거리 ' + s.d.toFixed(2) + ' cm · 눌림 ' + s.depth.toFixed(1) + ' mm · r = ' + (s.r >= 0 ? '+' : '') + s.r.toFixed(2)
+      + ' · 지금까지 합 ' + s.G.toFixed(2) + ' · 할인 합(γ=0.99) ' + Gd.toFixed(2) + (T === 55 ? ' · terminated' : '');
+  }
+  eT.addEventListener('input', drawEp);
+  let epTimer = null;
+  document.getElementById('epPlay').addEventListener('click', () => {
+    if (epTimer) { clearInterval(epTimer); epTimer = null; return; }
+    if (+eT.value >= 55) eT.value = 0;
+    epTimer = setInterval(() => {
+      eT.value = +eT.value + 1; drawEp();
+      if (+eT.value >= 55) { clearInterval(epTimer); epTimer = null; }
+    }, 80);
+  });
+  drawEp();
+
+  // ---------- Figure 8: sigma ----------
+  const sSvg = document.getElementById('sigSvg'), sS = document.getElementById('sigS'), sOut = document.getElementById('sigOut');
+  const NOISE = (function () { const rnd = mulberry32(7), out = []; for (let i = 0; i < 40; i++) { const u = rnd() || 1e-9, v = rnd(); out.push(Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v)); } return out; })();
+  function drawSig() {
+    const s = +sS.value; sOut.textContent = f2(s);
+    clear(sSvg);
+    const X0 = 40, X1 = 680, xmin = -2.5, xmax = 2.5, Yb = 130, Yt = 20;
+    const x = v => X0 + (v - xmin) / (xmax - xmin) * (X1 - X0);
+    const mu = 0.3, lo = 0.15, hi = 0.45;
+    el(sSvg, 'rect', { x: x(lo), y: Yt, width: x(hi) - x(lo), height: 175 - Yt, fill: 'var(--green-soft)' });
+    el(sSvg, 'text', { x: x(hi) + 6, y: Yt + 12, class: 'small', style: 'fill:var(--green)' }, '버튼 정중앙 누르기');
+    el(sSvg, 'line', { x1: X0, y1: Yb, x2: X1, y2: Yb, class: 'axis' });
+    const peak = 1 / (s * Math.sqrt(2 * Math.PI));
+    const hScale = (Yb - Yt) / Math.max(peak, 1 / (0.25 * Math.sqrt(2 * Math.PI)));
+    let d = '';
+    for (let i = 0; i <= 200; i++) {
+      const v = xmin + (xmax - xmin) * i / 200;
+      const p = Math.exp(-0.5 * Math.pow((v - mu) / s, 2)) / (s * Math.sqrt(2 * Math.PI));
+      d += (i ? 'L' : 'M') + x(v).toFixed(1) + ' ' + (Yb - p * hScale).toFixed(1);
+    }
+    el(sSvg, 'path', { d, fill: 'none', stroke: 'var(--s1)', 'stroke-width': 2 });
+    el(sSvg, 'line', { x1: x(mu), y1: Yt, x2: x(mu), y2: Yb, stroke: 'var(--muted)', 'stroke-dasharray': '4 3' });
+    el(sSvg, 'text', { x: x(mu), y: Yt - 4, 'text-anchor': 'middle', class: 'mut small' }, 'μ');
+    let hit = 0;
+    NOISE.forEach((n, i) => {
+      const a = mu + s * n, inside = a >= lo && a <= hi;
+      if (inside) hit++;
+      if (a < xmin || a > xmax) return;
+      el(sSvg, 'circle', { cx: x(a), cy: 150 + (i % 4) * 7, r: 4, fill: inside ? 'var(--s3)' : 'var(--s1)', stroke: 'var(--surface)', 'stroke-width': 2 });
+    });
+    el(sSvg, 'text', { x: X0, y: 205, class: 'mut small' }, '뽑은 행동 40개 중 ' + hit + '개가 초록 띠 안 · 나머지는 다른 곳을 시도 (탐험)');
+    el(sSvg, 'text', { x: X1, y: 205, 'text-anchor': 'end', class: 'mut small' }, '행동 a (예: 엄지 목표 위치) →');
+  }
+  sS.addEventListener('input', drawSig);
+  document.querySelectorAll('[data-s]').forEach(b => b.addEventListener('click', () => { sS.value = b.dataset.s; drawSig(); }));
+  drawSig();
+
+  // ---------- Figure 9: results ----------
+  const RES = [
+    ['무작위', 22.1, 11, 39, 19.7],
+    ['각도만', 40.9, 25, 52, 33.5],
+    ['각속도만', 198.7, 138, 278, 85.5],
+    ['각도 + 1.0 × 각속도', 491.7, 334, 500, 99.2],
+    ['각도 + 0.5 × 각속도', 500.0, 500, 500, 99.3],
+    ['각도 + 0.1 × 각속도', 500.0, 500, 500, 99.3],
+  ];
+  const rSvg = document.getElementById('resSvg'), rTip = document.getElementById('resTip'), rFig = rSvg.parentNode;
+  (function drawRes() {
+    const X0 = 170, X1 = 660, Y0 = 10, rowH = 38, bh = 16, x = v => X0 + v / 500 * (X1 - X0);
+    [0, 100, 200, 300, 400, 500].forEach(v => {
+      el(rSvg, 'line', { x1: x(v), y1: Y0, x2: x(v), y2: Y0 + rowH * RES.length, class: v === 0 ? 'axis' : 'grid' });
+      el(rSvg, 'text', { x: x(v), y: Y0 + rowH * RES.length + 18, 'text-anchor': 'middle', class: 'mut small mono' }, v);
+    });
+    el(rSvg, 'text', { x: X1, y: Y0 + rowH * RES.length + 36, 'text-anchor': 'end', class: 'mut small' }, '리턴 = 버틴 스텝 수 (최대 500)');
+    RES.forEach((r, i) => {
+      const cy = Y0 + rowH * i + rowH / 2;
+      el(rSvg, 'text', { x: X0 - 10, y: cy + 4, 'text-anchor': 'end', class: 'small' }, r[0]);
+      el(rSvg, 'rect', { x: X0, y: cy - bh / 2, width: Math.max(x(r[1]) - X0, 1), height: bh, rx: 4, fill: 'var(--s1)' });
+      if (r[2] !== r[3]) {
+        el(rSvg, 'line', { x1: x(r[2]), y1: cy - bh / 2 - 5, x2: x(r[3]), y2: cy - bh / 2 - 5, stroke: 'var(--muted)', 'stroke-width': 2 });
+        [r[2], r[3]].forEach(v => el(rSvg, 'line', { x1: x(v), y1: cy - bh / 2 - 9, x2: x(v), y2: cy - bh / 2 - 1, stroke: 'var(--muted)', 'stroke-width': 2 }));
+      }
+      el(rSvg, 'text', { x: x(r[1]) + 6, y: cy + 4, class: 'small mono' }, r[1].toFixed(1));
+      const hit = el(rSvg, 'rect', { x: 0, y: cy - rowH / 2, width: 720, height: rowH, fill: 'transparent' });
+      hit.addEventListener('mousemove', e => showTip(rTip, rFig, e, r[0] + '<br>평균 <b>' + r[1].toFixed(1) + '</b> · 최소 <b>' + r[2] + '</b> · 최대 <b>' + r[3] + '</b><br>할인 리턴(γ=0.99) <b>' + r[4].toFixed(1) + '</b>'));
+      hit.addEventListener('mouseleave', () => { rTip.style.display = 'none'; });
+    });
+  })();
+
+  // ---------- Figure 10: browser CartPole ----------
+  const CP = { g: 9.8, mc: 1.0, mp: 0.1, l: 0.5, F: 10.0, tau: 0.02, thMax: 12 * 2 * Math.PI / 360, xMax: 2.4 };
+  function cpStep(s, a) {
+    let [x, xd, th, thd] = s;
+    const force = a === 1 ? CP.F : -CP.F, ct = Math.cos(th), st = Math.sin(th), M = CP.mc + CP.mp, pml = CP.mp * CP.l;
+    const temp = (force + pml * thd * thd * st) / M;
+    const thacc = (CP.g * st - ct * temp) / (CP.l * (4 / 3 - CP.mp * ct * ct / M));
+    const xacc = temp - pml * thacc * ct / M;
+    x += CP.tau * xd; xd += CP.tau * xacc; th += CP.tau * thd; thd += CP.tau * thacc;
+    return [x, xd, th, thd];
+  }
+  let rule = 'mix';
+  const cK = document.getElementById('cpK'), cKOut = document.getElementById('cpKOut'), cRead = document.getElementById('cpRead');
+  function act(o, rnd) {
+    const k = +cK.value;
+    if (rule === 'rand') return rnd() < 0.5 ? 0 : 1;
+    if (rule === 'ang') return o[2] > 0 ? 1 : 0;
+    if (rule === 'vel') return o[3] > 0 ? 1 : 0;
+    return o[2] + k * o[3] > 0 ? 1 : 0;
+  }
+  function runEp(seed, record) {
+    const rnd = mulberry32(1000 + seed);
+    let s = [0, 0, 0, 0].map(() => (rnd() - 0.5) * 0.1), G = 0, traj = record ? [s] : null;
+    for (let t = 0; t < 500; t++) {
+      s = cpStep(s, act(s, rnd)); G += 1;
+      if (record) traj.push(s);
+      if (Math.abs(s[0]) > CP.xMax || Math.abs(s[2]) > CP.thMax) return { G, traj, end: 'terminated' };
+    }
+    return { G, traj, end: 'truncated' };
+  }
+  const cSvg = document.getElementById('cpSvg');
+  function drawCart(s, label) {
+    clear(cSvg);
+    const X0 = 40, X1 = 680, xs = v => X0 + (v + CP.xMax) / (2 * CP.xMax) * (X1 - X0), Yg = 160;
+    el(cSvg, 'line', { x1: X0, y1: Yg, x2: X1, y2: Yg, class: 'axis' });
+    [-CP.xMax, CP.xMax].forEach(v => el(cSvg, 'line', { x1: xs(v), y1: Yg - 8, x2: xs(v), y2: Yg + 8, stroke: 'var(--red)', 'stroke-width': 2 }));
+    el(cSvg, 'text', { x: xs(-CP.xMax), y: Yg + 24, 'text-anchor': 'middle', class: 'mut small mono' }, '−2.4');
+    el(cSvg, 'text', { x: xs(CP.xMax), y: Yg + 24, 'text-anchor': 'middle', class: 'mut small mono' }, '+2.4');
+    const cx = xs(s[0]), len = 110;
+    el(cSvg, 'rect', { x: cx - 30, y: Yg - 26, width: 60, height: 22, rx: 4, class: 's-acc' });
+    const tilt = Math.abs(s[2]) > CP.thMax * 0.8;
+    el(cSvg, 'line', { x1: cx, y1: Yg - 26, x2: cx + len * Math.sin(s[2]), y2: Yg - 26 - len * Math.cos(s[2]), stroke: tilt ? 'var(--red)' : 'var(--fg)', 'stroke-width': 5, 'stroke-linecap': 'round' });
+    el(cSvg, 'circle', { cx, cy: Yg - 26, r: 4, fill: 'var(--muted)' });
+    el(cSvg, 'text', { x: X0, y: 18, class: 'mut small mono' }, label);
+  }
+  function evalRule() {
+    cKOut.textContent = f2(+cK.value);
+    const Gs = []; for (let i = 0; i < 20; i++) Gs.push(runEp(i, false).G);
+    const mean = Gs.reduce((a, b) => a + b, 0) / Gs.length;
+    const name = { rand: '무작위', ang: '각도만', vel: '각속도만', mix: '각도 + ' + f2(+cK.value) + ' × 각속도' }[rule];
+    cRead.textContent = name + ' · 20 에피소드 평균 ' + mean.toFixed(1) + ' · 최소 ' + Math.min(...Gs) + ' · 최대 ' + Math.max(...Gs) + ' · 500 도달 ' + Gs.filter(g => g === 500).length + '/20';
+    cK.disabled = rule !== 'mix';
+  }
+  document.querySelectorAll('[data-rule]').forEach(b => b.addEventListener('click', () => {
+    rule = b.dataset.rule;
+    document.querySelectorAll('[data-rule]').forEach(x => x.classList.toggle('on', x === b));
+    stopAnim(); evalRule(); drawCart([0, 0, 0, 0], 'ready');
+  }));
+  cK.addEventListener('input', () => { stopAnim(); evalRule(); });
+  let anim = null;
+  function stopAnim() { if (anim) { cancelAnimationFrame(anim); anim = null; } }
+  document.getElementById('cpPlay').addEventListener('click', () => {
+    stopAnim();
+    const ep = runEp(0, true); let i = 0, last = 0;
+    function frame(ts) {
+      if (ts - last >= 20) { last = ts; i++; }
+      const s = ep.traj[Math.min(i, ep.traj.length - 1)];
+      drawCart(s, 't = ' + Math.min(i, ep.G) + ' / 리턴 ' + ep.G + (i >= ep.traj.length - 1 ? ' · ' + ep.end : ''));
+      if (i < ep.traj.length - 1) anim = requestAnimationFrame(frame); else anim = null;
+    }
+    anim = requestAnimationFrame(frame);
+  });
+  evalRule(); drawCart([0, 0, 0, 0], 'ready');
+
+  // ---------- Q&A toggle ----------
+  const toggle = document.getElementById('toggleAll');
+  toggle.addEventListener('click', () => {
+    const all = document.querySelectorAll('details.qa');
+    const open = Array.from(all).some(d => !d.open);
+    all.forEach(d => { d.open = open; });
+    toggle.textContent = open ? '모두 접기' : '모두 펼치기';
+  });
+})();
+</script>
+</div>
+<div class="notes-editor" hidden data-path="content/study/robot-hand-and-rl-chapter-1/index.ko.md" data-notes data-pagefind-ignore data-astro-cid-krmc5xkp><button type="button" class="ne-open" data-astro-cid-krmc5xkp>내 생각 쓰기</button><form class="ne-form" hidden data-astro-cid-krmc5xkp><textarea rows="8" aria-label="내 생각 (markdown)" placeholder="markdown 으로 쓰기" data-astro-cid-krmc5xkp></textarea><div class="ne-actions" data-astro-cid-krmc5xkp><button type="submit" data-astro-cid-krmc5xkp>저장</button><button type="button" class="ne-delete" data-astro-cid-krmc5xkp>지우기</button><button type="button" class="ne-cancel" data-astro-cid-krmc5xkp>취소</button><span class="ne-status" role="status" data-astro-cid-krmc5xkp></span></div></form></div><div class="post-admin" hidden data-dir="content/study/robot-hand-and-rl-chapter-1" data-lang="en" data-incoming="[]" data-relations="[]" data-pagefind-ignore data-astro-cid-krmc5xkp></div></div><nav class="toc" aria-labelledby="toc-h" data-pagefind-ignore data-astro-cid-krmc5xkp><h2 id="toc-h" data-astro-cid-krmc5xkp>Contents</h2><ol data-astro-cid-krmc5xkp><li class="d2" data-astro-cid-krmc5xkp><a href="#s1" data-astro-cid-krmc5xkp>01 Agent and Environment</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s2" data-astro-cid-krmc5xkp>02 Episodes and Termination</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s3" data-astro-cid-krmc5xkp>03 Return and Discount Rate γ</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s4" data-astro-cid-krmc5xkp>04 MDP and the Markov Property</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-1" data-astro-cid-krmc5xkp>Markov Property: Knowing the present is enough; the past is unnecessary</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s5" data-astro-cid-krmc5xkp>05 🤖 Following a Thumb Button Episode</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s6" data-astro-cid-krmc5xkp>06 Learning Loop: Episode ≠ Update</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s7" data-astro-cid-krmc5xkp>07 Policy, Value Function, Advantage</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-2" data-astro-cid-krmc5xkp>Policy π: What to do in this situation</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-3" data-astro-cid-krmc5xkp>V, Q, Advantage</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s8" data-astro-cid-krmc5xkp>08 Exploration and Exploitation</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s9" data-astro-cid-krmc5xkp>09 🤖 Hands-on: CartPole</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-4" data-astro-cid-krmc5xkp>Environment Setup</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-5" data-astro-cid-krmc5xkp>CartPole</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-6" data-astro-cid-krmc5xkp>Code 1: Loop ( cartpole_loop.py )</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-7" data-astro-cid-krmc5xkp>Code 2: Rule-based Policies ( rule_policies.py )</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-8" data-astro-cid-krmc5xkp>Try It Yourself: Browser CartPole</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-9" data-astro-cid-krmc5xkp>What Did We Confirm?</a></li><li class="d3" data-astro-cid-krmc5xkp><a href="#sec-10" data-astro-cid-krmc5xkp>What the Designer Decides Is Inside the Environment</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s10" data-astro-cid-krmc5xkp>10 🤖 Where does the human fit in?</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#s11" data-astro-cid-krmc5xkp>11 Overall Summary &amp;#x26; Connection to Next Chapter</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#quiz" data-astro-cid-krmc5xkp>? Check Questions</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#qa" data-astro-cid-krmc5xkp>Q&amp;#x26;A Questions &amp;#x26; Answers</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#check" data-astro-cid-krmc5xkp>✓ Confusing Concepts</a></li><li class="d2" data-astro-cid-krmc5xkp><a href="#refs" data-astro-cid-krmc5xkp>📚 Further Reading</a></li></ol></nav></div></article><aside class="after wrap" data-pagefind-ignore data-astro-cid-krmc5xkp><section aria-labelledby="related-h" data-astro-cid-krmc5xkp><h2 id="related-h" data-astro-cid-krmc5xkp>More on these tags</h2><article class="row" data-type="paper" data-astro-cid-gc2g3jd6><div class="meta" data-astro-cid-gc2g3jd6><span class="type" data-astro-cid-gc2g3jd6>Papers</span><time datetime="2026-11-16" data-astro-cid-gc2g3jd6>Nov 16, 2026</time><span class="pending" data-astro-cid-gc2g3jd6>AI-written, not reviewed</span></div><div class="body" data-astro-cid-gc2g3jd6><h3 class="title" data-astro-cid-gc2g3jd6="true"><a href="/en/papers/exrl-sample-efficient-online-adaptation-of/" data-astro-cid-gc2g3jd6>ExRL: Sample-Efficient Online Adaptation of Long-Chunk Policies via Execution Length Control</a></h3><p class="summary" data-astro-cid-gc2g3jd6>ExRL adapts long-chunk robot policies by learning a lightweight execution-length adapter that decides how many actions from each predicted chunk to execute, replacing high-dimensional action optimization with a low-dimensional discrete decision. It improves diverse long-chunk policies, including π0.5, on simulated and real-world manipulation tasks with limited physical interaction.</p><ul class="tags" data-astro-cid-gc2g3jd6><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/reinforcement-learning/" title="method/reinforcement-learning" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Reinforcement Learning</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/domain/robotics/manipulation/" title="domain/robotics/manipulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Robotics</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Manipulation</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/architecture/vision-language-action/" title="method/architecture/vision-language-action" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Architecture</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Vision-Language-Action (VLA)</span></a></li></ul></div></article><article class="row" data-type="paper" data-astro-cid-gc2g3jd6><div class="meta" data-astro-cid-gc2g3jd6><span class="type" data-astro-cid-gc2g3jd6>Papers</span><time datetime="2026-11-09" data-astro-cid-gc2g3jd6>Nov 9, 2026</time><span class="pending" data-astro-cid-gc2g3jd6>AI-written, not reviewed</span></div><div class="body" data-astro-cid-gc2g3jd6><h3 class="title" data-astro-cid-gc2g3jd6="true"><a href="/en/papers/la-jepa-compact-robot-policies-with/" data-astro-cid-gc2g3jd6>La-JEPA: Compact Robot Policies with Latent World Modeling</a></h3><p class="summary" data-astro-cid-gc2g3jd6>La-JEPA is a compact world-action model that trains its policy from scratch in the feature space of a pretrained V-JEPA 2.1 encoder, jointly predicting future features during training and generating only actions at inference.</p><ul class="tags" data-astro-cid-gc2g3jd6><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/world-model/" title="method/world-model" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>World Model</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/domain/robotics/manipulation/" title="domain/robotics/manipulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Robotics</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Manipulation</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/task/benchmarking/" title="task/benchmarking" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Benchmarking</span></a></li></ul></div></article><article class="row" data-type="paper" data-astro-cid-gc2g3jd6><div class="meta" data-astro-cid-gc2g3jd6><span class="type" data-astro-cid-gc2g3jd6>Papers</span><time datetime="2026-11-09" data-astro-cid-gc2g3jd6>Nov 9, 2026</time><span class="pending" data-astro-cid-gc2g3jd6>AI-written, not reviewed</span></div><div class="body" data-astro-cid-gc2g3jd6><h3 class="title" data-astro-cid-gc2g3jd6="true"><a href="/en/papers/spatial-umi-dream-scaling-world-action/" data-astro-cid-gc2g3jd6>Spatial-UMI-Dream: Scaling World Action Models with Metric Geometry for UMI Manipulation</a></h3><p class="summary" data-astro-cid-gc2g3jd6>Spatial-UMI-Dream is a 5B world-action model that jointly predicts RGB, metric depth, and actions after two-stage pretraining on 605 hours of UMI data. It is evaluated on the RoboTwin-UMI simulation benchmark and real-world bimanual tasks for in-domain performance and generalization across environments and robot embodiments.</p><ul class="tags" data-astro-cid-gc2g3jd6><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/world-model/" title="method/world-model" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>World Model</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/training/pretraining/" title="method/training/pretraining" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Training</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Pretraining</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/domain/robotics/manipulation/" title="domain/robotics/manipulation" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Robotics</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Manipulation</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/task/benchmarking/" title="task/benchmarking" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Benchmarking</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/architecture/diffusion/" title="method/architecture/diffusion" data-astro-cid-jjfiepte><span class="parent" data-astro-cid-jjfiepte>Architecture</span><span class="sep" aria-hidden="true" data-astro-cid-jjfiepte>/</span><span class="leaf" data-astro-cid-jjfiepte>Diffusion</span></a></li></ul></div></article><article class="row" data-type="study" data-astro-cid-gc2g3jd6><div class="meta" data-astro-cid-gc2g3jd6><span class="type" data-astro-cid-gc2g3jd6>Study</span><time datetime="2026-10-30" data-astro-cid-gc2g3jd6>Oct 30, 2026</time></div><div class="body" data-astro-cid-gc2g3jd6><h3 class="title" data-astro-cid-gc2g3jd6="true"><a href="/en/study/01-rl-problem-setup-multi-armed/" data-astro-cid-gc2g3jd6>01. RL Problem Setup &amp; Multi-armed Bandit</a></h3><p class="summary" data-astro-cid-gc2g3jd6>Defines the RL interaction loop and contrasts it with supervised learning, then covers exploration/exploitation in multi-armed bandits via value estimation, regret, UCB, and Thompson sampling.</p><ul class="tags" data-astro-cid-gc2g3jd6><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/method/reinforcement-learning/" title="method/reinforcement-learning" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Reinforcement Learning</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/domain/machine-learning/" title="domain/machine-learning" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Machine Learning</span></a></li><li data-astro-cid-gc2g3jd6><a class="tagpath" href="/en/tags/task/benchmarking/" title="task/benchmarking" data-astro-cid-jjfiepte><span class="leaf" data-astro-cid-jjfiepte>Benchmarking</span></a></li></ul></div></article></section></aside></main><footer class="wrap" data-astro-cid-hkbrpulz><p class="site-footer" data-astro-cid-hkbrpulz>Tech Blog</p></footer><dialog class="search" aria-label="Search posts" data-unavailable="The search index is built with the site. Run npm run build, then npm run preview." data-astro-cid-ac66eqjo><div class="search-head" data-astro-cid-ac66eqjo><h2 data-astro-cid-ac66eqjo>Search posts</h2><button type="button" class="close" data-search-close data-astro-cid-ac66eqjo>Close</button></div><div id="pagefind" class="search-body" data-astro-cid-ac66eqjo></div></dialog><script type="module">var e=document.querySelector(`dialog.search`),t=e.querySelector(`#pagefind`),n=!1;async function r(){if(!n){n=!0;try{let e=document.createElement(`link`);e.rel=`stylesheet`,e.href=`/pagefind/pagefind-ui.css`,document.head.append(e),await new Promise((e,t)=>{let n=document.createElement(`script`);n.src=`/pagefind/pagefind-ui.js`,n.onload=()=>e(),n.onerror=()=>t(Error(`pagefind missing`)),document.head.append(n)}),new PagefindUI({element:t,showSubResults:!0,showImages:!1,autofocus:!0})}catch{t.textContent=e.dataset.unavailable??``}}}function i(){e.showModal(),r(),t.querySelector(`input`)?.focus()}document.querySelectorAll(`[data-search-open]`).forEach(e=>e.addEventListener(`click`,i)),e.querySelector(`[data-search-close]`).addEventListener(`click`,()=>e.close()),e.addEventListener(`click`,t=>{t.target===e&&e.close()}),document.addEventListener(`keydown`,t=>{let n=t.target.tagName;e.open||n===`INPUT`||n===`TEXTAREA`||(t.key===`/`||(t.metaKey||t.ctrlKey)&&t.key.toLowerCase()===`k`)&&(t.preventDefault(),i())});</script></body></html><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_0_lang.C9cTWiA5.js"></script><script type="module" src="/_astro/_slug_.astro_astro_type_script_index_1_lang.BhCYdHk-.js"></script>
